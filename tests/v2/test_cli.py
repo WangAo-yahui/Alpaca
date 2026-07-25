@@ -67,9 +67,11 @@ class CLITests(unittest.TestCase):
                 ]
             )
 
-    def test_profile_is_required(self) -> None:
-        with self.assertRaises(SystemExit):
-            parse_cli_args([])
+    def test_profile_defaults_to_paper1(self) -> None:
+        self.assertEqual(
+            parse_cli_args([]).profile,
+            "paper1",
+        )
 
 
 if __name__ == "__main__":

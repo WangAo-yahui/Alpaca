@@ -32,7 +32,7 @@ class CycleReleaseMetadataTests(unittest.TestCase):
                 new_cycle=False,
                 paper=True,
                 live=False,
-                profile="paper2",
+                profile="paper1",
                 no_guidance=True,
             )
             result = bootstrap_main(
@@ -46,7 +46,7 @@ class CycleReleaseMetadataTests(unittest.TestCase):
             state = result.state
             self.assertEqual(
                 state.profile_id,
-                "paper2",
+                "paper1",
             )
             self.assertEqual(
                 state.release["app_version"],
@@ -75,9 +75,9 @@ class CycleReleaseMetadataTests(unittest.TestCase):
             empty = create_cycle_paths(
                 "2026-07-24",
                 project_root=root,
-                profile_id="paper2",
+                profile_id="paper1",
                 strategy_id="core_long",
-                strategy_version="1.1.0",
+                strategy_version="1.2.0",
                 now=datetime(
                     2026,
                     7,

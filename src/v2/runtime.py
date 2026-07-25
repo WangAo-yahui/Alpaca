@@ -18,7 +18,7 @@ from typing import Any
 from zoneinfo import ZoneInfo
 
 
-SCRIPT_VERSION = "2026-07-25-v2-runtime-stage-d-v1"
+SCRIPT_VERSION = "2026-07-25-v2-runtime-stage-e-v1"
 
 NEW_YORK_TZ = ZoneInfo("America/New_York")
 
@@ -97,9 +97,11 @@ class CyclePaths:
     portfolio_workspace: Path
 
     execution_directory: Path
+    execution_snapshot: Path
     execution_input: Path
     execution_output: Path
     execution_validation: Path
+    execution_codex_call: Path
     execution_workspace: Path
 
     orders_directory: Path
@@ -456,10 +458,16 @@ def build_cycle_paths(
         ),
         portfolio_workspace=portfolio_directory / "workspace",
         execution_directory=execution_directory,
+        execution_snapshot=(
+            execution_directory / "snapshot.json"
+        ),
         execution_input=execution_directory / "input.json",
         execution_output=execution_directory / "output.json",
         execution_validation=(
             execution_directory / "validation.json"
+        ),
+        execution_codex_call=(
+            execution_directory / "codex_call.json"
         ),
         execution_workspace=execution_directory / "workspace",
         orders_directory=orders_directory,

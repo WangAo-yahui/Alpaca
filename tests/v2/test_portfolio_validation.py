@@ -97,7 +97,7 @@ class PortfolioValidationTests(unittest.TestCase):
             ] = forbidden
 
             identity = copy.deepcopy(baseline)
-            identity["profile_id"] = "paper1"
+            identity["profile_id"] = "paper2"
             cases["PROFILE_ID_MISMATCH"] = identity
 
             signature = copy.deepcopy(baseline)

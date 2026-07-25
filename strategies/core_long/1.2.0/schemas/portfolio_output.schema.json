@@ -1,0 +1,497 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://wa-trader.local/schemas/v2/portfolio_output.schema.json",
+  "title": "WA Trader v2 portfolio decision output",
+  "description": "作用：约束 Stage D 只输出战略权重、研究结论和执行前复核点。重要性：严格字段集合阻止最终数量与订单参数越过阶段边界。",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "stage",
+    "profile_id",
+    "strategy_id",
+    "strategy_version",
+    "run_date",
+    "cycle_id",
+    "generated_at",
+    "input_signature",
+    "status",
+    "network_research",
+    "guidance_response",
+    "market_assessment",
+    "allocation",
+    "decisions",
+    "open_order_assessments",
+    "watchlist",
+    "execution_focus",
+    "requires_rebalance_next_cycle",
+    "valid_until",
+    "warnings",
+    "source_references"
+  ],
+  "properties": {
+    "schema_version": {
+      "type": "string",
+      "const": "1.0"
+    },
+    "stage": {
+      "type": "string",
+      "const": "portfolio_decision"
+    },
+    "profile_id": {
+      "type": "string",
+      "minLength": 1
+    },
+    "strategy_id": {
+      "type": "string",
+      "minLength": 1
+    },
+    "strategy_version": {
+      "type": "string",
+      "minLength": 1
+    },
+    "run_date": {
+      "type": "string",
+      "minLength": 10
+    },
+    "cycle_id": {
+      "type": "string",
+      "minLength": 15
+    },
+    "generated_at": {
+      "type": "string",
+      "minLength": 10
+    },
+    "input_signature": {
+      "type": "string",
+      "minLength": 64,
+      "maxLength": 64
+    },
+    "status": {
+      "type": "string",
+      "enum": [
+        "success",
+        "success_local_only"
+      ]
+    },
+    "network_research": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "status",
+        "web_access",
+        "summary",
+        "warnings"
+      ],
+      "properties": {
+        "status": {
+          "type": "string",
+          "enum": [
+            "completed",
+            "unavailable",
+            "not_requested"
+          ]
+        },
+        "web_access": {
+          "type": "boolean"
+        },
+        "summary": {
+          "type": "string"
+        },
+        "warnings": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        }
+      }
+    },
+    "guidance_response": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "summary",
+        "accepted_points",
+        "modified_points",
+        "rejected_points",
+        "constraint_conflicts"
+      ],
+      "properties": {
+        "summary": {
+          "type": "string"
+        },
+        "accepted_points": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "modified_points": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "rejected_points": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "constraint_conflicts": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        }
+      }
+    },
+    "market_assessment": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "regime",
+        "summary",
+        "key_risks"
+      ],
+      "properties": {
+        "regime": {
+          "type": "string"
+        },
+        "summary": {
+          "type": "string"
+        },
+        "key_risks": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        }
+      }
+    },
+    "allocation": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "target_cash_weight",
+        "target_invested_weight",
+        "target_position_count",
+        "maximum_single_symbol_weight",
+        "maximum_sector_weight",
+        "deployment_posture",
+        "rationale"
+      ],
+      "properties": {
+        "target_cash_weight": {
+          "type": "string"
+        },
+        "target_invested_weight": {
+          "type": "string"
+        },
+        "target_position_count": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "maximum_single_symbol_weight": {
+          "type": "string"
+        },
+        "maximum_sector_weight": {
+          "type": "string"
+        },
+        "deployment_posture": {
+          "type": "string",
+          "enum": [
+            "defensive",
+            "gradual",
+            "balanced"
+          ]
+        },
+        "rationale": {
+          "type": "string",
+          "minLength": 1
+        }
+      }
+    },
+    "decisions": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "symbol",
+          "current_position",
+          "in_current_coarse",
+          "action",
+          "conviction",
+          "target_weight",
+          "maximum_weight",
+          "priority",
+          "price_plan",
+          "protection_plan",
+          "thesis",
+          "risks",
+          "catalysts",
+          "portfolio_role",
+          "execution_checks",
+          "source_references"
+        ],
+        "properties": {
+          "symbol": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 15
+          },
+          "current_position": {
+            "type": "boolean"
+          },
+          "in_current_coarse": {
+            "type": "boolean"
+          },
+          "action": {
+            "type": "string",
+            "enum": [
+              "open",
+              "increase",
+              "hold",
+              "reduce",
+              "close",
+              "watch",
+              "avoid"
+            ]
+          },
+          "conviction": {
+            "type": "string",
+            "enum": [
+              "high",
+              "medium",
+              "low"
+            ]
+          },
+          "target_weight": {
+            "type": "string"
+          },
+          "maximum_weight": {
+            "type": "string"
+          },
+          "priority": {
+            "type": "integer",
+            "minimum": 1
+          },
+          "price_plan": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "currency",
+              "entry_zone_low",
+              "entry_zone_high",
+              "do_not_chase_above",
+              "review_below",
+              "notes"
+            ],
+            "properties": {
+              "currency": {
+                "type": "string",
+                "const": "USD"
+              },
+              "entry_zone_low": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              },
+              "entry_zone_high": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              },
+              "do_not_chase_above": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              },
+              "review_below": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              },
+              "notes": {
+                "type": "string"
+              }
+            }
+          },
+          "protection_plan": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "style",
+              "reference_price",
+              "maximum_loss_fraction",
+              "notes"
+            ],
+            "properties": {
+              "style": {
+                "type": "string",
+                "enum": [
+                  "review_threshold",
+                  "thesis_break",
+                  "none"
+                ]
+              },
+              "reference_price": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              },
+              "maximum_loss_fraction": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              },
+              "notes": {
+                "type": "string"
+              }
+            }
+          },
+          "thesis": {
+            "type": "string"
+          },
+          "risks": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "catalysts": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "portfolio_role": {
+            "type": "string"
+          },
+          "execution_checks": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "source_references": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          }
+        }
+      }
+    },
+    "open_order_assessments": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "order_reference",
+          "symbol",
+          "assessment",
+          "reason",
+          "conflicts_with_target"
+        ],
+        "properties": {
+          "order_reference": {
+            "type": "string"
+          },
+          "symbol": {
+            "type": "string"
+          },
+          "assessment": {
+            "type": "string",
+            "enum": [
+              "keep",
+              "review",
+              "cancel",
+              "replace"
+            ]
+          },
+          "reason": {
+            "type": "string"
+          },
+          "conflicts_with_target": {
+            "type": "boolean"
+          }
+        }
+      }
+    },
+    "watchlist": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "execution_focus": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "requires_rebalance_next_cycle": {
+      "type": "boolean"
+    },
+    "valid_until": {
+      "type": "string",
+      "minLength": 10
+    },
+    "warnings": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "source_references": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "id",
+          "title",
+          "url",
+          "source_type",
+          "retrieved_at"
+        ],
+        "properties": {
+          "id": {
+            "type": "string",
+            "minLength": 1
+          },
+          "title": {
+            "type": "string",
+            "minLength": 1
+          },
+          "url": {
+            "type": "string"
+          },
+          "source_type": {
+            "type": "string",
+            "enum": [
+              "web",
+              "input",
+              "local"
+            ]
+          },
+          "retrieved_at": {
+            "type": [
+              "string",
+              "null"
+            ]
+          }
+        }
+      }
+    }
+  }
+}

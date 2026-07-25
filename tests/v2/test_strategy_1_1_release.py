@@ -4,12 +4,11 @@ from __future__ import annotations
 
 import unittest
 
-from v2.profiles import load_profile
 from v2.releases import load_strategy_release
 
 
 class StrategyOneOneReleaseTests(unittest.TestCase):
-    def test_release_and_paper2_upgrade(self) -> None:
+    def test_release_contains_portfolio_capability(self) -> None:
         release = load_strategy_release(
             "core_long",
             "1.1.0",
@@ -21,12 +20,6 @@ class StrategyOneOneReleaseTests(unittest.TestCase):
         self.assertIn(
             "schemas/portfolio_output.schema.json",
             release.schema_hashes,
-        )
-        self.assertEqual(
-            load_profile(
-                "paper2"
-            ).strategy_version,
-            "1.1.0",
         )
 
     def test_coarse_artifacts_match_1_0_0(

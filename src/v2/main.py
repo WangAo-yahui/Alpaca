@@ -1,13 +1,14 @@
-"""WA Trader v2 Stage D 主流程入口。
+"""WA Trader v2 Stage E 主流程入口。
 
-作用：装载运行身份，刷新基础数据，运行或复用粗选与组合，并收集执行前意见。
-重要性：当前版本必须停在 REFRESH_EXECUTION_DATA，不运行执行逻辑或生成、提交订单。
+作用：装载 paper1 身份，刷新基础与执行数据，并运行粗选、组合、复查和执行意图代理。
+重要性：当前版本必须停在 BUILD_ORDERS，不生成最终数量、Alpaca OrderRequest 或提交订单。
 """
 
 from __future__ import annotations
 
 import sys
 from dataclasses import dataclass
+from datetime import datetime, timezone
 from pathlib import Path
 from typing import Callable, TextIO
 
@@ -36,9 +37,14 @@ from v2.data.snapshots import (  # noqa: E402
 from v2.data.daily_bars import (  # noqa: E402
     DailyBarStore,
 )
+from v2.data.execution_snapshot import (  # noqa: E402
+    ExecutionSnapshotResult,
+    create_execution_snapshot,
+)
 from v2.exceptions import (  # noqa: E402
     ConfigurationError,
     LiveTradingRejected,
+    SafetyBlockedError,
     TemporaryDataError,
     V2Error,
 )
@@ -83,10 +89,12 @@ from v2.releases import (  # noqa: E402
 )
 from v2.runtime import (  # noqa: E402
     CyclePaths,
+    atomic_write_json,
     build_cycle_paths,
     build_daily_paths,
     create_cycle_paths,
     ensure_cycle_directories,
+    load_json_object,
     normalize_cycle_id,
     normalize_run_date,
     utc_now_iso,
@@ -113,9 +121,14 @@ from v2.stages.portfolio import (  # noqa: E402
     PortfolioStageResult,
     execute_portfolio_decision,
 )
+from v2.stages.execution import (  # noqa: E402
+    ExecutionRunner,
+    ExecutionStageResult,
+    execute_execution_decision,
+)
 
 
-SCRIPT_VERSION = "2026-07-25-v2-stage-d-v1"
+SCRIPT_VERSION = "2026-07-25-v2-stage-e-v1"
 
 
 @dataclass(frozen=True)
@@ -157,6 +170,141 @@ class StageDRunResult:
     portfolio: PortfolioStageResult | None
     review: UserReview | None
     stopped_at: StepName | None
+
+
+@dataclass(frozen=True)
+class StageERunResult:
+    resolution: CycleResolution
+    stage_d_result: StageDRunResult
+    execution_snapshot: (
+        ExecutionSnapshotResult | None
+    )
+    execution: ExecutionStageResult | None
+    stopped_at: StepName | None
+
+
+def _parse_utc_timestamp(
+    value: object,
+) -> datetime | None:
+    if not isinstance(value, str):
+        return None
+    normalized = value.strip()
+    if normalized.endswith("Z"):
+        normalized = (
+            normalized[:-1] + "+00:00"
+        )
+    try:
+        parsed = datetime.fromisoformat(
+            normalized
+        )
+    except ValueError:
+        return None
+    if parsed.tzinfo is None:
+        parsed = parsed.replace(
+            tzinfo=timezone.utc
+        )
+    return parsed.astimezone(timezone.utc)
+
+
+def _load_portfolio_for_execution(
+    paths: CyclePaths,
+    state: CycleState,
+) -> dict[str, object]:
+    """Load this cycle's portfolio or safely adopt the latest valid same-day one."""
+
+    if paths.portfolio_output.is_file():
+        return load_json_object(
+            paths.portfolio_output
+        )
+    daily_state = load_daily_state(
+        paths.daily_state
+    )
+    source_text = (
+        daily_state
+        .latest_valid_portfolio_output_path
+    )
+    if not source_text:
+        raise SafetyBlockedError(
+            "执行阶段没有可用portfolio output",
+            code="EXECUTION_PORTFOLIO_MISSING",
+        )
+    source_path = Path(source_text)
+    if (
+        not source_path.is_file()
+        or not source_path.resolve()
+        .is_relative_to(
+            paths.cycles_directory.resolve()
+        )
+    ):
+        raise SafetyBlockedError(
+            "历史portfolio路径不属于当前身份与日期",
+            code=(
+                "EXECUTION_PORTFOLIO_IDENTITY_MISMATCH"
+            ),
+        )
+    source_validation = (
+        source_path.parent / "validation.json"
+    )
+    if not source_validation.is_file():
+        raise SafetyBlockedError(
+            "历史portfolio缺少验证记录",
+            code="EXECUTION_PORTFOLIO_INVALID",
+        )
+    validation = load_json_object(
+        source_validation
+    )
+    portfolio = load_json_object(
+        source_path
+    )
+    valid_until = _parse_utc_timestamp(
+        portfolio.get("valid_until")
+    )
+    now = datetime.now(timezone.utc)
+    if (
+        validation.get("valid") is not True
+        or portfolio.get("profile_id")
+        != paths.profile_id
+        or portfolio.get("strategy_id")
+        != paths.strategy_id
+        or portfolio.get("strategy_version")
+        != paths.strategy_version
+        or portfolio.get("run_date")
+        != paths.run_date
+        or valid_until is None
+        or valid_until <= now
+    ):
+        raise SafetyBlockedError(
+            "历史portfolio已过期或身份无效",
+            code="EXECUTION_PORTFOLIO_INVALID",
+        )
+    atomic_write_json(
+        paths.portfolio_output,
+        portfolio,
+    )
+    atomic_write_json(
+        paths.portfolio_reuse,
+        {
+            "schema_version": "1.0",
+            "stage": "portfolio_decision",
+            "reused": True,
+            "source_cycle_id": (
+                daily_state
+                .latest_valid_portfolio_cycle_id
+            ),
+            "source_output_path": str(
+                source_path
+            ),
+            "reused_at": utc_now_iso(),
+            "reason": (
+                "execution_refresh采用同日有效组合"
+            ),
+        },
+    )
+    state.reused_portfolio_cycle_id = (
+        daily_state
+        .latest_valid_portfolio_cycle_id
+    )
+    return portfolio
 
 
 def load_runtime_identity(
@@ -1383,15 +1531,273 @@ def print_stage_d_result(
     print("未生成或提交订单")
 
 
+def run_stage_e(
+    options: CLIOptions,
+    *,
+    project_root: Path | None = None,
+    clients: AlpacaClients | None = None,
+    coarse_runner: CoarseRunner | None = None,
+    portfolio_runner: PortfolioRunner | None = None,
+    execution_runner: ExecutionRunner | None = None,
+    bar_store: DailyBarStore | None = None,
+    review_input_func: Callable[[str], str] = input,
+    review_stdin: TextIO | None = None,
+) -> StageERunResult:
+    """Run through execution intent and stop before any order construction."""
+
+    stage_d_result = run_stage_d(
+        options,
+        project_root=project_root,
+        clients=clients,
+        coarse_runner=coarse_runner,
+        portfolio_runner=portfolio_runner,
+        bar_store=bar_store,
+        review_input_func=review_input_func,
+        review_stdin=review_stdin,
+    )
+    resolution = stage_d_result.resolution
+    paths = resolution.paths
+    state = resolution.state
+    snapshot_result: (
+        ExecutionSnapshotResult | None
+    ) = None
+    execution_result: (
+        ExecutionStageResult | None
+    ) = None
+
+    if (
+        next_step(state)
+        == StepName.REFRESH_EXECUTION_DATA
+    ):
+        begin_next_step(state)
+        save_cycle_state(
+            paths.cycle_state,
+            state,
+        )
+        try:
+            active_clients = clients
+            if active_clients is None:
+                profile = load_profile(
+                    paths.profile_id,
+                    project_root=project_root,
+                )
+                active_clients = (
+                    create_alpaca_clients(
+                        paper=options.paper,
+                        live=options.live,
+                        project_root=project_root,
+                        profile=profile,
+                    )
+                )
+            portfolio_output = (
+                _load_portfolio_for_execution(
+                    paths,
+                    state,
+                )
+            )
+            config = load_config(
+                project_root=project_root,
+            )
+            snapshot_result = (
+                create_execution_snapshot(
+                    paths,
+                    active_clients,
+                    portfolio_output=(
+                        portfolio_output
+                    ),
+                    minute_window=int(
+                        config.market_data[
+                            "minute_bar_window"
+                        ]
+                    ),
+                )
+            )
+            if not snapshot_result.execution_ready:
+                raise TemporaryDataError(
+                    "执行级账户、持仓或订单数据不完整，"
+                    "已保存快照并阻止第三阶段",
+                    code=(
+                        "EXECUTION_SNAPSHOT_NOT_READY"
+                    ),
+                )
+            complete_current_step(
+                state,
+                output_path=str(
+                    paths.execution_snapshot
+                ),
+                message="执行级数据刷新成功",
+            )
+            save_cycle_state(
+                paths.cycle_state,
+                state,
+            )
+        except Exception as error:
+            fail_current_step(state, error)
+            save_cycle_state(
+                paths.cycle_state,
+                state,
+            )
+            raise
+
+    if next_step(state) == StepName.RUN_EXECUTION:
+        begin_next_step(state)
+        save_cycle_state(
+            paths.cycle_state,
+            state,
+        )
+        try:
+            execution_result = (
+                execute_execution_decision(
+                    paths=paths,
+                    state=state,
+                    config=load_config(
+                        project_root=project_root,
+                    ),
+                    runner=execution_runner,
+                )
+            )
+            complete_current_step(
+                state,
+                output_path=str(
+                    paths.execution_output
+                ),
+                message=(
+                    "完成并验证第三阶段执行意图"
+                ),
+            )
+            save_cycle_state(
+                paths.cycle_state,
+                state,
+            )
+        except Exception as error:
+            fail_current_step(state, error)
+            save_cycle_state(
+                paths.cycle_state,
+                state,
+            )
+            raise
+
+    return StageERunResult(
+        resolution=CycleResolution(
+            paths=paths,
+            state=state,
+            resumed=resolution.resumed,
+            reason=resolution.reason,
+        ),
+        stage_d_result=stage_d_result,
+        execution_snapshot=snapshot_result,
+        execution=execution_result,
+        stopped_at=next_step(state),
+    )
+
+
+def print_stage_e_result(
+    result: StageERunResult,
+) -> None:
+    """Print the deployed identity, validations and zero-order safety stop."""
+
+    state = result.resolution.state
+    print_bootstrap_result(result.resolution)
+    print(f"Profile：{state.profile_id}")
+    print("账户环境：paper")
+    print(
+        "策略："
+        f"{state.release['strategy_id']}@"
+        f"{state.release['strategy_version']}"
+    )
+    print(
+        f"风险：{state.release['risk_profile']}"
+    )
+    print(
+        "交易提交权限："
+        + (
+            "enabled"
+            if state.trade_permission
+            .submission_enabled
+            else "dry-run"
+        )
+    )
+    coarse = (
+        result.stage_d_result
+        .stage_c_result.coarse
+    )
+    print(
+        "第一阶段："
+        + (
+            coarse.action
+            if coarse is not None
+            else "not_required"
+        )
+    )
+    portfolio = result.stage_d_result.portfolio
+    print(
+        "第二阶段："
+        + (
+            portfolio.action
+            if portfolio is not None
+            else "not_required"
+        )
+    )
+    review = result.stage_d_result.review
+    print(
+        "执行前复查："
+        + (
+            review.mode
+            if review is not None
+            else "existing"
+        )
+    )
+    print(
+        "执行数据刷新："
+        + (
+            "成功"
+            if result.execution_snapshot
+            is not None
+            else "复用当前轮次"
+        )
+    )
+    execution = result.execution
+    if execution is not None:
+        print(
+            f"第三阶段：{execution.action}"
+        )
+        print("第三阶段校验：通过")
+        print(
+            f"Approve：{execution.approve_count}"
+        )
+        print(
+            f"Modify：{execution.modify_count}"
+        )
+        print(
+            f"Defer：{execution.defer_count}"
+        )
+        print(
+            f"Reject：{execution.reject_count}"
+        )
+        print(
+            "No action："
+            f"{execution.no_action_count}"
+        )
+    else:
+        print("第三阶段：复用当前轮次")
+    print(
+        "下一步骤："
+        f"{result.stopped_at.value if result.stopped_at else '无'}"
+    )
+    print("订单构建尚未实现")
+    print("提交订单数：0")
+    print("未生成、取消、替换或提交订单")
+
+
 def main() -> int:
     print(f"脚本版本：{SCRIPT_VERSION}")
 
     try:
         options = parse_cli_args()
-        result = run_stage_d(
+        result = run_stage_e(
             options
         )
-        print_stage_d_result(
+        print_stage_e_result(
             result
         )
         return 0
