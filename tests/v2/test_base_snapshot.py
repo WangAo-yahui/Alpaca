@@ -193,6 +193,8 @@ class BaseSnapshotTests(unittest.TestCase):
             result = run_stage_b(
                 parse_cli_args(
                     [
+                        "--profile",
+                        "default",
                         "--run-date",
                         "2026-07-23",
                         "--no-review",

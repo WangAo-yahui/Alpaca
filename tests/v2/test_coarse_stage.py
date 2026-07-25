@@ -53,6 +53,8 @@ def clients(
 def options(*extra: str):
     return parse_cli_args(
         [
+            "--profile",
+            "default",
             "--run-date",
             "2026-07-23",
             "--no-review",
