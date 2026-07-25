@@ -33,7 +33,7 @@ from v2.runtime import (  # noqa: E402
 )
 
 
-SCRIPT_VERSION = "2026-07-23-v2-state-models-stage-b-v1"
+SCRIPT_VERSION = "2026-07-25-v2-state-models-stage-c5-v1"
 SCHEMA_VERSION = "1.0"
 
 
@@ -438,6 +438,9 @@ def default_stage_records() -> dict[str, StageRecord]:
 class DailyState:
     schema_version: str
     run_date: str
+    profile_id: str
+    strategy_id: str
+    strategy_version: str
     config_version: str
     config_signature: str
     first_successful_cycle_id: str | None
@@ -486,6 +489,19 @@ class DailyState:
             raise ValueError(
                 "DailyState.config_signature不能为空"
             )
+
+        for label, value in (
+            ("profile_id", self.profile_id),
+            ("strategy_id", self.strategy_id),
+            (
+                "strategy_version",
+                self.strategy_version,
+            ),
+        ):
+            if not value.strip():
+                raise ValueError(
+                    f"DailyState.{label}不能为空"
+                )
 
         if len(set(self.cycle_ids)) != len(
             self.cycle_ids
@@ -545,6 +561,11 @@ class DailyState:
         return {
             "schema_version": self.schema_version,
             "run_date": self.run_date,
+            "profile_id": self.profile_id,
+            "strategy_id": self.strategy_id,
+            "strategy_version": (
+                self.strategy_version
+            ),
             "config_version": self.config_version,
             "config_signature": self.config_signature,
             "first_successful_cycle_id": (
@@ -595,6 +616,24 @@ class DailyState:
             ),
             run_date=str(
                 payload.get("run_date", "")
+            ),
+            profile_id=str(
+                payload.get(
+                    "profile_id",
+                    "default",
+                )
+            ),
+            strategy_id=str(
+                payload.get(
+                    "strategy_id",
+                    "core_long",
+                )
+            ),
+            strategy_version=str(
+                payload.get(
+                    "strategy_version",
+                    "1.0.0",
+                )
             ),
             config_version=str(
                 payload.get(
@@ -690,6 +729,9 @@ class CycleState:
     config_signature: str
     invocation: InvocationState
     trade_permission: TradePermission
+    profile_id: str
+    release: dict[str, Any]
+    guidance: dict[str, Any]
 
     created_at: str
     updated_at: str
@@ -753,6 +795,42 @@ class CycleState:
         if not self.config_signature.strip():
             raise ValueError(
                 "CycleState.config_signature不能为空"
+            )
+
+        if not self.profile_id.strip():
+            raise ValueError(
+                "CycleState.profile_id不能为空"
+            )
+        required_release = {
+            "app_version",
+            "git_commit",
+            "strategy_id",
+            "strategy_version",
+            "risk_profile",
+            "release_hash",
+            "prompt_hashes",
+            "schema_hashes",
+            "config_hashes",
+        }
+        if (
+            not isinstance(self.release, dict)
+            or not required_release.issubset(
+                self.release
+            )
+        ):
+            raise ValueError(
+                "CycleState.release不完整"
+            )
+        if not isinstance(self.guidance, dict):
+            raise ValueError(
+                "CycleState.guidance必须是对象"
+            )
+        if not {
+            "path",
+            "guidance_hash",
+        }.issubset(self.guidance):
+            raise ValueError(
+                "CycleState.guidance不完整"
             )
 
         self.invocation.validate()
@@ -871,6 +949,9 @@ class CycleState:
             "trade_permission": (
                 self.trade_permission.to_dict()
             ),
+            "profile_id": self.profile_id,
+            "release": dict(self.release),
+            "guidance": dict(self.guidance),
             "created_at": self.created_at,
             "updated_at": self.updated_at,
             "started_at_new_york": (
@@ -1025,6 +1106,46 @@ class CycleState:
                     raw_permission
                 )
             ),
+            profile_id=str(
+                payload.get(
+                    "profile_id",
+                    "default",
+                )
+            ),
+            release=(
+                dict(payload["release"])
+                if isinstance(
+                    payload.get("release"),
+                    dict,
+                )
+                else {
+                    "app_version": "2.0.0",
+                    "git_commit": "unknown",
+                    "strategy_id": "core_long",
+                    "strategy_version": "1.0.0",
+                    "risk_profile": (
+                        "paper_standard@1.0.0"
+                    ),
+                    "release_hash": "unknown",
+                    "prompt_hashes": {},
+                    "schema_hashes": {},
+                    "config_hashes": {},
+                }
+            ),
+            guidance=(
+                dict(payload["guidance"])
+                if isinstance(
+                    payload.get("guidance"),
+                    dict,
+                )
+                else {
+                    "path": "",
+                    "guidance_hash": (
+                        "e3b0c44298fc1c149afbf4c8996fb924"
+                        "27ae41e4649b934ca495991b7852b855"
+                    ),
+                }
+            ),
             created_at=str(
                 payload.get(
                     "created_at",
@@ -1141,6 +1262,9 @@ def new_daily_state(
     state = DailyState(
         schema_version=SCHEMA_VERSION,
         run_date=paths.run_date,
+        profile_id=paths.profile_id,
+        strategy_id=paths.strategy_id,
+        strategy_version=paths.strategy_version,
         config_version=config_version,
         config_signature=config_signature,
         first_successful_cycle_id=None,
@@ -1170,6 +1294,8 @@ def new_cycle_state(
     allow_trade: bool = False,
     paper: bool = True,
     live: bool = False,
+    release: dict[str, Any] | None = None,
+    guidance: dict[str, Any] | None = None,
 ) -> CycleState:
     """创建新的轮次级状态对象。"""
     now = utc_now_iso()
@@ -1192,6 +1318,39 @@ def new_cycle_state(
         ),
         trade_permission=trade_permission(
             allow_trade
+        ),
+        profile_id=paths.profile_id,
+        release=(
+            dict(release)
+            if release is not None
+            else {
+                "app_version": "2.0.0",
+                "git_commit": "unknown",
+                "strategy_id": paths.strategy_id,
+                "strategy_version": (
+                    paths.strategy_version
+                ),
+                "risk_profile": (
+                    "paper_standard@1.0.0"
+                ),
+                "release_hash": "unknown",
+                "prompt_hashes": {},
+                "schema_hashes": {},
+                "config_hashes": {},
+            }
+        ),
+        guidance=(
+            dict(guidance)
+            if guidance is not None
+            else {
+                "path": str(
+                    paths.initial_guidance
+                ),
+                "guidance_hash": (
+                    "e3b0c44298fc1c149afbf4c8996fb924"
+                    "27ae41e4649b934ca495991b7852b855"
+                ),
+            }
         ),
         created_at=now,
         updated_at=now,
@@ -1290,6 +1449,8 @@ def initialize_cycle_state(
     allow_trade: bool = False,
     paper: bool = True,
     live: bool = False,
+    release: dict[str, Any] | None = None,
+    guidance: dict[str, Any] | None = None,
 ) -> CycleState:
     if paths.cycle_state.exists() and not overwrite:
         return load_cycle_state(
@@ -1307,6 +1468,8 @@ def initialize_cycle_state(
         allow_trade=allow_trade,
         paper=paper,
         live=live,
+        release=release,
+        guidance=guidance,
     )
     save_cycle_state(
         paths.cycle_state,

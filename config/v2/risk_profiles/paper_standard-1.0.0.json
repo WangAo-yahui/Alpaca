@@ -1,0 +1,12 @@
+{
+  "schema_version": "1.0",
+  "risk_profile_id": "paper_standard",
+  "risk_profile_version": "1.0.0",
+  "environment": "paper",
+  "settings": {
+    "maximum_gross_exposure": 0.75,
+    "maximum_single_position_weight": 0.08,
+    "minimum_cash_weight": 0.25,
+    "allow_short_positions": false
+  }
+}

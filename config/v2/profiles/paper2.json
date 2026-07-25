@@ -1,0 +1,14 @@
+{
+  "schema_version": "1.0",
+  "profile_id": "paper2",
+  "enabled": true,
+  "broker": "alpaca",
+  "environment": "paper",
+  "credential_key_env": "ALPACA_PAPER2_API_KEY",
+  "credential_secret_env": "ALPACA_PAPER2_SECRET_KEY",
+  "strategy": {
+    "strategy_id": "core_long",
+    "strategy_version": "1.0.0"
+  },
+  "risk_profile": "paper_standard@1.0.0"
+}

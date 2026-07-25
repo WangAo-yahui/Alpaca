@@ -12,27 +12,36 @@ from typing import Any
 from zoneinfo import ZoneInfo
 
 
-SCRIPT_VERSION = "2026-07-23-v2-runtime-v1"
+SCRIPT_VERSION = "2026-07-25-v2-runtime-stage-c5-v1"
 
 NEW_YORK_TZ = ZoneInfo("America/New_York")
 
 RUNTIME_ROOT_NAME = "decision_runtime_v2"
-REPORT_ROOT_PARTS = ("reports", "v2", "daily")
+REPORT_ROOT_PARTS = ("reports", "v2")
 
 RUN_DATE_PATTERN = re.compile(r"^\d{4}-\d{2}-\d{2}$")
 CYCLE_ID_PATTERN = re.compile(r"^\d{8}T\d{6}$")
+IDENTITY_COMPONENT_PATTERN = re.compile(
+    r"^[A-Za-z0-9][A-Za-z0-9._-]*$"
+)
 
 
 @dataclass(frozen=True)
 class DailyPaths:
     project_root: Path
     run_date: str
+    profile_id: str
+    strategy_id: str
+    strategy_version: str
 
     runtime_root: Path
+    identity_root: Path
     day_directory: Path
     daily_state: Path
 
     coarse_directory: Path
+    coarse_current: Path
+    coarse_revisions: Path
     coarse_input: Path
     coarse_output: Path
     coarse_validation: Path
@@ -48,11 +57,17 @@ class CyclePaths:
     project_root: Path
     run_date: str
     cycle_id: str
+    profile_id: str
+    strategy_id: str
+    strategy_version: str
 
     runtime_root: Path
+    identity_root: Path
     day_directory: Path
     daily_state: Path
     coarse_directory: Path
+    coarse_current: Path
+    coarse_revisions: Path
     coarse_input: Path
     coarse_output: Path
     coarse_validation: Path
@@ -63,6 +78,7 @@ class CyclePaths:
     cycle_directory: Path
     cycle_state: Path
     base_snapshot: Path
+    initial_guidance: Path
     user_review: Path
     cycle_summary: Path
 
@@ -85,6 +101,29 @@ class CyclePaths:
     reconciliation: Path
 
     daily_report: Path
+
+
+@dataclass(frozen=True)
+class CoarseRevisionPaths:
+    input_signature: str
+    revision_directory: Path
+    input: Path
+    output: Path
+    validation: Path
+    codex_call: Path
+    workspace: Path
+
+
+@dataclass(frozen=True)
+class SharedDataPaths:
+    root: Path
+    universe: Path
+    market: Path
+    daily: Path
+    intraday: Path
+    quotes: Path
+    assets: Path
+    public_research_cache: Path
 
 
 def get_project_root() -> Path:
@@ -198,10 +237,53 @@ def generate_cycle_id(
     return current.strftime("%Y%m%dT%H%M%S")
 
 
+def normalize_identity_component(
+    value: str,
+    *,
+    field: str,
+) -> str:
+    normalized = str(value).strip()
+    if not IDENTITY_COMPONENT_PATTERN.fullmatch(
+        normalized
+    ):
+        raise ValueError(
+            f"{field}格式无效：{value}"
+        )
+    return normalized
+
+
+def build_shared_data_paths(
+    *,
+    project_root: Path | None = None,
+) -> SharedDataPaths:
+    root = (
+        project_root.expanduser().resolve()
+        if project_root is not None
+        else get_project_root()
+    )
+    shared = root / "shared_data"
+    market = shared / "market"
+    return SharedDataPaths(
+        root=shared,
+        universe=shared / "universe",
+        market=market,
+        daily=market / "daily",
+        intraday=market / "intraday",
+        quotes=market / "quotes",
+        assets=shared / "assets",
+        public_research_cache=(
+            shared / "public_research_cache"
+        ),
+    )
+
+
 def build_daily_paths(
     run_date: str | date | datetime | None = None,
     *,
     project_root: Path | None = None,
+    profile_id: str = "default",
+    strategy_id: str = "core_long",
+    strategy_version: str = "1.0.0",
 ) -> DailyPaths:
     """
     构造日期级规范路径。
@@ -213,23 +295,60 @@ def build_daily_paths(
     )
 
     normalized_date = normalize_run_date(run_date)
+    normalized_profile = normalize_identity_component(
+        profile_id,
+        field="profile_id",
+    )
+    normalized_strategy = normalize_identity_component(
+        strategy_id,
+        field="strategy_id",
+    )
+    normalized_version = normalize_identity_component(
+        strategy_version,
+        field="strategy_version",
+    )
 
     runtime_root = root / RUNTIME_ROOT_NAME
-    day_directory = runtime_root / normalized_date
+    identity_root = (
+        runtime_root
+        / "accounts"
+        / normalized_profile
+        / "strategies"
+        / normalized_strategy
+        / normalized_version
+    )
+    day_directory = identity_root / normalized_date
     coarse_directory = day_directory / "coarse"
+    coarse_revisions = coarse_directory / "revisions"
     cycles_directory = day_directory / "cycles"
 
-    report_root = root.joinpath(*REPORT_ROOT_PARTS)
+    report_root = (
+        root.joinpath(*REPORT_ROOT_PARTS)
+        / "accounts"
+        / normalized_profile
+        / "strategies"
+        / normalized_strategy
+        / normalized_version
+        / "daily"
+    )
 
     return DailyPaths(
         project_root=root,
         run_date=normalized_date,
+        profile_id=normalized_profile,
+        strategy_id=normalized_strategy,
+        strategy_version=normalized_version,
         runtime_root=runtime_root,
+        identity_root=identity_root,
         day_directory=day_directory,
         daily_state=day_directory / "daily_state.json",
         coarse_directory=coarse_directory,
+        coarse_current=coarse_directory / "current.json",
+        coarse_revisions=coarse_revisions,
+        # Compatibility aliases for Stage A-C callers.  C.5 orchestration uses
+        # CoarseRevisionPaths exclusively.
         coarse_input=coarse_directory / "input.json",
-        coarse_output=coarse_directory / "output.json",
+        coarse_output=coarse_directory / "current.json",
         coarse_validation=(
             coarse_directory / "validation.json"
         ),
@@ -247,6 +366,9 @@ def build_cycle_paths(
     cycle_id: str,
     run_date: str | date | datetime | None = None,
     project_root: Path | None = None,
+    profile_id: str = "default",
+    strategy_id: str = "core_long",
+    strategy_version: str = "1.0.0",
 ) -> CyclePaths:
     """
     构造轮次级规范路径。
@@ -270,6 +392,9 @@ def build_cycle_paths(
     daily = build_daily_paths(
         normalized_run_date,
         project_root=project_root,
+        profile_id=profile_id,
+        strategy_id=strategy_id,
+        strategy_version=strategy_version,
     )
 
     cycle_directory = (
@@ -285,10 +410,16 @@ def build_cycle_paths(
         project_root=daily.project_root,
         run_date=daily.run_date,
         cycle_id=normalized_cycle_id,
+        profile_id=daily.profile_id,
+        strategy_id=daily.strategy_id,
+        strategy_version=daily.strategy_version,
         runtime_root=daily.runtime_root,
+        identity_root=daily.identity_root,
         day_directory=daily.day_directory,
         daily_state=daily.daily_state,
         coarse_directory=daily.coarse_directory,
+        coarse_current=daily.coarse_current,
+        coarse_revisions=daily.coarse_revisions,
         coarse_input=daily.coarse_input,
         coarse_output=daily.coarse_output,
         coarse_validation=daily.coarse_validation,
@@ -298,6 +429,9 @@ def build_cycle_paths(
         cycle_directory=cycle_directory,
         cycle_state=cycle_directory / "cycle_state.json",
         base_snapshot=cycle_directory / "base_snapshot.json",
+        initial_guidance=(
+            cycle_directory / "initial_guidance.json"
+        ),
         user_review=cycle_directory / "user_review.json",
         cycle_summary=cycle_directory / "cycle_summary.json",
         portfolio_directory=portfolio_directory,
@@ -323,15 +457,37 @@ def build_cycle_paths(
     )
 
 
+def build_coarse_revision_paths(
+    paths: DailyPaths | CyclePaths,
+    input_signature: str,
+) -> CoarseRevisionPaths:
+    signature = str(input_signature).strip().lower()
+    if not re.fullmatch(r"[0-9a-f]{64}", signature):
+        raise ValueError(
+            "coarse input_signature必须是64位SHA-256"
+        )
+    root = paths.coarse_revisions / signature
+    return CoarseRevisionPaths(
+        input_signature=signature,
+        revision_directory=root,
+        input=root / "input.json",
+        output=root / "output.json",
+        validation=root / "validation.json",
+        codex_call=root / "codex_call.json",
+        workspace=root / "workspace",
+    )
+
+
 def ensure_daily_directories(paths: DailyPaths) -> None:
     """
     创建日期级目录，但不创建任何状态文件。
     """
     for directory in (
         paths.runtime_root,
+        paths.identity_root,
         paths.day_directory,
         paths.coarse_directory,
-        paths.coarse_workspace,
+        paths.coarse_revisions,
         paths.cycles_directory,
         paths.daily_report.parent,
     ):
@@ -348,6 +504,9 @@ def ensure_cycle_directories(paths: CyclePaths) -> None:
     daily_paths = build_daily_paths(
         paths.run_date,
         project_root=paths.project_root,
+        profile_id=paths.profile_id,
+        strategy_id=paths.strategy_id,
+        strategy_version=paths.strategy_version,
     )
     ensure_daily_directories(daily_paths)
 
@@ -365,10 +524,32 @@ def ensure_cycle_directories(paths: CyclePaths) -> None:
         )
 
 
+def ensure_shared_data_directories(
+    paths: SharedDataPaths,
+) -> None:
+    for directory in (
+        paths.root,
+        paths.universe,
+        paths.market,
+        paths.daily,
+        paths.intraday,
+        paths.quotes,
+        paths.assets,
+        paths.public_research_cache,
+    ):
+        directory.mkdir(
+            parents=True,
+            exist_ok=True,
+        )
+
+
 def list_cycle_ids(
     run_date: str | date | datetime | None = None,
     *,
     project_root: Path | None = None,
+    profile_id: str = "default",
+    strategy_id: str = "core_long",
+    strategy_version: str = "1.0.0",
 ) -> list[str]:
     """
     返回指定纽约日期下所有合法轮次ID。
@@ -376,6 +557,9 @@ def list_cycle_ids(
     paths = build_daily_paths(
         run_date,
         project_root=project_root,
+        profile_id=profile_id,
+        strategy_id=strategy_id,
+        strategy_version=strategy_version,
     )
 
     if not paths.cycles_directory.exists():
@@ -405,6 +589,9 @@ def find_latest_cycle_id(
     run_date: str | date | datetime | None = None,
     *,
     project_root: Path | None = None,
+    profile_id: str = "default",
+    strategy_id: str = "core_long",
+    strategy_version: str = "1.0.0",
 ) -> str | None:
     """
     返回指定日期最新轮次ID。
@@ -412,6 +599,9 @@ def find_latest_cycle_id(
     cycle_ids = list_cycle_ids(
         run_date,
         project_root=project_root,
+        profile_id=profile_id,
+        strategy_id=strategy_id,
+        strategy_version=strategy_version,
     )
 
     return cycle_ids[-1] if cycle_ids else None
@@ -421,6 +611,9 @@ def allocate_cycle_id(
     run_date: str | date | datetime | None = None,
     *,
     project_root: Path | None = None,
+    profile_id: str = "default",
+    strategy_id: str = "core_long",
+    strategy_version: str = "1.0.0",
     now: datetime | None = None,
     max_attempts: int = 120,
 ) -> str:
@@ -457,6 +650,9 @@ def allocate_cycle_id(
             cycle_id=candidate_id,
             run_date=normalized_run_date,
             project_root=project_root,
+            profile_id=profile_id,
+            strategy_id=strategy_id,
+            strategy_version=strategy_version,
         )
 
         if not candidate_paths.cycle_directory.exists():
@@ -472,6 +668,9 @@ def create_cycle_paths(
     run_date: str | date | datetime | None = None,
     *,
     project_root: Path | None = None,
+    profile_id: str = "default",
+    strategy_id: str = "core_long",
+    strategy_version: str = "1.0.0",
     now: datetime | None = None,
 ) -> CyclePaths:
     """
@@ -482,6 +681,9 @@ def create_cycle_paths(
     daily_paths = build_daily_paths(
         normalized_run_date,
         project_root=project_root,
+        profile_id=profile_id,
+        strategy_id=strategy_id,
+        strategy_version=strategy_version,
     )
     ensure_daily_directories(daily_paths)
 
@@ -505,6 +707,9 @@ def create_cycle_paths(
             cycle_id=cycle_id,
             run_date=normalized_run_date,
             project_root=project_root,
+            profile_id=profile_id,
+            strategy_id=strategy_id,
+            strategy_version=strategy_version,
         )
 
         try:

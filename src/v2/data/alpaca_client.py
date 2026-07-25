@@ -5,6 +5,7 @@ from collections.abc import Callable, Mapping
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any, TypeVar
+from typing import TYPE_CHECKING
 
 from alpaca.data.historical import (
     StockHistoricalDataClient,
@@ -19,6 +20,9 @@ from v2.exceptions import (
     V2Error,
 )
 from v2.runtime import get_project_root
+
+if TYPE_CHECKING:
+    from v2.profiles import Profile
 
 
 T = TypeVar("T")
@@ -90,6 +94,7 @@ def create_alpaca_clients(
     stock_data_factory: Callable[
         ..., Any
     ] = StockHistoricalDataClient,
+    profile: "Profile | None" = None,
 ) -> AlpacaClients:
     """Create the only Alpaca client pair used by v2.
 
@@ -121,24 +126,33 @@ def create_alpaca_clients(
     ):
         raise LiveTradingRejected()
 
+    if profile is not None:
+        if profile.environment != "paper":
+            raise LiveTradingRejected()
+        api_names = (
+            profile.credential_key_env,
+        )
+        secret_names = (
+            profile.credential_secret_env,
+        )
+    else:
+        api_names = API_KEY_NAMES
+        secret_names = SECRET_KEY_NAMES
+
     api_key = _first_environment_value(
         source_environment,
-        API_KEY_NAMES,
+        api_names,
     )
     secret_key = _first_environment_value(
         source_environment,
-        SECRET_KEY_NAMES,
+        secret_names,
     )
 
     missing: list[str] = []
     if not api_key:
-        missing.append(
-            "ALPACA_API_KEY/APCA_API_KEY_ID"
-        )
+        missing.append("/".join(api_names))
     if not secret_key:
-        missing.append(
-            "ALPACA_SECRET_KEY/APCA_API_SECRET_KEY"
-        )
+        missing.append("/".join(secret_names))
     if missing:
         raise ConfigurationError(
             "缺少Alpaca paper凭据",

@@ -8,10 +8,13 @@ from typing import Any, Mapping
 
 from v2.config import V2Config
 from v2.runtime import (
+    CoarseRevisionPaths,
     DailyPaths,
     atomic_write_json,
     atomic_write_text,
+    load_json_object,
 )
+from v2.releases import StrategyRelease
 
 
 @dataclass(frozen=True)
@@ -36,12 +39,20 @@ def _read_required(path: Path) -> str:
 
 
 def prepare_coarse_workspace(
-    paths: DailyPaths,
+    paths: DailyPaths | CoarseRevisionPaths,
     *,
     config: V2Config,
     input_payload: Mapping[str, Any],
+    release: StrategyRelease | None = None,
 ) -> CoarseWorkspace:
-    root = paths.coarse_workspace
+    root = (
+        paths.workspace
+        if isinstance(
+            paths,
+            CoarseRevisionPaths,
+        )
+        else paths.coarse_workspace
+    )
     data_directory = root / "data"
     config_directory = root / "config"
     prompts_directory = root / "prompts"
@@ -62,24 +73,41 @@ def prepare_coarse_workspace(
             exist_ok=True,
         )
 
-    source_prompt = (
-        config.project_root
-        / "prompts"
-        / "v2"
-        / "coarse.md"
-    )
-    source_agents = (
-        config.project_root
-        / "prompts"
-        / "v2"
-        / "coarse_AGENTS.md"
-    )
-    source_schema = (
-        config.project_root
-        / "schemas"
-        / "v2"
-        / "coarse_output.schema.json"
-    )
+    if release is None:
+        source_prompt = (
+            config.project_root
+            / "prompts"
+            / "v2"
+            / "coarse.md"
+        )
+        source_agents = (
+            config.project_root
+            / "prompts"
+            / "v2"
+            / "coarse_AGENTS.md"
+        )
+        source_schema = (
+            config.project_root
+            / "schemas"
+            / "v2"
+            / "coarse_output.schema.json"
+        )
+    else:
+        source_prompt = (
+            release.root
+            / "prompts"
+            / "coarse.md"
+        )
+        source_agents = (
+            release.root
+            / "prompts"
+            / "coarse_AGENTS.md"
+        )
+        source_schema = (
+            release.root
+            / "schemas"
+            / "coarse_output.schema.json"
+        )
     agents = root / "AGENTS.md"
     input_file = data_directory / "input.json"
     policy_file = (
@@ -107,6 +135,15 @@ def prepare_coarse_workspace(
     atomic_write_json(
         policy_file,
         {
+            **(
+                load_json_object(
+                    release.root
+                    / "config"
+                    / "coarse_policy.json"
+                )
+                if release is not None
+                else {}
+            ),
             "schema_version": "1.0",
             "stage": "coarse_selection",
             "required_selection_count": int(

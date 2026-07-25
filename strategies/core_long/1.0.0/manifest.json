@@ -1,0 +1,17 @@
+{
+  "schema_version": "1.0",
+  "strategy_id": "core_long",
+  "strategy_version": "1.0.0",
+  "compatible_app_version": ">=2.0.0,<3.0.0",
+  "description": "Long-horizon US equity strategy",
+  "prompt_hashes": {
+    "prompts/coarse.md": "37194262fa793c8d719100937ab1a7486bc119edf057c8ab23d372e4d4f7b88e",
+    "prompts/coarse_AGENTS.md": "a039f86d8477d9b239ceaab5e163a438d039f7bb3daec3888ebdc68b7694a7bb"
+  },
+  "schema_hashes": {
+    "schemas/coarse_output.schema.json": "55c7e1f111be24400771673167495b2532db6f7b59678aa19fd91ce0d877aa74"
+  },
+  "config_hashes": {
+    "config/coarse_policy.json": "ac25ecd2d5635db458496e44bcb6e49e95a3609d752c77cc0bb0c2ed95c19f73"
+  }
+}

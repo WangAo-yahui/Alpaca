@@ -27,6 +27,7 @@ from v2.exceptions import (
     CodexOutputValidationError,
     TemporaryDataError,
 )
+from v2.guidance import load_initial_guidance
 from v2.models.coarse import (
     CoarseInputBuildResult,
     CoarseValidationResult,
@@ -42,9 +43,14 @@ from v2.models.state import (
 from v2.runtime import (
     CyclePaths,
     atomic_write_json,
+    build_coarse_revision_paths,
     build_daily_paths,
     load_json_object,
     utc_now_iso,
+)
+from v2.releases import (
+    StrategyRelease,
+    load_strategy_release,
 )
 
 
@@ -167,6 +173,31 @@ def _validation_document(
     return payload
 
 
+def _install_current_revision(
+    daily_paths: Any,
+    revision: Any,
+) -> None:
+    atomic_write_json(
+        daily_paths.coarse_current,
+        {
+            "schema_version": "1.0",
+            "stage": "coarse_selection",
+            "input_signature": (
+                revision.input_signature
+            ),
+            "revision_directory": str(
+                revision.revision_directory
+            ),
+            "input_path": str(revision.input),
+            "output_path": str(revision.output),
+            "validation_path": str(
+                revision.validation
+            ),
+            "installed_at": utc_now_iso(),
+        },
+    )
+
+
 def _previous_valid_identity(
     daily_state: DailyState,
     output_path: Path,
@@ -228,13 +259,7 @@ def _validate_existing(
 ] | None:
     if force_full:
         return None
-    if (
-        daily_state.coarse_status
-        != CoarseStatus.VALID
-        or daily_state.coarse_input_signature
-        != input_result.input_signature
-        or not output_path.is_file()
-    ):
+    if not output_path.is_file():
         return None
     try:
         output = load_json_object(output_path)
@@ -260,17 +285,28 @@ def execute_coarse_selection(
     runner: CoarseRunner | None = None,
     bar_store: DailyBarStore | None = None,
     now: datetime | None = None,
+    release: StrategyRelease | None = None,
 ) -> CoarseStageResult:
     """Execute Stage C and never touch portfolio or order artifacts."""
 
     daily_paths = build_daily_paths(
         paths.run_date,
         project_root=paths.project_root,
+        profile_id=paths.profile_id,
+        strategy_id=paths.strategy_id,
+        strategy_version=paths.strategy_version,
+    )
+    active_release = (
+        release
+        or load_strategy_release(
+            paths.strategy_id,
+            paths.strategy_version,
+            project_root=paths.project_root,
+        )
     )
     schema_path = (
-        config.project_root
+        active_release.root
         / "schemas"
-        / "v2"
         / "coarse_output.schema.json"
     )
     schema = load_coarse_schema(schema_path)
@@ -278,22 +314,45 @@ def execute_coarse_selection(
     base_snapshot = load_json_object(
         paths.base_snapshot
     )
+    guidance = load_initial_guidance(
+        paths
+    )
     input_result = build_coarse_input(
         config=config,
         run_date=paths.run_date,
         base_snapshot=base_snapshot,
         bar_store=bar_store,
+        profile_id=paths.profile_id,
+        strategy_id=paths.strategy_id,
+        strategy_version=(
+            paths.strategy_version
+        ),
+        guidance=guidance.to_dict(),
     )
-    atomic_write_json(
-        daily_paths.coarse_input,
-        input_result.payload,
+    revision = build_coarse_revision_paths(
+        daily_paths,
+        input_result.input_signature,
     )
+    revision.revision_directory.mkdir(
+        parents=True,
+        exist_ok=True,
+    )
+    if not revision.input.exists():
+        atomic_write_json(
+            revision.input,
+            input_result.payload,
+        )
     daily_state = load_daily_state(
         paths.daily_state
     )
+    previous_output = (
+        Path(daily_state.coarse_output_path)
+        if daily_state.coarse_output_path
+        else revision.output
+    )
     previous = _previous_valid_identity(
         daily_state,
-        daily_paths.coarse_output,
+        previous_output,
     )
     required = int(
         config.stages["coarse_candidate_count"]
@@ -317,7 +376,7 @@ def execute_coarse_selection(
             warnings=(),
         )
         atomic_write_json(
-            daily_paths.coarse_validation,
+            revision.validation,
             _validation_document(
                 validation,
                 input_signature=(
@@ -348,7 +407,7 @@ def execute_coarse_selection(
 
     reusable = _validate_existing(
         daily_state=daily_state,
-        output_path=daily_paths.coarse_output,
+        output_path=revision.output,
         input_result=input_result,
         schema=schema,
         force_full=options.force_full,
@@ -357,7 +416,7 @@ def execute_coarse_selection(
     if reusable is not None:
         output, validation = reusable
         atomic_write_json(
-            daily_paths.coarse_validation,
+            revision.validation,
             _validation_document(
                 validation,
                 input_signature=(
@@ -371,7 +430,7 @@ def execute_coarse_selection(
             ),
         )
         atomic_write_json(
-            daily_paths.coarse_codex_call,
+            revision.codex_call,
             {
                 "schema_version": "1.0",
                 "stage": "coarse_selection",
@@ -389,16 +448,33 @@ def execute_coarse_selection(
         state.reused_coarse_cycle_id = (
             state.previous_cycle_id
         )
+        daily_state.coarse_status = (
+            CoarseStatus.VALID
+        )
+        daily_state.coarse_output_path = str(
+            revision.output
+        )
+        daily_state.coarse_input_signature = (
+            input_result.input_signature
+        )
+        _install_current_revision(
+            daily_paths,
+            revision,
+        )
+        save_daily_state(
+            paths.daily_state,
+            daily_state,
+        )
         return _stage_result(
             reused=True,
             output=output,
             validation=validation,
             input_result=input_result,
             output_path=(
-                daily_paths.coarse_output
+                revision.output
             ),
             validation_path=(
-                daily_paths.coarse_validation
+                revision.validation
             ),
         )
 
@@ -409,9 +485,10 @@ def execute_coarse_selection(
         daily_state,
     )
     workspace = prepare_coarse_workspace(
-        daily_paths,
+        revision,
         config=config,
         input_payload=input_result.payload,
+        release=active_release,
     )
     active_runner = runner or CodexRunner(
         timeout_seconds=float(
@@ -426,7 +503,7 @@ def execute_coarse_selection(
             workspace
         )
         atomic_write_json(
-            daily_paths.coarse_codex_call,
+            revision.codex_call,
             {
                 **run_result.call_record,
                 "input_signature": (
@@ -441,7 +518,7 @@ def execute_coarse_selection(
             now=now,
         )
         atomic_write_json(
-            daily_paths.coarse_validation,
+            revision.validation,
             _validation_document(
                 validation,
                 input_signature=(
@@ -476,19 +553,23 @@ def execute_coarse_selection(
                 },
             )
         atomic_write_json(
-            daily_paths.coarse_output,
+            revision.output,
             run_result.payload,
         )
         daily_state.coarse_status = (
             CoarseStatus.VALID
         )
         daily_state.coarse_output_path = str(
-            daily_paths.coarse_output
+            revision.output
         )
         daily_state.coarse_input_signature = (
             input_result.input_signature
         )
         daily_state.updated_at = utc_now_iso()
+        _install_current_revision(
+            daily_paths,
+            revision,
+        )
         save_daily_state(
             paths.daily_state,
             daily_state,
@@ -499,10 +580,10 @@ def execute_coarse_selection(
             validation=validation,
             input_result=input_result,
             output_path=(
-                daily_paths.coarse_output
+                revision.output
             ),
             validation_path=(
-                daily_paths.coarse_validation
+                revision.validation
             ),
         )
     except Exception as error:
@@ -516,7 +597,7 @@ def execute_coarse_selection(
                 None,
             )
             atomic_write_json(
-                daily_paths.coarse_codex_call,
+                revision.codex_call,
                 call_record
                 if isinstance(call_record, dict)
                 else {

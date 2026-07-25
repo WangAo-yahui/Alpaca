@@ -24,6 +24,10 @@ def copy_v2_config(target_root: Path) -> None:
         PROJECT_ROOT / "config" / "universe",
         target_root / "config" / "universe",
     )
+    shutil.copytree(
+        PROJECT_ROOT / "strategies",
+        target_root / "strategies",
+    )
 
 
 def prepare_stage_c_project(
