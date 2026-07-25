@@ -860,6 +860,9 @@ class CycleState:
             "strategy_id",
             "strategy_version",
             "risk_profile",
+            "risk_profile_hash",
+            "order_policy",
+            "order_policy_hash",
             "release_hash",
             "prompt_hashes",
             "schema_hashes",
@@ -1299,6 +1302,18 @@ class CycleState:
                 if isinstance(item, dict)
             ],
         )
+        state.release.setdefault(
+            "risk_profile_hash",
+            "unknown",
+        )
+        state.release.setdefault(
+            "order_policy",
+            "legacy-unversioned",
+        )
+        state.release.setdefault(
+            "order_policy_hash",
+            "unknown",
+        )
         state.validate()
         return state
 
@@ -1388,8 +1403,13 @@ def new_cycle_state(
                     paths.strategy_version
                 ),
                 "risk_profile": (
-                    "paper_standard@1.0.0"
+                    "paper_standard@1.1.0"
                 ),
+                "risk_profile_hash": "unknown",
+                "order_policy": (
+                    "paper_equity@1.0.0"
+                ),
+                "order_policy_hash": "unknown",
                 "release_hash": "unknown",
                 "prompt_hashes": {},
                 "schema_hashes": {},

@@ -23,10 +23,11 @@ from v2.runtime import (
 PROFILE_COMPONENT = re.compile(
     r"^[A-Za-z0-9][A-Za-z0-9._-]*$"
 )
-RISK_REFERENCE = re.compile(
+VERSIONED_REFERENCE = re.compile(
     r"^([A-Za-z0-9][A-Za-z0-9._-]*)@"
     r"([A-Za-z0-9][A-Za-z0-9._-]*)$"
 )
+RISK_REFERENCE = VERSIONED_REFERENCE
 
 
 @dataclass(frozen=True)
@@ -41,6 +42,7 @@ class Profile:
     strategy_id: str
     strategy_version: str
     risk_profile: str
+    order_policy: str | None
     source_path: Path
 
     def validate(self) -> None:
@@ -99,6 +101,16 @@ class Profile:
                 "risk_profile必须使用name@version格式",
                 code="RISK_PROFILE_REFERENCE_INVALID",
             )
+        if (
+            self.order_policy is not None
+            and not VERSIONED_REFERENCE.fullmatch(
+                self.order_policy
+            )
+        ):
+            raise ConfigurationError(
+                "order_policy必须使用name@version格式",
+                code="ORDER_POLICY_REFERENCE_INVALID",
+            )
 
 
 @dataclass(frozen=True)
@@ -115,6 +127,26 @@ class RiskProfile:
         return (
             f"{self.risk_profile_id}@"
             f"{self.risk_profile_version}"
+        )
+
+
+@dataclass(frozen=True)
+class OrderPolicy:
+    """装载后的版本化券商订单规划规则。"""
+
+    schema_version: str
+    order_policy_id: str
+    order_policy_version: str
+    broker: str
+    environment: str
+    settings: Mapping[str, Any]
+    source_path: Path
+
+    @property
+    def reference(self) -> str:
+        return (
+            f"{self.order_policy_id}@"
+            f"{self.order_policy_version}"
         )
 
 
@@ -224,6 +256,11 @@ def load_profile(
             "risk_profile",
             code="PROFILE_INVALID",
         ),
+        order_policy=(
+            str(payload["order_policy"]).strip()
+            if payload.get("order_policy") is not None
+            else None
+        ),
         source_path=path,
     )
     profile.validate()
@@ -305,6 +342,89 @@ def load_risk_profile(
         raise ConfigurationError(
             "risk profile内容与引用不一致",
             code="RISK_PROFILE_INVALID",
+        )
+    return result
+
+
+def load_order_policy(
+    reference: str,
+    *,
+    project_root: Path | None = None,
+) -> OrderPolicy:
+    """装载并核对一个外置、版本化的订单策略。"""
+
+    match = VERSIONED_REFERENCE.fullmatch(
+        str(reference).strip()
+    )
+    if match is None:
+        raise ConfigurationError(
+            "order policy引用格式无效",
+            code="ORDER_POLICY_REFERENCE_INVALID",
+        )
+    policy_id, version = match.groups()
+    path = (
+        _project_root(project_root)
+        / "config"
+        / "v2"
+        / "order_policies"
+        / f"{policy_id}-{version}.json"
+    )
+    if not path.is_file():
+        raise ConfigurationError(
+            f"order policy不存在：{reference}",
+            code="ORDER_POLICY_NOT_FOUND",
+        )
+    payload = load_json_object(path)
+    result = OrderPolicy(
+        schema_version=_required_string(
+            payload,
+            "schema_version",
+            code="ORDER_POLICY_INVALID",
+        ),
+        order_policy_id=_required_string(
+            payload,
+            "order_policy_id",
+            code="ORDER_POLICY_INVALID",
+        ),
+        order_policy_version=_required_string(
+            payload,
+            "order_policy_version",
+            code="ORDER_POLICY_INVALID",
+        ),
+        broker=_required_string(
+            payload,
+            "broker",
+            code="ORDER_POLICY_INVALID",
+        ),
+        environment=_required_string(
+            payload,
+            "environment",
+            code="ORDER_POLICY_INVALID",
+        ),
+        settings={
+            key: value
+            for key, value in payload.items()
+            if key
+            not in {
+                "_comment",
+                "schema_version",
+                "order_policy_id",
+                "order_policy_version",
+                "broker",
+                "environment",
+            }
+        },
+        source_path=path,
+    )
+    if (
+        result.schema_version != "1.0"
+        or result.reference != reference
+        or result.broker != "alpaca"
+        or result.environment not in {"paper", "live"}
+    ):
+        raise ConfigurationError(
+            "order policy内容与引用不一致",
+            code="ORDER_POLICY_INVALID",
         )
     return result
 

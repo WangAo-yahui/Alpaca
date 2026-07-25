@@ -1,5 +1,5 @@
 {
-  "_comment": "作用：定义 paper1 的凭据变量、策略 release 和风险 profile。重要性：它将该账户的运行状态、报告与其他 paper 账户完全隔离。",
+  "_comment": "作用：定义 paper1 的凭据变量、策略 release、风险 profile 和订单 policy。重要性：它将账户运行产物完全隔离，并把 Stage F 订单规划绑定到明确版本。",
   "schema_version": "1.0",
   "profile_id": "paper1",
   "enabled": true,
@@ -11,5 +11,6 @@
     "strategy_id": "core_long",
     "strategy_version": "1.2.0"
   },
-  "risk_profile": "paper_standard@1.0.0"
+  "risk_profile": "paper_standard@1.1.0",
+  "order_policy": "paper_equity@1.0.0"
 }

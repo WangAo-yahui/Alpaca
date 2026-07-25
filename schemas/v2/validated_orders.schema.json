@@ -1,0 +1,113 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://wa-trader.local/schemas/v2/validated_orders.schema.json",
+  "title": "WA Trader v2 validated order plan",
+  "description": "作用：保存 Python 硬校验后的逐单状态、问题和统计。重要性：只有 approved 或 dry_run_approved 可生成本地 SDK 请求规格，但 Stage F 仍绝不提交。",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "profile_id",
+    "strategy_id",
+    "strategy_version",
+    "risk_profile",
+    "order_policy",
+    "run_date",
+    "cycle_id",
+    "generated_at",
+    "execution_output_hash",
+    "pretrade_snapshot_hash",
+    "submission_requested",
+    "dry_run",
+    "submission_performed",
+    "submitted_order_count",
+    "orders",
+    "global_issues",
+    "summary"
+  ],
+  "properties": {
+    "schema_version": {
+      "const": "1.0"
+    },
+    "profile_id": {
+      "const": "paper1"
+    },
+    "strategy_id": {
+      "const": "core_long"
+    },
+    "strategy_version": {
+      "const": "1.2.0"
+    },
+    "risk_profile": {
+      "const": "paper_standard@1.1.0"
+    },
+    "order_policy": {
+      "const": "paper_equity@1.0.0"
+    },
+    "run_date": {
+      "type": "string"
+    },
+    "cycle_id": {
+      "type": "string"
+    },
+    "generated_at": {
+      "type": "string"
+    },
+    "execution_output_hash": {
+      "type": "string",
+      "pattern": "^[0-9a-f]{64}$"
+    },
+    "pretrade_snapshot_hash": {
+      "type": "string",
+      "pattern": "^[0-9a-f]{64}$"
+    },
+    "submission_requested": {
+      "type": "boolean"
+    },
+    "dry_run": {
+      "type": "boolean"
+    },
+    "submission_performed": {
+      "const": false
+    },
+    "submitted_order_count": {
+      "const": 0
+    },
+    "orders": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": [
+          "plan_id",
+          "status",
+          "validation_issues"
+        ]
+      }
+    },
+    "global_issues": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": [
+          "code",
+          "message",
+          "severity",
+          "path"
+        ]
+      }
+    },
+    "summary": {
+      "type": "object",
+      "required": [
+        "proposed",
+        "approved",
+        "dry_run_approved",
+        "blocked",
+        "skipped",
+        "dependent",
+        "submission_performed",
+        "submitted_order_count"
+      ]
+    }
+  }
+}

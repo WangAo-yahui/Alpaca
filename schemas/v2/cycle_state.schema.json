@@ -1,6 +1,6 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$comment": "作用：校验单个运行轮次的步骤、权限、profile、release 与 guidance 元数据。重要性：它保证恢复和失败关闭所依赖的 cycle_state 结构完整。",
+  "$comment": "作用：校验单个运行轮次的步骤、权限、profile、策略、风险与订单 policy release 元数据。重要性：它保证恢复和失败关闭所依赖的 cycle_state 身份与结构完整。",
   "$id": "https://wa-trader.local/schemas/v2/cycle_state.schema.json",
   "title": "WA Trader v2 Cycle State",
   "type": "object",
@@ -152,6 +152,9 @@
         "strategy_id",
         "strategy_version",
         "risk_profile",
+        "risk_profile_hash",
+        "order_policy",
+        "order_policy_hash",
         "release_hash",
         "prompt_hashes",
         "schema_hashes",
@@ -174,6 +177,18 @@
           "minLength": 1
         },
         "risk_profile": {
+          "type": "string",
+          "minLength": 1
+        },
+        "risk_profile_hash": {
+          "type": "string",
+          "minLength": 1
+        },
+        "order_policy": {
+          "type": "string",
+          "minLength": 1
+        },
+        "order_policy_hash": {
           "type": "string",
           "minLength": 1
         },

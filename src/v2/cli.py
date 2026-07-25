@@ -17,7 +17,7 @@ from v2.runtime import (
 )
 
 
-SCRIPT_VERSION = "2026-07-25-v2-cli-stage-e-v1"
+SCRIPT_VERSION = "2026-07-25-v2-cli-stage-f-v1"
 
 
 @dataclass(frozen=True)

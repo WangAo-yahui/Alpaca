@@ -1,3 +1,9 @@
+"""验证轮次状态记录完整 release 身份。
+
+作用：检查策略、风险、订单策略及 hash 与恢复轮次保持一致。
+重要性：防止同一轮次在配置版本变化后静默沿用旧决策产物。
+"""
+
 from __future__ import annotations
 
 import tempfile
@@ -58,7 +64,19 @@ class CycleReleaseMetadataTests(unittest.TestCase):
             )
             self.assertEqual(
                 state.release["risk_profile"],
-                "paper_standard@1.0.0",
+                "paper_standard@1.1.0",
+            )
+            self.assertEqual(
+                state.release["order_policy"],
+                "paper_equity@1.0.0",
+            )
+            self.assertEqual(
+                len(
+                    state.release[
+                        "order_policy_hash"
+                    ]
+                ),
+                64,
             )
             self.assertEqual(
                 len(state.guidance["guidance_hash"]),
