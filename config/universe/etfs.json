@@ -1,0 +1,220 @@
+{
+  "schema_version": "1.0",
+  "description": "WA Trader v1 ETF候选池。用于市场判断、资产配置和候选筛选，不代表必须持有。",
+  "selection_policy": {
+    "exclude_leveraged": true,
+    "exclude_inverse": true,
+    "exclude_low_liquidity": true,
+    "allow_new_positions": true
+  },
+  "etfs": [
+    {
+      "symbol": "SPY",
+      "category": "broad_market",
+      "role": "primary_benchmark",
+      "enabled": true
+    },
+    {
+      "symbol": "QQQ",
+      "category": "large_cap_growth",
+      "role": "growth_benchmark",
+      "enabled": true
+    },
+    {
+      "symbol": "IWM",
+      "category": "small_cap",
+      "role": "small_cap_benchmark",
+      "enabled": true
+    },
+    {
+      "symbol": "DIA",
+      "category": "large_cap_value",
+      "role": "blue_chip_benchmark",
+      "enabled": true
+    },
+    {
+      "symbol": "RSP",
+      "category": "equal_weight",
+      "role": "market_breadth",
+      "enabled": true
+    },
+    {
+      "symbol": "VTI",
+      "category": "total_us_market",
+      "role": "broad_market_candidate",
+      "enabled": true
+    },
+    {
+      "symbol": "VXUS",
+      "category": "international_total",
+      "role": "international_candidate",
+      "enabled": true
+    },
+    {
+      "symbol": "EFA",
+      "category": "developed_ex_us",
+      "role": "international_candidate",
+      "enabled": true
+    },
+    {
+      "symbol": "EEM",
+      "category": "emerging_markets",
+      "role": "international_candidate",
+      "enabled": true
+    },
+
+    {
+      "symbol": "XLC",
+      "category": "sector_communication_services",
+      "role": "sector_candidate",
+      "enabled": true
+    },
+    {
+      "symbol": "XLY",
+      "category": "sector_consumer_discretionary",
+      "role": "sector_candidate",
+      "enabled": true
+    },
+    {
+      "symbol": "XLP",
+      "category": "sector_consumer_staples",
+      "role": "sector_candidate",
+      "enabled": true
+    },
+    {
+      "symbol": "XLE",
+      "category": "sector_energy",
+      "role": "sector_candidate",
+      "enabled": true
+    },
+    {
+      "symbol": "XLF",
+      "category": "sector_financials",
+      "role": "sector_candidate",
+      "enabled": true
+    },
+    {
+      "symbol": "XLV",
+      "category": "sector_health_care",
+      "role": "sector_candidate",
+      "enabled": true
+    },
+    {
+      "symbol": "XLI",
+      "category": "sector_industrials",
+      "role": "sector_candidate",
+      "enabled": true
+    },
+    {
+      "symbol": "XLB",
+      "category": "sector_materials",
+      "role": "sector_candidate",
+      "enabled": true
+    },
+    {
+      "symbol": "XLRE",
+      "category": "sector_real_estate",
+      "role": "sector_candidate",
+      "enabled": true
+    },
+    {
+      "symbol": "XLK",
+      "category": "sector_technology",
+      "role": "sector_candidate",
+      "enabled": true
+    },
+    {
+      "symbol": "XLU",
+      "category": "sector_utilities",
+      "role": "sector_candidate",
+      "enabled": true
+    },
+
+    {
+      "symbol": "IWF",
+      "category": "factor_growth",
+      "role": "factor_candidate",
+      "enabled": true
+    },
+    {
+      "symbol": "IWD",
+      "category": "factor_value",
+      "role": "factor_candidate",
+      "enabled": true
+    },
+    {
+      "symbol": "QUAL",
+      "category": "factor_quality",
+      "role": "factor_candidate",
+      "enabled": true
+    },
+    {
+      "symbol": "USMV",
+      "category": "factor_minimum_volatility",
+      "role": "factor_candidate",
+      "enabled": true
+    },
+    {
+      "symbol": "MTUM",
+      "category": "factor_momentum",
+      "role": "factor_candidate",
+      "enabled": true
+    },
+    {
+      "symbol": "SCHD",
+      "category": "factor_dividend",
+      "role": "factor_candidate",
+      "enabled": true
+    },
+
+    {
+      "symbol": "SHY",
+      "category": "fixed_income_short_treasury",
+      "role": "defensive_candidate",
+      "enabled": true
+    },
+    {
+      "symbol": "IEF",
+      "category": "fixed_income_intermediate_treasury",
+      "role": "defensive_candidate",
+      "enabled": true
+    },
+    {
+      "symbol": "TLT",
+      "category": "fixed_income_long_treasury",
+      "role": "defensive_candidate",
+      "enabled": true
+    },
+    {
+      "symbol": "TIP",
+      "category": "fixed_income_inflation_protected",
+      "role": "defensive_candidate",
+      "enabled": true
+    },
+    {
+      "symbol": "AGG",
+      "category": "fixed_income_aggregate",
+      "role": "defensive_candidate",
+      "enabled": true
+    },
+    {
+      "symbol": "LQD",
+      "category": "fixed_income_investment_grade",
+      "role": "credit_candidate",
+      "enabled": true
+    },
+    {
+      "symbol": "HYG",
+      "category": "fixed_income_high_yield",
+      "role": "credit_risk_indicator",
+      "enabled": true
+    },
+
+    {
+      "symbol": "GLD",
+      "category": "alternative_gold",
+      "role": "defensive_candidate",
+      "enabled": true
+    }
+  ]
+}

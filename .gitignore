@@ -1,0 +1,10 @@
+.env
+.Alpaca/
+decision_runtime_v2/
+decision_runtime_v2_legacy/
+reports/v2/
+account_bindings/
+archive/
+__pycache__/
+*.pyc
+.DS_Store

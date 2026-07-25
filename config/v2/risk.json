@@ -1,0 +1,16 @@
+{
+  "schema_version": "1.0",
+  "config_version": "2026-07-23-stage-b-v1",
+  "max_single_symbol_weight": 0.15,
+  "max_sector_weight": 0.35,
+  "minimum_cash_weight": 0.1,
+  "minimum_order_value": 25.0,
+  "max_slippage_bps": 30,
+  "max_quote_age_seconds": 15,
+  "allow_short": false,
+  "allow_fractional": true,
+  "max_extended_hours_spread_bps": 30,
+  "max_extended_hours_slippage_bps": 30,
+  "allow_new_positions_extended_hours": true,
+  "allow_fractional_extended_hours": true
+}

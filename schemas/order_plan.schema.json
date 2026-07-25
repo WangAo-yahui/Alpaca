@@ -1,0 +1,492 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://local.wa-trader/schemas/order_plan.schema.json",
+  "title": "WA Trader v1 Order Plan",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "run_id",
+    "generated_at",
+    "run_mode",
+    "market_view",
+    "confidence",
+    "portfolio_target",
+    "trade_plans",
+    "order_review",
+    "summary",
+    "risk_notes",
+    "data_warnings",
+    "research_files"
+  ],
+  "properties": {
+    "schema_version": {
+      "const": "1.0"
+    },
+    "run_id": {
+      "type": "string",
+      "pattern": "^[0-9]{8}_[A-Za-z0-9_-]+$"
+    },
+    "generated_at": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "run_mode": {
+      "type": "string",
+      "enum": [
+        "before_market_open",
+        "regular_session",
+        "after_market_close",
+        "market_closed_weekend"
+      ]
+    },
+    "market_view": {
+      "type": "string",
+      "enum": [
+        "bullish",
+        "neutral",
+        "cautious",
+        "bearish"
+      ]
+    },
+    "confidence": {
+      "type": "number",
+      "minimum": 0,
+      "maximum": 1
+    },
+    "portfolio_target": {
+      "$ref": "#/$defs/portfolio_target"
+    },
+    "trade_plans": {
+      "type": "array",
+      "maxItems": 20,
+      "items": {
+        "$ref": "#/$defs/trade_plan"
+      }
+    },
+    "order_review": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/order_review"
+      }
+    },
+    "summary": {
+      "type": "string",
+      "minLength": 1
+    },
+    "risk_notes": {
+      "type": "array",
+      "items": {
+        "type": "string",
+        "minLength": 1
+      }
+    },
+    "data_warnings": {
+      "type": "array",
+      "items": {
+        "type": "string",
+        "minLength": 1
+      }
+    },
+    "research_files": {
+      "type": "array",
+      "uniqueItems": true,
+      "items": {
+        "type": "string",
+        "pattern": "^research/.+\\.(json|md)$"
+      }
+    }
+  },
+  "$defs": {
+    "symbol": {
+      "type": "string",
+      "pattern": "^[A-Z][A-Z0-9.-]{0,14}$"
+    },
+    "portfolio_target": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "target_cash_weight",
+        "positions"
+      ],
+      "properties": {
+        "target_cash_weight": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 1
+        },
+        "positions": {
+          "type": "array",
+          "maxItems": 10,
+          "items": {
+            "$ref": "#/$defs/target_position"
+          }
+        }
+      }
+    },
+    "target_position": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "symbol",
+        "decision",
+        "target_qty",
+        "target_weight",
+        "reason"
+      ],
+      "properties": {
+        "symbol": {
+          "$ref": "#/$defs/symbol"
+        },
+        "decision": {
+          "type": "string",
+          "enum": [
+            "hold",
+            "open",
+            "increase",
+            "reduce",
+            "close"
+          ]
+        },
+        "target_qty": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "target_weight": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 1
+        },
+        "reason": {
+          "type": "string",
+          "minLength": 1
+        }
+      }
+    },
+    "trade_plan": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "trade_plan_id",
+        "symbol",
+        "intent",
+        "target_qty",
+        "primary_order",
+        "protection",
+        "rationale"
+      ],
+      "properties": {
+        "trade_plan_id": {
+          "type": "string",
+          "pattern": "^[A-Za-z0-9_-]{1,64}$"
+        },
+        "symbol": {
+          "$ref": "#/$defs/symbol"
+        },
+        "intent": {
+          "type": "string",
+          "enum": [
+            "open",
+            "increase",
+            "reduce",
+            "close",
+            "protect",
+            "replace_protection",
+            "no_trade"
+          ]
+        },
+        "target_qty": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "primary_order": {
+          "oneOf": [
+            {
+              "type": "null"
+            },
+            {
+              "$ref": "#/$defs/primary_order"
+            }
+          ]
+        },
+        "protection": {
+          "$ref": "#/$defs/protection"
+        },
+        "rationale": {
+          "type": "string",
+          "minLength": 1
+        }
+      }
+    },
+    "primary_order": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "side",
+        "qty",
+        "entry_style",
+        "order_type",
+        "reference_price",
+        "reference_quote_at",
+        "limit_price",
+        "stop_price",
+        "time_in_force",
+        "valid_until",
+        "max_spread_bps",
+        "price_reason"
+      ],
+      "properties": {
+        "side": {
+          "type": "string",
+          "enum": [
+            "buy",
+            "sell"
+          ]
+        },
+        "qty": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "entry_style": {
+          "type": "string",
+          "enum": [
+            "immediate",
+            "passive_pullback",
+            "breakout_confirmation"
+          ]
+        },
+        "order_type": {
+          "type": "string",
+          "enum": [
+            "limit",
+            "stop",
+            "stop_limit"
+          ]
+        },
+        "reference_price": {
+          "type": "number",
+          "exclusiveMinimum": 0
+        },
+        "reference_quote_at": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "limit_price": {
+          "type": [
+            "number",
+            "null"
+          ],
+          "exclusiveMinimum": 0
+        },
+        "stop_price": {
+          "type": [
+            "number",
+            "null"
+          ],
+          "exclusiveMinimum": 0
+        },
+        "time_in_force": {
+          "type": "string",
+          "enum": [
+            "day",
+            "gtc"
+          ]
+        },
+        "valid_until": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "max_spread_bps": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 30
+        },
+        "price_reason": {
+          "type": "string",
+          "minLength": 1
+        }
+      }
+    },
+    "protection": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "mode",
+        "protected_qty",
+        "take_profit_price",
+        "stop_loss",
+        "trail_percent",
+        "time_in_force",
+        "tranches",
+        "reason"
+      ],
+      "properties": {
+        "mode": {
+          "type": "string",
+          "enum": [
+            "none",
+            "fixed_bracket",
+            "existing_position_oco",
+            "standalone_trailing_stop",
+            "tiered_fixed_brackets"
+          ]
+        },
+        "protected_qty": {
+          "type": [
+            "integer",
+            "null"
+          ],
+          "minimum": 1
+        },
+        "take_profit_price": {
+          "type": [
+            "number",
+            "null"
+          ],
+          "exclusiveMinimum": 0
+        },
+        "stop_loss": {
+          "oneOf": [
+            {
+              "type": "null"
+            },
+            {
+              "$ref": "#/$defs/stop_loss"
+            }
+          ]
+        },
+        "trail_percent": {
+          "type": [
+            "number",
+            "null"
+          ],
+          "minimum": 2,
+          "maximum": 15
+        },
+        "time_in_force": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "enum": [
+            "day",
+            "gtc",
+            null
+          ]
+        },
+        "tranches": {
+          "type": "array",
+          "maxItems": 3,
+          "items": {
+            "$ref": "#/$defs/exit_tranche"
+          }
+        },
+        "reason": {
+          "type": "string",
+          "minLength": 1
+        }
+      }
+    },
+    "stop_loss": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "type",
+        "stop_price",
+        "limit_price"
+      ],
+      "properties": {
+        "type": {
+          "type": "string",
+          "enum": [
+            "stop",
+            "stop_limit"
+          ]
+        },
+        "stop_price": {
+          "type": "number",
+          "exclusiveMinimum": 0
+        },
+        "limit_price": {
+          "type": [
+            "number",
+            "null"
+          ],
+          "exclusiveMinimum": 0
+        }
+      }
+    },
+    "exit_tranche": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "tranche_id",
+        "qty",
+        "take_profit_price",
+        "stop_loss",
+        "reason"
+      ],
+      "properties": {
+        "tranche_id": {
+          "type": "string",
+          "pattern": "^[A-Za-z0-9_-]{1,32}$"
+        },
+        "qty": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "take_profit_price": {
+          "type": "number",
+          "exclusiveMinimum": 0
+        },
+        "stop_loss": {
+          "$ref": "#/$defs/stop_loss"
+        },
+        "reason": {
+          "type": "string",
+          "minLength": 1
+        }
+      }
+    },
+    "order_review": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "client_order_id",
+        "symbol",
+        "suggested_action",
+        "reason",
+        "replacement_trade_plan_id"
+      ],
+      "properties": {
+        "client_order_id": {
+          "type": "string",
+          "minLength": 1
+        },
+        "symbol": {
+          "$ref": "#/$defs/symbol"
+        },
+        "suggested_action": {
+          "type": "string",
+          "enum": [
+            "keep",
+            "cancel",
+            "replace",
+            "review"
+          ]
+        },
+        "reason": {
+          "type": "string",
+          "minLength": 1
+        },
+        "replacement_trade_plan_id": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "pattern": "^[A-Za-z0-9_-]{1,64}$"
+        }
+      }
+    }
+  }
+}

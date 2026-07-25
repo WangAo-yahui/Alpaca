@@ -1,0 +1,133 @@
+{
+"schema_version": "1.0",
+"execution": {
+"paper_only": true,
+"automatic_submission_enabled": false,
+"require_manual_confirmation": true,
+"allowed_run_modes": [
+"regular_session"
+],
+"plan_valid_minutes": 10,
+"require_latest_quote_before_submit": true,
+"quote_max_age_seconds": 15
+},
+"portfolio_limits": {
+"long_only": true,
+"allow_margin": false,
+"min_cash_weight": 0.10,
+"max_total_position_weight": 0.90,
+"max_single_position_weight": 0.20,
+"max_position_count": 10,
+"max_new_positions_per_run": 3,
+"max_total_turnover_per_run": 0.30
+},
+"quantity_policy": {
+"quantity_mode": "whole_shares",
+"allow_fractional_quantity": false,
+"allow_notional_orders": false,
+"min_order_notional": 25.0,
+"max_single_order_equity_fraction": 0.20,
+"max_total_orders_equity_fraction": 0.30
+},
+"entry_policy": {
+"allowed_actions": [
+"buy",
+"sell",
+"hold",
+"cancel",
+"no_trade"
+],
+"allowed_entry_styles": [
+"immediate",
+"passive_pullback",
+"breakout_confirmation",
+"no_trade"
+],
+"allowed_order_types": [
+"limit",
+"stop",
+"stop_limit"
+],
+"market_orders_enabled": false,
+"default_time_in_force": "day",
+"allowed_time_in_force": [
+"day",
+"gtc"
+],
+"extended_hours_enabled": false,
+"max_spread_bps": 30,
+"marketable_limit_buffer_bps": 10,
+"max_limit_distance_from_reference_bps": 300,
+"max_price_deviation_before_submit_bps": 75
+},
+"protection_policy": {
+"protection_required_for_new_positions": true,
+"allowed_modes": [
+"fixed_bracket",
+"existing_position_oco",
+"standalone_trailing_stop",
+"tiered_fixed_brackets",
+"none"
+],
+"allow_none_only_with_reason": true,
+"default_mode_for_new_position": "fixed_bracket",
+"allow_trailing_stop_inside_bracket": false,
+"allow_trailing_stop_inside_oco": false,
+"stop_loss": {
+"allowed_types": [
+"stop",
+"stop_limit"
+],
+"min_distance_from_entry_pct": 0.02,
+"max_distance_from_entry_pct": 0.15,
+"stop_limit_max_extra_distance_pct": 0.02
+},
+"take_profit": {
+"min_distance_from_entry_pct": 0.03,
+"max_distance_from_entry_pct": 0.50
+},
+"trailing_stop": {
+"allowed_units": [
+"percent"
+],
+"min_trail_percent": 2.0,
+"max_trail_percent": 15.0,
+"regular_session_only": true
+}
+},
+"tiered_exit_policy": {
+"enabled": true,
+"max_tranches": 3,
+"min_tranche_fraction": 0.10,
+"require_tranche_fractions_sum_to_one": true,
+"allowed_protection_type": "fixed_bracket",
+"allow_dynamic_conversion_after_fill": false,
+"allow_shared_stop_price": true,
+"require_take_profit_prices_ascending": true
+},
+"order_reconciliation": {
+"strategy_client_order_id_prefix": "wa_v1_",
+"manage_only_strategy_orders": true,
+"never_cancel_manual_orders": true,
+"cancel_conflicting_strategy_orders": true,
+"cancel_previous_run_open_orders": true,
+"refresh_positions_after_cancel": true,
+"refresh_open_orders_before_submit": true,
+"include_partial_fills_in_position_calculation": true
+},
+"safety_checks": {
+"reject_unknown_symbol": true,
+"reject_duplicate_symbol_orders": true,
+"reject_negative_quantity": true,
+"reject_zero_quantity": true,
+"reject_insufficient_cash": true,
+"reject_stale_plan": true,
+"reject_stale_quote": true,
+"reject_price_outside_policy": true,
+"reject_position_limit_violation": true,
+"reject_unprotected_new_position": true,
+"reject_if_account_trading_blocked": true,
+"reject_if_market_data_missing": true,
+"reject_if_order_total_exceeds_position": true
+}
+}

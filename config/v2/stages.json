@@ -1,0 +1,23 @@
+{
+  "schema_version": "1.0",
+  "config_version": "2026-07-23-stage-b-v1",
+  "coarse_candidate_count": 60,
+  "coarse_stage_version": "2026-07-23-stage-c-v1",
+  "coarse_screening_version": "2026-07-23-screening-v1",
+  "coarse_prompt_version": "2026-07-23-prompt-v1",
+  "coarse_schema_version": "1.0",
+  "coarse_screening": {
+    "supported_asset_types": [
+      "stock",
+      "etf"
+    ],
+    "minimum_screening_daily_bars": 60,
+    "minimum_price": 5.0,
+    "minimum_adv20": 1000000.0
+  },
+  "portfolio_valid_minutes": 240,
+  "execution_valid_seconds": 60,
+  "available_cash_change_rebalance_bps": 100,
+  "force_full_invalidates_coarse": true,
+  "same_day_coarse_reuse": true
+}

@@ -1,0 +1,408 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://wa-trader.local/schemas/v2/cycle_state.schema.json",
+  "title": "WA Trader v2 Cycle State",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "run_date",
+    "cycle_id",
+    "cycle_kind",
+    "status",
+    "current_step",
+    "review_mode",
+    "config_version",
+    "config_signature",
+    "invocation",
+    "trade_permission",
+    "created_at",
+    "updated_at",
+    "started_at_new_york",
+    "completed_at",
+    "stages",
+    "completed_steps",
+    "skipped_steps",
+    "step_attempts",
+    "resume",
+    "previous_cycle_id",
+    "reused_coarse_cycle_id",
+    "reused_portfolio_cycle_id",
+    "stop_reason",
+    "failed_step",
+    "warnings",
+    "errors"
+  ],
+  "properties": {
+    "schema_version": {
+      "const": "1.0"
+    },
+    "run_date": {
+      "type": "string",
+      "format": "date"
+    },
+    "cycle_id": {
+      "$ref": "#/$defs/cycle_id"
+    },
+    "cycle_kind": {
+      "enum": [
+        "daily_full",
+        "intraday_rebalance",
+        "execution_refresh",
+        "maintenance_only"
+      ]
+    },
+    "status": {
+      "enum": [
+        "initialized",
+        "running",
+        "waiting_for_review",
+        "blocked",
+        "failed_retriable",
+        "failed_terminal",
+        "completed",
+        "completed_no_action",
+        "completed_dry_run",
+        "completed_no_submission",
+        "completed_with_submissions",
+        "completed_with_open_orders"
+      ]
+    },
+    "current_step": {
+      "$ref": "#/$defs/step"
+    },
+    "review_mode": {
+      "enum": [
+        "prompt",
+        "skipped_by_flag"
+      ]
+    },
+    "config_version": {
+      "type": "string",
+      "minLength": 1
+    },
+    "config_signature": {
+      "type": "string",
+      "minLength": 1
+    },
+    "invocation": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "no_review",
+        "allow_trade",
+        "paper",
+        "live"
+      ],
+      "properties": {
+        "no_review": {
+          "type": "boolean"
+        },
+        "allow_trade": {
+          "type": "boolean"
+        },
+        "paper": {
+          "const": true
+        },
+        "live": {
+          "const": false
+        }
+      }
+    },
+    "trade_permission": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "submission_enabled",
+        "extended_hours_requested",
+        "session_policy",
+        "dry_run"
+      ],
+      "properties": {
+        "submission_enabled": {
+          "type": "boolean"
+        },
+        "extended_hours_requested": {
+          "type": "boolean"
+        },
+        "session_policy": {
+          "enum": [
+            "analysis_only",
+            "broker_capability"
+          ]
+        },
+        "dry_run": {
+          "type": "boolean"
+        }
+      }
+    },
+    "created_at": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "updated_at": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "started_at_new_york": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "completed_at": {
+      "type": [
+        "string",
+        "null"
+      ],
+      "format": "date-time"
+    },
+    "stages": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "maintenance",
+        "base_data",
+        "coarse",
+        "portfolio",
+        "review",
+        "execution",
+        "orders",
+        "report"
+      ],
+      "properties": {
+        "maintenance": {
+          "$ref": "#/$defs/stage_record"
+        },
+        "base_data": {
+          "$ref": "#/$defs/stage_record"
+        },
+        "coarse": {
+          "$ref": "#/$defs/stage_record"
+        },
+        "portfolio": {
+          "$ref": "#/$defs/stage_record"
+        },
+        "review": {
+          "$ref": "#/$defs/stage_record"
+        },
+        "execution": {
+          "$ref": "#/$defs/stage_record"
+        },
+        "orders": {
+          "$ref": "#/$defs/stage_record"
+        },
+        "report": {
+          "$ref": "#/$defs/stage_record"
+        }
+      }
+    },
+    "completed_steps": {
+      "type": "array",
+      "uniqueItems": true,
+      "items": {
+        "$ref": "#/$defs/executable_step"
+      }
+    },
+    "skipped_steps": {
+      "type": "array",
+      "uniqueItems": true,
+      "items": {
+        "$ref": "#/$defs/executable_step"
+      }
+    },
+    "step_attempts": {
+      "type": "object",
+      "propertyNames": {
+        "$ref": "#/$defs/executable_step"
+      },
+      "additionalProperties": {
+        "type": "integer",
+        "minimum": 0
+      }
+    },
+    "resume": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "allowed",
+        "resume_count"
+      ],
+      "properties": {
+        "allowed": {
+          "type": "boolean"
+        },
+        "resume_count": {
+          "type": "integer",
+          "minimum": 0
+        }
+      }
+    },
+    "previous_cycle_id": {
+      "$ref": "#/$defs/nullable_cycle_id"
+    },
+    "reused_coarse_cycle_id": {
+      "$ref": "#/$defs/nullable_cycle_id"
+    },
+    "reused_portfolio_cycle_id": {
+      "$ref": "#/$defs/nullable_cycle_id"
+    },
+    "stop_reason": {
+      "type": [
+        "string",
+        "null"
+      ]
+    },
+    "failed_step": {
+      "oneOf": [
+        {
+          "$ref": "#/$defs/executable_step"
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
+    "warnings": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/message"
+      }
+    },
+    "errors": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/message"
+      }
+    }
+  },
+  "$defs": {
+    "cycle_id": {
+      "type": "string",
+      "pattern": "^[0-9]{8}T[0-9]{6}$"
+    },
+    "nullable_cycle_id": {
+      "oneOf": [
+        {
+          "$ref": "#/$defs/cycle_id"
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
+    "step": {
+      "enum": [
+        "START",
+        "MAINTAIN_PREVIOUS",
+        "REFRESH_BASE_DATA",
+        "DECIDE_CYCLE_KIND",
+        "RUN_COARSE",
+        "RUN_PORTFOLIO",
+        "COLLECT_REVIEW",
+        "REFRESH_EXECUTION_DATA",
+        "RUN_EXECUTION",
+        "BUILD_ORDERS",
+        "VALIDATE_ORDERS",
+        "SUBMIT_ORDERS",
+        "SAVE_CYCLE",
+        "UPDATE_REPORT",
+        "COMPLETE"
+      ]
+    },
+    "executable_step": {
+      "enum": [
+        "MAINTAIN_PREVIOUS",
+        "REFRESH_BASE_DATA",
+        "DECIDE_CYCLE_KIND",
+        "RUN_COARSE",
+        "RUN_PORTFOLIO",
+        "COLLECT_REVIEW",
+        "REFRESH_EXECUTION_DATA",
+        "RUN_EXECUTION",
+        "BUILD_ORDERS",
+        "VALIDATE_ORDERS",
+        "SUBMIT_ORDERS",
+        "SAVE_CYCLE",
+        "UPDATE_REPORT",
+        "COMPLETE"
+      ]
+    },
+    "stage_record": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "status",
+        "attempts",
+        "started_at",
+        "completed_at",
+        "output_path",
+        "message"
+      ],
+      "properties": {
+        "status": {
+          "enum": [
+            "pending",
+            "running",
+            "skipped",
+            "completed",
+            "blocked",
+            "failed"
+          ]
+        },
+        "attempts": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "started_at": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "format": "date-time"
+        },
+        "completed_at": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "format": "date-time"
+        },
+        "output_path": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "message": {
+          "type": "string"
+        }
+      }
+    },
+    "message": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "code",
+        "message",
+        "created_at",
+        "details"
+      ],
+      "properties": {
+        "code": {
+          "type": "string",
+          "minLength": 1
+        },
+        "message": {
+          "type": "string",
+          "minLength": 1
+        },
+        "created_at": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "details": {
+          "type": "object"
+        }
+      }
+    }
+  }
+}

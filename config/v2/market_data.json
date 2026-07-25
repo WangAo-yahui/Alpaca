@@ -1,0 +1,21 @@
+{
+  "schema_version": "1.0",
+  "config_version": "2026-07-23-stage-b-v1",
+  "minimum_daily_bars": 300,
+  "retained_daily_bars": 300,
+  "initial_daily_lookback_days": 500,
+  "minute_bar_window": 60,
+  "daily_bar_incremental_overlap_sessions": 5,
+  "market_phases": [
+    "before_market_open",
+    "regular_session",
+    "after_market_close",
+    "overnight_session",
+    "market_closed_weekend",
+    "market_closed_holiday",
+    "unknown"
+  ],
+  "new_position_session_policy": "broker_capability_when_allow_trade",
+  "daily_adjustment": "all",
+  "daily_feed": "sip"
+}

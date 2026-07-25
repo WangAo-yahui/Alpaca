@@ -1,0 +1,36 @@
+{
+  "generated_at": "2026-07-23T04:42:54.438056+00:00",
+  "source": "alpaca",
+  "status": "success",
+  "data": {
+    "market_date": "2026-07-23",
+    "market_timezone": "America/New_York",
+    "account_mode": "paper",
+    "query_window": {
+      "start": "2026-07-23T00:00:00-04:00",
+      "end": "2026-07-24T00:00:00-04:00"
+    },
+    "submitted_orders": {
+      "order_count": 0,
+      "status_counts": {},
+      "orders": []
+    },
+    "fill_related_orders_from_other_dates": {
+      "order_count": 0,
+      "orders": []
+    },
+    "fills": {
+      "fill_count": 0,
+      "activities": [],
+      "summary": {
+        "fill_activity_count": 0,
+        "symbol_count": 0,
+        "total_buy_notional": 0.0,
+        "total_sell_notional": 0.0,
+        "net_cash_flow_from_trades": 0.0,
+        "symbols": []
+      }
+    },
+    "warnings": []
+  }
+}

@@ -1,0 +1,32 @@
+{
+  "generated_at": "2026-07-23T04:43:11.805616+00:00",
+  "source": "alpaca_stock_bars",
+  "status": "no_data",
+  "data": {
+    "symbol": "JPM",
+    "market_date": "2026-07-23",
+    "market_timezone": "America/New_York",
+    "timeframe": "5Min",
+    "feed": "sip",
+    "adjustment": "all",
+    "sip_delay_minutes": 20,
+    "window_status": "before_delayed_data_available",
+    "query_start": "2026-07-23T09:30:00-04:00",
+    "query_end": "2026-07-23T09:30:00-04:00",
+    "selection_reasons": [
+      "validated_coarse_selection"
+    ],
+    "bar_count": 0,
+    "first_bar_at": null,
+    "last_bar_at": null,
+    "session_open": null,
+    "session_high": null,
+    "session_low": null,
+    "latest_close": null,
+    "total_volume": 0,
+    "bars": [],
+    "warnings": [
+      "盘中下载主范围来自已验证粗选结果：/Users/wangao/Alpaca/decision_runtime/2026-07-22/coarse_workspace"
+    ]
+  }
+}

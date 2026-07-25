@@ -1,0 +1,37 @@
+{
+  "schema_version": "1.0",
+  "config_version": "2026-07-23-stage-b-v1",
+  "paper_only": true,
+  "allowed_order_types": [
+    "market",
+    "limit",
+    "stop",
+    "stop_limit",
+    "trailing_stop"
+  ],
+  "allowed_time_in_force": [
+    "day",
+    "gtc"
+  ],
+  "require_local_idempotency_key": true,
+  "block_duplicate_open_orders": true,
+  "block_opposite_side_conflicts": true,
+  "submit_approved_only": true,
+  "submission": {
+    "default_enabled": false,
+    "paper_only": true
+  },
+  "extended_hours": {
+    "enabled_when_allow_trade": true,
+    "equity_order_type": "limit",
+    "allowed_time_in_force": [
+      "day",
+      "gtc"
+    ],
+    "queue_when_broker_allows": true,
+    "convert_market_intent_to_limit": true,
+    "limit_price_reference": "conservative_quote",
+    "max_spread_bps": 30,
+    "max_quote_age_seconds": 15
+  }
+}

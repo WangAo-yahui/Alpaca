@@ -1,0 +1,24 @@
+{
+  "generated_at": "2026-07-23T04:42:46.678908+00:00",
+  "source": "alpaca",
+  "status": "success",
+  "data": {
+    "status": "ACTIVE",
+    "currency": "USD",
+    "buying_power": "400000",
+    "non_marginable_buying_power": "100000",
+    "cash": "100000",
+    "equity": "100000",
+    "last_equity": "100000",
+    "long_market_value": "0",
+    "short_market_value": "0",
+    "initial_margin": "0",
+    "maintenance_margin": "0",
+    "trading_blocked": false,
+    "transfers_blocked": false,
+    "account_blocked": false,
+    "trade_suspended_by_user": false,
+    "multiplier": "4",
+    "shorting_enabled": true
+  }
+}

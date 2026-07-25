@@ -1,0 +1,28 @@
+{
+  "hard_filters": {
+    "min_history_bars": 120,
+    "max_data_age_calendar_days": 5,
+    "require_tradable": true,
+    "require_active": true
+  },
+  "risk_filters": {
+    "min_price": 5.0,
+    "min_average_dollar_volume_20d": 10000000,
+    "max_annualized_volatility_20d": 1.0,
+    "max_absolute_return_1d": 0.2,
+    "max_absolute_gap": 0.15
+  },
+  "selection": {
+    "max_candidates": 60,
+    "always_include": [
+      "SPY",
+      "QQQ",
+      "IWM",
+      "DIA",
+      "GLD",
+      "TLT"
+    ],
+    "include_current_positions": true,
+    "include_open_order_symbols": true
+  }
+}

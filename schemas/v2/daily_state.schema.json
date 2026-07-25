@@ -1,0 +1,145 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://wa-trader.local/schemas/v2/daily_state.schema.json",
+  "title": "WA Trader v2 Daily State",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "run_date",
+    "config_version",
+    "config_signature",
+    "first_successful_cycle_id",
+    "latest_cycle_id",
+    "active_cycle_id",
+    "coarse_status",
+    "coarse_output_path",
+    "coarse_input_signature",
+    "detailed_report_created",
+    "cycle_ids",
+    "created_at",
+    "updated_at",
+    "warnings",
+    "errors"
+  ],
+  "properties": {
+    "schema_version": {
+      "const": "1.0"
+    },
+    "run_date": {
+      "type": "string",
+      "format": "date"
+    },
+    "config_version": {
+      "type": "string",
+      "minLength": 1
+    },
+    "config_signature": {
+      "type": "string",
+      "minLength": 1
+    },
+    "first_successful_cycle_id": {
+      "$ref": "#/$defs/nullable_cycle_id"
+    },
+    "latest_cycle_id": {
+      "$ref": "#/$defs/nullable_cycle_id"
+    },
+    "active_cycle_id": {
+      "$ref": "#/$defs/nullable_cycle_id"
+    },
+    "coarse_status": {
+      "enum": [
+        "missing",
+        "running",
+        "valid",
+        "invalid",
+        "failed"
+      ]
+    },
+    "coarse_output_path": {
+      "type": [
+        "string",
+        "null"
+      ]
+    },
+    "coarse_input_signature": {
+      "type": [
+        "string",
+        "null"
+      ]
+    },
+    "detailed_report_created": {
+      "type": "boolean"
+    },
+    "cycle_ids": {
+      "type": "array",
+      "uniqueItems": true,
+      "items": {
+        "$ref": "#/$defs/cycle_id"
+      }
+    },
+    "created_at": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "updated_at": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "warnings": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/message"
+      }
+    },
+    "errors": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/message"
+      }
+    }
+  },
+  "$defs": {
+    "cycle_id": {
+      "type": "string",
+      "pattern": "^[0-9]{8}T[0-9]{6}$"
+    },
+    "nullable_cycle_id": {
+      "oneOf": [
+        {
+          "$ref": "#/$defs/cycle_id"
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
+    "message": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "code",
+        "message",
+        "created_at",
+        "details"
+      ],
+      "properties": {
+        "code": {
+          "type": "string",
+          "minLength": 1
+        },
+        "message": {
+          "type": "string",
+          "minLength": 1
+        },
+        "created_at": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "details": {
+          "type": "object"
+        }
+      }
+    }
+  }
+}

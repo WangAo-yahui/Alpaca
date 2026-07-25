@@ -1,0 +1,156 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://wa-trader.local/schemas/v2/base_snapshot.schema.json",
+  "title": "WA Trader v2 Base Snapshot",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "run_date",
+    "cycle_id",
+    "retrieved_at",
+    "market_phase",
+    "account",
+    "positions",
+    "open_orders",
+    "today_orders",
+    "assets",
+    "capital",
+    "data_quality"
+  ],
+  "properties": {
+    "schema_version": {
+      "const": "1.0"
+    },
+    "run_date": {
+      "type": "string",
+      "format": "date"
+    },
+    "cycle_id": {
+      "type": "string",
+      "pattern": "^[0-9]{8}T[0-9]{6}$"
+    },
+    "retrieved_at": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "market_phase": {
+      "enum": [
+        "before_market_open",
+        "regular_session",
+        "after_market_close",
+        "overnight_session",
+        "market_closed_weekend",
+        "market_closed_holiday",
+        "unknown"
+      ]
+    },
+    "account": {
+      "type": [
+        "object",
+        "null"
+      ]
+    },
+    "positions": {
+      "type": "array",
+      "items": {
+        "type": "object"
+      }
+    },
+    "open_orders": {
+      "type": "array",
+      "items": {
+        "type": "object"
+      }
+    },
+    "today_orders": {
+      "type": "array",
+      "items": {
+        "type": "object"
+      }
+    },
+    "assets": {
+      "type": "object",
+      "additionalProperties": {
+        "type": "object"
+      }
+    },
+    "capital": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "cash",
+        "buying_power",
+        "open_order_reserved_estimate",
+        "allocatable_capital_estimate"
+      ],
+      "properties": {
+        "cash": {
+          "type": [
+            "number",
+            "null"
+          ]
+        },
+        "buying_power": {
+          "type": [
+            "number",
+            "null"
+          ]
+        },
+        "open_order_reserved_estimate": {
+          "type": "number",
+          "minimum": 0
+        },
+        "allocatable_capital_estimate": {
+          "type": [
+            "number",
+            "null"
+          ],
+          "minimum": 0
+        }
+      }
+    },
+    "data_quality": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "account_fresh",
+        "positions_fresh",
+        "orders_fresh",
+        "assets_complete",
+        "decision_ready",
+        "errors",
+        "warnings"
+      ],
+      "properties": {
+        "account_fresh": {
+          "type": "boolean"
+        },
+        "positions_fresh": {
+          "type": "boolean"
+        },
+        "orders_fresh": {
+          "type": "boolean"
+        },
+        "assets_complete": {
+          "type": "boolean"
+        },
+        "decision_ready": {
+          "type": "boolean"
+        },
+        "errors": {
+          "type": "array",
+          "items": {
+            "type": "object"
+          }
+        },
+        "warnings": {
+          "type": "array",
+          "items": {
+            "type": "object"
+          }
+        }
+      }
+    }
+  }
+}

@@ -1,0 +1,19 @@
+{
+  "generated_at": "2026-07-19T18:18:41.218514+00:00",
+  "source": "alpaca",
+  "status": "no_data",
+  "data": {
+    "symbol": "TLT",
+    "market_date": "2026-07-19",
+    "session": "regular",
+    "timeframe": "5Min",
+    "feed": "sip",
+    "delay_minutes": 20,
+    "requested_start": "2026-07-19T09:30:00-04:00",
+    "requested_end": "2026-07-19T13:58:38.245181-04:00",
+    "bar_count": 0,
+    "first_bar_at": null,
+    "last_bar_at": null,
+    "bars": []
+  }
+}

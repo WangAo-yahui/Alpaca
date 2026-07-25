@@ -1,0 +1,214 @@
+{
+  "schema_version": "1.1",
+  "timezone": "America/New_York",
+  "daily_bars": {
+    "retention_bars": 300,
+    "use_alpaca_market_calendar": true,
+    "completion_delay_minutes_after_close": 30,
+    "initial_calendar_lookback_days": 500,
+    "incremental_overlap_sessions": 5,
+    "repair_internal_gaps": true,
+    "exclude_weekends_and_market_holidays": true,
+    "merge_by_timestamp": true,
+    "deduplicate": true,
+    "sort_ascending": true,
+    "retain_only_completed_sessions": true,
+    "missing_session_retry_limit": 3,
+    "missing_session_exceptions": [
+      "pre_listing",
+      "trading_halt",
+      "inactive_asset",
+      "no_trade_session"
+    ]
+  },
+  "codex": {
+    "stage_order": [
+      "coarse_selection",
+      "portfolio_decision",
+      "execution_review"
+    ],
+    "invocation_mode": "codex_exec_ephemeral",
+    "persistent_files_written_by_codex_per_call": 0,
+    "final_response_transport": "stdout_json",
+    "progress_transport": "stderr",
+    "temporary_helper_code": {
+      "allowed": true,
+      "directory": ".tmp/codex",
+      "must_be_deleted_after_call": true,
+      "may_modify_project_source": false,
+      "may_read_secrets": false,
+      "may_call_trading_api": false
+    },
+    "stage_output_sections": {
+      "coarse_selection": "coarse_selection",
+      "portfolio_decision": "portfolio_decision",
+      "execution_review": "execution_review"
+    },
+    "network_research": {
+      "coarse_selection": {
+        "required_to_attempt": true,
+        "allow_local_only_result": true,
+        "local_only_stage_status": "success_local_only",
+        "retry_count_after_network_failure": 1,
+        "retry_may_temporarily_clear_proxy_environment": true,
+        "may_modify_project_env": false,
+        "may_modify_system_vpn_or_proxy": false
+      },
+      "portfolio_decision": {
+        "required_to_attempt": true,
+        "allow_local_only_result": true,
+        "local_only_may_manage_existing_positions": true,
+        "local_only_may_propose_new_positions": false,
+        "second_stage_network_retry_required": true
+      },
+      "execution_review": {
+        "network_is_advisory": true,
+        "must_use_latest_local_account_positions_orders_and_quotes": true,
+        "python_remains_final_authority": true
+      }
+    }
+  },
+  "decision_state": {
+    "one_file_per_new_york_date": true,
+    "path_template": "decision_runtime/{date}/decision_state.json",
+    "atomic_update": true,
+    "preserve_previous_stage_sections": true,
+    "allow_stage_revision": true,
+    "revision_requires_new_input_hash": true,
+    "reject_duplicate_stage_result": true
+  },
+  "reports": {
+    "daily": {
+      "enabled": true,
+      "path_template": "reports/daily/{date}.md",
+      "one_file_per_new_york_date": true,
+      "written_by": "python",
+      "source": "decision_state",
+      "atomic_update": true,
+      "duplicate_section_policy": "replace_stage_section_in_place",
+      "sections": [
+        "data_update",
+        "coarse_selection",
+        "portfolio_decision",
+        "execution_review",
+        "actual_orders_and_fills",
+        "positions",
+        "open_orders",
+        "warnings"
+      ],
+      "include_compact_codex_summaries": true,
+      "include_raw_codex_logs": false
+    },
+    "weekly": {
+      "enabled": true,
+      "update_only_on_weekend": true,
+      "weekend_days": [
+        "saturday",
+        "sunday"
+      ],
+      "path_template": "reports/weekly/{iso_year}-W{iso_week}.md",
+      "saturday_and_sunday_share_file": true,
+      "minimum_completed_rebalance_events": 4,
+      "rebalance_event_definition": "one strategy run with at least one confirmed fill that changes net position quantity",
+      "protection_only_changes_count_as_rebalance": false,
+      "planned_or_cancelled_orders_count_as_rebalance": false,
+      "atomic_update": true,
+      "duplicate_section_policy": "update_existing_week"
+    }
+  },
+  "market_phase_policy": {
+    "regular_session": {
+      "new_positions_allowed": true,
+      "increase_existing_positions_allowed": true,
+      "reduce_existing_positions_allowed": true,
+      "close_existing_positions_allowed": true,
+      "modify_protection_allowed": true,
+      "place_pending_orders_allowed": true
+    },
+    "outside_regular_session": {
+      "new_positions_allowed": false,
+      "increase_existing_positions_allowed": true,
+      "reduce_existing_positions_allowed": true,
+      "close_existing_positions_allowed": true,
+      "modify_protection_allowed": true,
+      "place_pending_orders_allowed": true,
+      "existing_position_definition": "symbol has non-zero position quantity at final pre-order check",
+      "preferred_pending_order_type": "limit",
+      "preferred_time_in_force": "gtc",
+      "final_position_recheck_required": true,
+      "opening_order_for_zero_position_symbol": "reject",
+      "protection_not_executable_in_current_session": "mark_as_queued_protection"
+    }
+  },
+  "candidate_selection": {
+    "universe_source": "python_hard_filtered_full_universe",
+    "target_candidate_count": 60,
+    "python_may_rank_for_reference": true,
+    "python_may_choose_final_60": false,
+    "codex_selects_final_60": true,
+    "force_include": [
+      "current_positions",
+      "open_order_symbols",
+      "core_symbols"
+    ],
+    "market_balance_is_required": false,
+    "sector_limits_are_soft_constraints": true,
+    "market_balance_is_prompt_soft_preference": true,
+    "python_rejects_for_sector_or_theme_concentration": false,
+    "codex_must_disclose_material_concentration": true,
+    "eligibility_model": {
+      "coarse_selection_may_express": [
+        "research_eligible",
+        "screen_new_position_eligible"
+      ],
+      "research_eligible_definition": "symbol may remain in the 60-name research pool, including forced benchmarks, current positions, and open-order symbols",
+      "screen_new_position_eligible_definition": "symbol passed Python asset, data, liquidity, and risk screening; this is not permission to submit an opening order",
+      "execution_new_position_allowed_definition": "computed only during execution_review and the final Python pre-order check using market phase, actual position quantity, approval state, data freshness, and order policy",
+      "coarse_selection_may_grant_execution_permission": false,
+      "portfolio_decision_may_grant_execution_permission": false,
+      "python_final_pre_order_check_required": true
+    },
+    "legacy_field_transition": {
+      "field": "new_position_allowed",
+      "status": "deprecated",
+      "temporary_meaning": "screen_new_position_eligible",
+      "must_not_be_interpreted_as": "execution_new_position_allowed",
+      "remove_after": "coarse output schema, prompt, validator, and downstream readers have migrated to the split fields"
+    }
+  },
+  "validation": {
+    "stop_on_invalid_coarse_selection": true,
+    "stop_on_invalid_portfolio_decision": true,
+    "stop_on_invalid_execution_review": true,
+    "stop_on_stale_account_or_position_data": true,
+    "stop_on_duplicate_output": true,
+    "stop_on_new_position_outside_regular_session": true,
+    "python_is_final_order_authority": true,
+    "coarse_market_concentration_is_warning_only": true,
+    "coarse_market_concentration_may_block_pipeline": false,
+    "execution_permission_must_not_come_from_coarse_output": true
+  },
+  "execution_authority": {
+    "coarse_selection": {
+      "may_generate_orders": false,
+      "may_set_position_sizes": false,
+      "may_grant_new_position_permission": false
+    },
+    "portfolio_decision": {
+      "may_propose_target_positions": true,
+      "may_propose_risk_controls": true,
+      "may_grant_new_position_permission": false
+    },
+    "execution_review": {
+      "may_recommend_final_actions": true,
+      "may_grant_new_position_permission": false
+    },
+    "python": {
+      "is_final_order_authority": true,
+      "must_refresh_account_positions_open_orders": true,
+      "must_recheck_market_phase": true,
+      "must_recheck_actual_position_quantity": true,
+      "must_reject_zero_position_opening_orders_outside_regular_session": true
+    }
+  }
+}

@@ -1,0 +1,12 @@
+{
+  "schema_version": "1.0",
+  "description": "无论筛选结果如何，都需要持续采集和检查的核心市场基准与防御资产。",
+  "symbols": [
+    "SPY",
+    "QQQ",
+    "IWM",
+    "DIA",
+    "GLD",
+    "TLT"
+  ]
+}

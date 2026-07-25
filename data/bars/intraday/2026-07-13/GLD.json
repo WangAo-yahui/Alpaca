@@ -1,0 +1,19 @@
+{
+  "generated_at": "2026-07-13T13:02:29.314665+00:00",
+  "source": "alpaca",
+  "status": "no_data",
+  "data": {
+    "symbol": "GLD",
+    "market_date": "2026-07-13",
+    "session": "regular",
+    "timeframe": "5Min",
+    "feed": "sip",
+    "delay_minutes": 20,
+    "requested_start": "2026-07-13T09:30:00-04:00",
+    "requested_end": "2026-07-13T08:42:29.311163-04:00",
+    "bar_count": 0,
+    "first_bar_at": null,
+    "last_bar_at": null,
+    "bars": []
+  }
+}

@@ -1,0 +1,13 @@
+{
+  "schema_version": "1.0",
+  "config_version": "2026-07-23-stage-b-v1",
+  "timezone": "America/New_York",
+  "trading_mode": "paper",
+  "allow_live": false,
+  "runtime_root": "decision_runtime_v2",
+  "report_root": "reports/v2/daily",
+  "codex_temp_root": ".tmp/codex",
+  "request_timeout_seconds": 30,
+  "codex_timeout_seconds": 900,
+  "codex_retry_count": 1
+}
