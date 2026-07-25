@@ -7,7 +7,9 @@ from v2.cli import parse_cli_args
 
 class CLITests(unittest.TestCase):
     def test_defaults_to_paper(self) -> None:
-        options = parse_cli_args([])
+        options = parse_cli_args(
+            ["--profile", "default"]
+        )
         self.assertTrue(options.paper)
         self.assertFalse(options.live)
         self.assertFalse(options.no_review)
@@ -21,14 +23,20 @@ class CLITests(unittest.TestCase):
             with self.subTest(flag=flag):
                 self.assertTrue(
                     parse_cli_args(
-                        [flag]
+                        [
+                            "--profile",
+                            "default",
+                            flag,
+                        ]
                     ).no_review
                 )
 
     def test_live_is_parsed_for_main_to_reject(
         self,
     ) -> None:
-        options = parse_cli_args(["--live"])
+        options = parse_cli_args(
+            ["--profile", "default", "--live"]
+        )
         self.assertTrue(options.live)
         self.assertFalse(options.paper)
 
@@ -38,6 +46,8 @@ class CLITests(unittest.TestCase):
         with self.assertRaises(SystemExit):
             parse_cli_args(
                 [
+                    "--profile",
+                    "default",
                     "--force-full",
                     "--force-rebalance",
                 ]
@@ -49,11 +59,17 @@ class CLITests(unittest.TestCase):
         with self.assertRaises(SystemExit):
             parse_cli_args(
                 [
+                    "--profile",
+                    "default",
                     "--cycle-id",
                     "20260723T120502",
                     "--new-cycle",
                 ]
             )
+
+    def test_profile_is_required(self) -> None:
+        with self.assertRaises(SystemExit):
+            parse_cli_args([])
 
 
 if __name__ == "__main__":

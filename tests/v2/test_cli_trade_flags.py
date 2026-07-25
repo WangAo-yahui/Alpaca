@@ -16,7 +16,13 @@ class CLITradeFlagTests(unittest.TestCase):
         ):
             with self.subTest(flag=flag):
                 self.assertTrue(
-                    parse_cli_args([flag]).no_review
+                    parse_cli_args(
+                        [
+                            "--profile",
+                            "default",
+                            flag,
+                        ]
+                    ).no_review
                 )
 
     def test_all_allow_trade_aliases(self) -> None:
@@ -25,7 +31,13 @@ class CLITradeFlagTests(unittest.TestCase):
             "--allow_trade",
         ):
             with self.subTest(flag=flag):
-                options = parse_cli_args([flag])
+                options = parse_cli_args(
+                    [
+                        "--profile",
+                        "default",
+                        flag,
+                    ]
+                )
                 self.assertTrue(
                     options.allow_trade
                 )
@@ -36,7 +48,11 @@ class CLITradeFlagTests(unittest.TestCase):
         self,
     ) -> None:
         options = parse_cli_args(
-            ["--no-review"]
+            [
+                "--profile",
+                "default",
+                "--no-review",
+            ]
         )
         self.assertFalse(options.allow_trade)
 
@@ -49,6 +65,8 @@ class CLITradeFlagTests(unittest.TestCase):
             with self.assertRaises(SystemExit):
                 parse_cli_args(
                     [
+                        "--profile",
+                        "default",
                         "--allow-trade",
                         "--maintenance-only",
                     ]

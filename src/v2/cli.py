@@ -56,10 +56,9 @@ def build_parser() -> argparse.ArgumentParser:
 
     parser.add_argument(
         "--profile",
-        default="default",
+        required=True,
         help=(
-            "账户配置名称；默认default仅用于向后兼容，"
-            "日常运行建议显式指定"
+            "账户配置名称；可显式使用default兼容旧凭据环境变量"
         ),
     )
 
