@@ -89,6 +89,10 @@ class StageHPathTests(unittest.TestCase):
                 paths.runtime
                 / "account_bindings/paper1.json",
             )
+            self.assertEqual(
+                environment["PYTHONDONTWRITEBYTECODE"],
+                "1",
+            )
             self.assertEqual(commit, "a" * 40)
             self.assertTrue(verified)
 

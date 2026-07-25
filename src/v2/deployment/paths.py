@@ -117,6 +117,7 @@ class DeploymentPaths:
                 "WA_LOG_ROOT": str(self.logs),
                 "WA_DOTENV_PATH": str(self.dotenv),
                 "WA_RELEASE_GIT_COMMIT": git_commit,
+                "PYTHONDONTWRITEBYTECODE": "1",
                 "PYTHONUNBUFFERED": "1",
             }
         )
