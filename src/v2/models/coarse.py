@@ -18,6 +18,7 @@ from v2.data.daily_bars import (
 )
 from v2.data.universe import load_universe
 from v2.runtime import (
+    build_shared_data_paths,
     load_json_object,
     utc_now_iso,
 )
@@ -929,13 +930,19 @@ def _asset_map(
     base_snapshot: Mapping[str, Any],
 ) -> dict[str, dict[str, Any]]:
     result: dict[str, dict[str, Any]] = {}
-    snapshot_path = (
+    snapshot_paths = (
+        build_shared_data_paths(
+            project_root=project_root
+        ).assets
+        / "assets.json",
         project_root
         / "data"
         / "snapshots"
-        / "assets.json"
+        / "assets.json",
     )
-    if snapshot_path.exists():
+    for snapshot_path in snapshot_paths:
+        if not snapshot_path.exists():
+            continue
         try:
             payload = load_json_object(snapshot_path)
             for raw in payload.get("assets", []):
@@ -1096,6 +1103,10 @@ def build_coarse_input(
     base_snapshot: Mapping[str, Any],
     bar_store: DailyBarStore | None = None,
     generated_at: str | None = None,
+    profile_id: str = "default",
+    strategy_id: str = "core_long",
+    strategy_version: str = "1.0.0",
+    guidance: Mapping[str, Any] | None = None,
 ) -> CoarseInputBuildResult:
     """Build a coarse input without including cash, quotes, or cycle identity."""
 
@@ -1303,8 +1314,34 @@ def build_coarse_input(
         if latest_dates
         else None
     )
+    guidance_payload = (
+        dict(guidance)
+        if isinstance(guidance, Mapping)
+        else {
+            "mode": "skipped_by_flag",
+            "raw_text": "",
+            "guidance_hash": (
+                "e3b0c44298fc1c149afbf4c8996fb924"
+                "27ae41e4649b934ca495991b7852b855"
+            ),
+            "applies_to": [
+                "coarse",
+                "portfolio",
+                "execution",
+            ],
+        }
+    )
     signature_payload = {
         "run_date": run_date,
+        "profile_id": profile_id,
+        "strategy_id": strategy_id,
+        "strategy_version": strategy_version,
+        "guidance_hash": str(
+            guidance_payload.get(
+                "guidance_hash",
+                "",
+            )
+        ),
         "stock_pool_version": (
             universe["stock_pool_version"]
         ),
@@ -1370,8 +1407,44 @@ def build_coarse_input(
         ),
         "stage": "coarse_selection",
         "run_date": run_date,
+        "profile_id": profile_id,
+        "strategy_id": strategy_id,
+        "strategy_version": strategy_version,
         "generated_at": generated,
         "input_signature": input_signature,
+        "initial_guidance": {
+            "mode": str(
+                guidance_payload.get(
+                    "mode",
+                    "skipped_by_flag",
+                )
+            ),
+            "raw_text": str(
+                guidance_payload.get(
+                    "raw_text",
+                    "",
+                )
+            ),
+            "guidance_hash": str(
+                guidance_payload.get(
+                    "guidance_hash",
+                    "",
+                )
+            ),
+            "applies_to": list(
+                guidance_payload.get(
+                    "applies_to",
+                    [
+                        "coarse",
+                        "portfolio",
+                        "execution",
+                    ],
+                )
+            ),
+            "semantics": (
+                "research_preference_not_trade_mandate"
+            ),
+        },
         "universe": candidates,
         "screening_summary": {
             "input_count": (

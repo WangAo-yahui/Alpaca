@@ -196,6 +196,7 @@ class BaseSnapshotTests(unittest.TestCase):
                         "--run-date",
                         "2026-07-23",
                         "--no-review",
+                        "--no-guidance",
                         "--allow-trade",
                     ]
                 ),

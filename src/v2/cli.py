@@ -5,7 +5,7 @@ from dataclasses import dataclass
 from typing import Sequence
 
 
-SCRIPT_VERSION = "2026-07-23-v2-cli-stage-b-v1"
+SCRIPT_VERSION = "2026-07-25-v2-cli-stage-c5-v1"
 
 
 @dataclass(frozen=True)
@@ -23,6 +23,15 @@ class CLIOptions:
     new_cycle: bool
     paper: bool
     live: bool
+
+    # Defaults keep direct programmatic Stage A-C callers compatible.  The
+    # command-line parser deliberately defaults to no explicit guidance so a
+    # non-interactive invocation must opt in to --no-guidance/--unattended.
+    profile: str = "default"
+    guidance: str | None = None
+    no_guidance: bool = True
+    unattended: bool = False
+    bind_account: bool = False
 
     @property
     def no_need_review(self) -> bool:
@@ -42,6 +51,15 @@ def build_parser() -> argparse.ArgumentParser:
         help=(
             "指定纽约运行日期，格式YYYY-MM-DD；"
             "默认使用当前纽约日期"
+        ),
+    )
+
+    parser.add_argument(
+        "--profile",
+        default="default",
+        help=(
+            "账户配置名称；默认default仅用于向后兼容，"
+            "日常运行建议显式指定"
         ),
     )
 
@@ -71,6 +89,36 @@ def build_parser() -> argparse.ArgumentParser:
             "第二阶段后不等待人工意见，"
             "自动继续"
         ),
+    )
+
+    guidance_group = (
+        parser.add_mutually_exclusive_group()
+    )
+    guidance_group.add_argument(
+        "--guidance",
+        help="启动时提供贯穿粗选、组合和执行阶段的研究建议",
+    )
+    guidance_group.add_argument(
+        "--no-guidance",
+        "--no_initial_guidance",
+        dest="no_guidance",
+        action="store_true",
+        help="明确跳过启动建议",
+    )
+
+    parser.add_argument(
+        "--unattended",
+        action="store_true",
+        help=(
+            "无人值守运行，等价于"
+            "--no-guidance --no-review"
+        ),
+    )
+
+    parser.add_argument(
+        "--bind-account",
+        action="store_true",
+        help="显式确认并首次绑定当前Alpaca账户hash",
     )
 
     parser.add_argument(
@@ -185,12 +233,27 @@ def parse_cli_args(
             "--maintenance-only同时使用"
         )
 
+    if args.guidance and args.unattended:
+        parser.error(
+            "--guidance不能与--unattended同时使用"
+        )
+
+    profile = str(args.profile).strip()
+    if not profile:
+        parser.error("--profile不能为空")
+
     paper = not args.live
+    no_review = bool(
+        args.no_review or args.unattended
+    )
+    no_guidance = bool(
+        args.no_guidance or args.unattended
+    )
 
     return CLIOptions(
         run_date=args.run_date,
         cycle_id=args.cycle_id,
-        no_review=args.no_review,
+        no_review=no_review,
         allow_trade=args.allow_trade,
         force_full=args.force_full,
         force_rebalance=(
@@ -205,4 +268,9 @@ def parse_cli_args(
         new_cycle=args.new_cycle,
         paper=paper,
         live=args.live,
+        profile=profile,
+        guidance=args.guidance,
+        no_guidance=no_guidance,
+        unattended=bool(args.unattended),
+        bind_account=bool(args.bind_account),
     )

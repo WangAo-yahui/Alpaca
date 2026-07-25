@@ -19,6 +19,7 @@ from v2.cli import CLIOptions, parse_cli_args  # noqa: E402
 from v2.config import V2Config, load_config  # noqa: E402
 from v2.data.alpaca_client import (  # noqa: E402
     AlpacaClients,
+    call_api,
     create_alpaca_clients,
 )
 from v2.data.snapshots import (  # noqa: E402
@@ -29,9 +30,13 @@ from v2.data.daily_bars import (  # noqa: E402
     DailyBarStore,
 )
 from v2.exceptions import (  # noqa: E402
+    ConfigurationError,
     LiveTradingRejected,
     TemporaryDataError,
     V2Error,
+)
+from v2.guidance import (  # noqa: E402
+    collect_initial_guidance,
 )
 from v2.models.state import (  # noqa: E402
     CoarseStatus,
@@ -51,6 +56,18 @@ from v2.models.state import (  # noqa: E402
     save_cycle_state,
     save_daily_state,
     update_invocation,
+    StateMessage,
+)
+from v2.profiles import (  # noqa: E402
+    Profile,
+    load_profile,
+    load_risk_profile,
+    verify_or_bind_account,
+)
+from v2.releases import (  # noqa: E402
+    StrategyRelease,
+    get_git_commit,
+    load_strategy_release,
 )
 from v2.runtime import (  # noqa: E402
     CyclePaths,
@@ -82,7 +99,15 @@ from v2.stages.coarse import (  # noqa: E402
 )
 
 
-SCRIPT_VERSION = "2026-07-24-v2-stage-c-v1"
+SCRIPT_VERSION = "2026-07-25-v2-stage-c5-v1"
+
+
+@dataclass(frozen=True)
+class RuntimeIdentity:
+    profile: Profile
+    release: StrategyRelease
+    release_state: dict[str, object]
+    git_verified: bool
 
 
 @dataclass(frozen=True)
@@ -107,6 +132,53 @@ class StageCRunResult:
     base_result: StageBRunResult
     coarse: CoarseStageResult | None
     stopped_at: StepName | None
+
+
+def load_runtime_identity(
+    options: CLIOptions,
+    *,
+    project_root: Path | None = None,
+) -> RuntimeIdentity:
+    root = (
+        project_root.expanduser().resolve()
+        if project_root is not None
+        else Path(__file__).resolve().parents[2]
+    )
+    profile = load_profile(
+        options.profile,
+        project_root=root,
+    )
+    if profile.environment != "paper":
+        raise LiveTradingRejected()
+    risk_profile = load_risk_profile(
+        profile.risk_profile,
+        project_root=root,
+    )
+    if (
+        risk_profile.environment
+        != profile.environment
+    ):
+        raise ConfigurationError(
+            "profile与risk profile环境不一致",
+            code="RISK_PROFILE_ENVIRONMENT_MISMATCH",
+        )
+    release = load_strategy_release(
+        profile.strategy_id,
+        profile.strategy_version,
+        project_root=root,
+    )
+    git_commit, git_verified = (
+        get_git_commit(root)
+    )
+    return RuntimeIdentity(
+        profile=profile,
+        release=release,
+        release_state=release.state_payload(
+            risk_profile=profile.risk_profile,
+            git_commit=git_commit,
+        ),
+        git_verified=git_verified,
+    )
 
 
 def decide_new_cycle_kind(
@@ -182,6 +254,7 @@ def load_resumable_cycle(
     run_date: str,
     cycle_id: str,
     project_root: Path | None = None,
+    profile: Profile | None = None,
 ) -> CycleResolution | None:
     """
     轮次存在、状态可恢复时返回该轮次。
@@ -197,6 +270,21 @@ def load_resumable_cycle(
         cycle_id=normalized_cycle_id,
         run_date=run_date,
         project_root=project_root,
+        profile_id=(
+            profile.profile_id
+            if profile is not None
+            else "default"
+        ),
+        strategy_id=(
+            profile.strategy_id
+            if profile is not None
+            else "core_long"
+        ),
+        strategy_version=(
+            profile.strategy_version
+            if profile is not None
+            else "1.0.0"
+        ),
     )
 
     if not paths.cycle_directory.exists():
@@ -233,6 +321,7 @@ def initialize_existing_empty_cycle(
     daily_state: DailyState,
     options: CLIOptions,
     config: V2Config,
+    identity: RuntimeIdentity | None = None,
     project_root: Path | None = None,
 ) -> CycleResolution:
     """
@@ -242,6 +331,21 @@ def initialize_existing_empty_cycle(
         cycle_id=cycle_id,
         run_date=run_date,
         project_root=project_root,
+        profile_id=(
+            identity.profile.profile_id
+            if identity is not None
+            else "default"
+        ),
+        strategy_id=(
+            identity.profile.strategy_id
+            if identity is not None
+            else "core_long"
+        ),
+        strategy_version=(
+            identity.profile.strategy_version
+            if identity is not None
+            else "1.0.0"
+        ),
     )
 
     if not paths.cycle_directory.exists():
@@ -291,6 +395,11 @@ def initialize_existing_empty_cycle(
         allow_trade=options.allow_trade,
         paper=options.paper,
         live=options.live,
+        release=(
+            identity.release_state
+            if identity is not None
+            else None
+        ),
     )
 
     return CycleResolution(
@@ -309,6 +418,7 @@ def resolve_cycle(
     daily_state: DailyState,
     options: CLIOptions,
     config: V2Config,
+    identity: RuntimeIdentity | None = None,
     project_root: Path | None = None,
 ) -> CycleResolution:
     """
@@ -325,6 +435,7 @@ def resolve_cycle(
             daily_state=daily_state,
             options=options,
             config=config,
+            identity=identity,
             project_root=project_root,
         )
 
@@ -339,6 +450,11 @@ def resolve_cycle(
                 daily_state.active_cycle_id
             ),
             project_root=project_root,
+            profile=(
+                identity.profile
+                if identity is not None
+                else None
+            ),
         )
 
         if active is not None:
@@ -347,6 +463,21 @@ def resolve_cycle(
     paths = create_cycle_paths(
         run_date,
         project_root=project_root,
+        profile_id=(
+            identity.profile.profile_id
+            if identity is not None
+            else "default"
+        ),
+        strategy_id=(
+            identity.profile.strategy_id
+            if identity is not None
+            else "core_long"
+        ),
+        strategy_version=(
+            identity.profile.strategy_version
+            if identity is not None
+            else "1.0.0"
+        ),
     )
 
     cycle_kind = decide_new_cycle_kind(
@@ -369,6 +500,11 @@ def resolve_cycle(
         allow_trade=options.allow_trade,
         paper=options.paper,
         live=options.live,
+        release=(
+            identity.release_state
+            if identity is not None
+            else None
+        ),
     )
 
     return CycleResolution(
@@ -490,6 +626,11 @@ def bootstrap_main(
     if options.live:
         raise LiveTradingRejected()
 
+    identity = load_runtime_identity(
+        options,
+        project_root=project_root,
+    )
+
     config = load_config(
         project_root=project_root,
     )
@@ -501,6 +642,11 @@ def bootstrap_main(
     daily_paths = build_daily_paths(
         run_date,
         project_root=project_root,
+        profile_id=identity.profile.profile_id,
+        strategy_id=identity.profile.strategy_id,
+        strategy_version=(
+            identity.profile.strategy_version
+        ),
     )
 
     daily_state = initialize_daily_state(
@@ -524,6 +670,7 @@ def bootstrap_main(
         daily_state=daily_state,
         options=options,
         config=config,
+        identity=identity,
         project_root=project_root,
     )
 
@@ -541,6 +688,64 @@ def bootstrap_main(
         options,
     )
 
+    state = resolution.state
+    if state.profile_id != identity.profile.profile_id:
+        raise ConfigurationError(
+            "恢复轮次的profile与当前调用不一致",
+            code="CYCLE_PROFILE_MISMATCH",
+        )
+    existing_release = state.release
+    expected_release = identity.release_state
+    if existing_release.get(
+        "release_hash"
+    ) == "unknown":
+        state.release = dict(expected_release)
+    else:
+        release_identity_fields = (
+            "app_version",
+            "strategy_id",
+            "strategy_version",
+            "risk_profile",
+            "release_hash",
+            "prompt_hashes",
+            "schema_hashes",
+            "config_hashes",
+        )
+        if any(
+            existing_release.get(field)
+            != expected_release.get(field)
+            for field in release_identity_fields
+        ):
+            raise ConfigurationError(
+                "恢复轮次的strategy release与当前版本不一致",
+                code="CYCLE_RELEASE_MISMATCH",
+            )
+    if (
+        not identity.git_verified
+        and not any(
+            item.code == "GIT_COMMIT_UNKNOWN"
+            for item in state.warnings
+        )
+    ):
+        state.warnings.append(
+            StateMessage(
+                code="GIT_COMMIT_UNKNOWN",
+                message="无法读取Git commit，已记录unknown",
+            )
+        )
+
+    guidance = collect_initial_guidance(
+        options,
+        resolution.paths,
+    )
+    state.guidance = guidance.state_payload(
+        resolution.paths
+    )
+    save_cycle_state(
+        resolution.paths.cycle_state,
+        state,
+    )
+
     if (
         resolution.state.review_mode
         == ReviewMode.SKIPPED_BY_FLAG
@@ -551,7 +756,7 @@ def bootstrap_main(
 
     register_cycle(
         daily_state,
-        resolution.state,
+        state,
     )
 
     save_daily_state(
@@ -671,12 +876,42 @@ def run_stage_b(
                 active_clients = (
                     clients
                     if clients is not None
-                    else create_alpaca_clients(
-                        paper=options.paper,
-                        live=options.live,
+                    else None
+                )
+                if active_clients is None:
+                    profile = load_profile(
+                        paths.profile_id,
                         project_root=project_root,
                     )
-                )
+                    active_clients = (
+                        create_alpaca_clients(
+                            paper=options.paper,
+                            live=options.live,
+                            project_root=project_root,
+                            profile=profile,
+                        )
+                    )
+                    account = call_api(
+                        "get_account_for_binding",
+                        active_clients.trading.get_account,
+                    )
+                    account_id = (
+                        account.get("id")
+                        if isinstance(account, dict)
+                        else getattr(
+                            account,
+                            "id",
+                            None,
+                        )
+                    )
+                    verify_or_bind_account(
+                        profile,
+                        account_id,
+                        bind_account=(
+                            options.bind_account
+                        ),
+                        project_root=project_root,
+                    )
                 snapshot = create_base_snapshot(
                     paths,
                     active_clients,
@@ -943,6 +1178,17 @@ def main() -> int:
         print("v2主流程拒绝或失败")
         print(f"错误代码：{disposition.code}")
         print(f"错误信息：{disposition.message}")
+        if (
+            disposition.code
+            == "ACCOUNT_BINDING_REQUIRED"
+            and disposition.details.get(
+                "account_id_hash"
+            )
+        ):
+            print(
+                "待绑定账户hash："
+                f"{disposition.details['account_id_hash']}"
+            )
         return 2
 
     except Exception as error:

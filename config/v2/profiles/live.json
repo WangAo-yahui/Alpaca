@@ -1,0 +1,14 @@
+{
+  "schema_version": "1.0",
+  "profile_id": "live",
+  "enabled": false,
+  "broker": "alpaca",
+  "environment": "live",
+  "credential_key_env": "ALPACA_LIVE_API_KEY",
+  "credential_secret_env": "ALPACA_LIVE_SECRET_KEY",
+  "strategy": {
+    "strategy_id": "core_long",
+    "strategy_version": "1.0.0"
+  },
+  "risk_profile": "live_conservative@1.0.0"
+}

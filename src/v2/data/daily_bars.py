@@ -26,6 +26,7 @@ from v2.data.alpaca_client import (
 from v2.exceptions import V2Error
 from v2.runtime import (
     atomic_write_json,
+    build_shared_data_paths,
     load_json_object,
 )
 
@@ -132,6 +133,7 @@ def merge_daily_bars(
 @dataclass(frozen=True)
 class DailyBarStore:
     root: Path
+    fallback_root: Path | None = None
 
     @classmethod
     def for_project(
@@ -139,7 +141,10 @@ class DailyBarStore:
         project_root: Path,
     ) -> "DailyBarStore":
         return cls(
-            root=(
+            root=build_shared_data_paths(
+                project_root=project_root
+            ).daily,
+            fallback_root=(
                 project_root
                 / "data"
                 / "bars"
@@ -163,9 +168,16 @@ class DailyBarStore:
         symbol: str,
     ) -> dict[str, Any] | None:
         path = self.path_for(symbol)
-        if not path.exists():
+        if path.exists():
+            return load_json_object(path)
+        if self.fallback_root is None:
             return None
-        return load_json_object(path)
+        fallback = (
+            self.fallback_root / path.name
+        )
+        if not fallback.exists():
+            return None
+        return load_json_object(fallback)
 
     def bars(
         self,

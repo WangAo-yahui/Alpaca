@@ -56,6 +56,7 @@ def options(*extra: str):
             "--run-date",
             "2026-07-23",
             "--no-review",
+            "--no-guidance",
             "--allow-trade",
             *extra,
         ]
@@ -189,12 +190,10 @@ class CoarseStageTests(unittest.TestCase):
                 CoarseStatus.VALID,
             )
             cycle_states = sorted(
-                (
-                    root
-                    / "decision_runtime_v2"
-                    / "2026-07-23"
-                    / "cycles"
-                ).glob("*/cycle_state.json")
+                first.resolution.paths
+                .cycles_directory.glob(
+                    "*/cycle_state.json"
+                )
             )
             failed = load_cycle_state(
                 cycle_states[-1]

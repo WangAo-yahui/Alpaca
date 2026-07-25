@@ -16,6 +16,9 @@
     "config_signature",
     "invocation",
     "trade_permission",
+    "profile_id",
+    "release",
+    "guidance",
     "created_at",
     "updated_at",
     "started_at_new_york",
@@ -133,6 +136,75 @@
         },
         "dry_run": {
           "type": "boolean"
+        }
+      }
+    },
+    "profile_id": {
+      "type": "string",
+      "minLength": 1
+    },
+    "release": {
+      "type": "object",
+      "required": [
+        "app_version",
+        "git_commit",
+        "strategy_id",
+        "strategy_version",
+        "risk_profile",
+        "release_hash",
+        "prompt_hashes",
+        "schema_hashes",
+        "config_hashes"
+      ],
+      "properties": {
+        "app_version": {
+          "const": "2.0.0"
+        },
+        "git_commit": {
+          "type": "string",
+          "minLength": 1
+        },
+        "strategy_id": {
+          "type": "string",
+          "minLength": 1
+        },
+        "strategy_version": {
+          "type": "string",
+          "minLength": 1
+        },
+        "risk_profile": {
+          "type": "string",
+          "minLength": 1
+        },
+        "release_hash": {
+          "type": "string",
+          "minLength": 1
+        },
+        "prompt_hashes": {
+          "type": "object"
+        },
+        "schema_hashes": {
+          "type": "object"
+        },
+        "config_hashes": {
+          "type": "object"
+        }
+      }
+    },
+    "guidance": {
+      "type": "object",
+      "required": [
+        "path",
+        "guidance_hash"
+      ],
+      "properties": {
+        "path": {
+          "type": "string"
+        },
+        "guidance_hash": {
+          "type": "string",
+          "minLength": 64,
+          "maxLength": 64
         }
       }
     },

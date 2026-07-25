@@ -7,6 +7,9 @@
   "required": [
     "schema_version",
     "run_date",
+    "profile_id",
+    "strategy_id",
+    "strategy_version",
     "config_version",
     "config_signature",
     "first_successful_cycle_id",
@@ -29,6 +32,18 @@
     "run_date": {
       "type": "string",
       "format": "date"
+    },
+    "profile_id": {
+      "type": "string",
+      "minLength": 1
+    },
+    "strategy_id": {
+      "type": "string",
+      "minLength": 1
+    },
+    "strategy_version": {
+      "type": "string",
+      "minLength": 1
     },
     "config_version": {
       "type": "string",
