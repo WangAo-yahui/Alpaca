@@ -1,3 +1,9 @@
+"""构造 WA Trader v2 的隔离运行路径并提供原子文件操作。
+
+作用：按 profile、strategy 和 version 分隔账户产物，同时定义共享市场数据目录。
+重要性：路径隔离防止账户状态、报告和订单互相污染；原子写入保护恢复点不被半写损坏。
+"""
+
 from __future__ import annotations
 
 import argparse

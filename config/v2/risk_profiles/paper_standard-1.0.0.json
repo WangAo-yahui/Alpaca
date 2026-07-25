@@ -1,4 +1,5 @@
 {
+  "_comment": "作用：定义 paper 环境标准风险参数。重要性：所有 paper profile 通过版本化引用共享同一可审计风险合同，而不是复制可漂移参数。",
   "schema_version": "1.0",
   "risk_profile_id": "paper_standard",
   "risk_profile_version": "1.0.0",

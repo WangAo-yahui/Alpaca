@@ -1,0 +1,18 @@
+{
+  "_comment": "作用：固定 core_long@1.0.1 的兼容版本与全部 prompt/schema/config 哈希。重要性：运行前必须验证此清单，任何 release 内原地修改都应失败。",
+  "schema_version": "1.0",
+  "strategy_id": "core_long",
+  "strategy_version": "1.0.1",
+  "compatible_app_version": ">=2.0.0,<3.0.0",
+  "description": "Long-horizon US equity strategy with documented artifact headers",
+  "prompt_hashes": {
+    "prompts/coarse.md": "0e1603c70d1c8b8cbe6287f5e3802fe4729eb1c93c28da33ae140b507b271bff",
+    "prompts/coarse_AGENTS.md": "120f159c541917ed2ce941f96afd24ada56d48043b475e75482de8c31fa0ffb6"
+  },
+  "schema_hashes": {
+    "schemas/coarse_output.schema.json": "21511129898f63f9f4381e5688d55f14d60e6c3566df19ea0ff1f7948ff1081b"
+  },
+  "config_hashes": {
+    "config/coarse_policy.json": "ed414715dbcd681c8b99d1ce96a5531c5500698f3a3de458568babe0cff66a1e"
+  }
+}

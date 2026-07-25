@@ -1,3 +1,9 @@
+"""安全创建和调用 WA Trader v2 的 Alpaca paper 客户端。
+
+作用：按 profile 指定的环境变量名读取凭据，并统一包装 broker API 异常。
+重要性：该模块不得泄露密钥，且必须拒绝 live 客户端，是 broker 访问的核心安全边界。
+"""
+
 from __future__ import annotations
 
 import os

@@ -1,4 +1,8 @@
-"""Account profiles, versioned risk profiles, and explicit account binding."""
+"""装载账户 profile、版本化风险配置并执行显式账户绑定。
+
+作用：解析非敏感的凭据环境变量名，使用 SHA-256 绑定 Alpaca account id。
+重要性：它防止 profile 串用账户或风险规则；原始账户号和密钥绝不能写入运行产物。
+"""
 
 from __future__ import annotations
 

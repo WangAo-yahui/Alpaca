@@ -1,4 +1,8 @@
-"""Stage C orchestration: input, reuse, Codex, validation, atomic install."""
+"""编排 Stage C 粗选的 revision、Codex、校验和原子安装。
+
+作用：按 input signature 复用或创建 revision，并用 current.json 指向最近有效结果。
+重要性：失败重跑不得覆盖旧有效输出，且本阶段绝不能产生组合决策或订单产物。
+"""
 
 from __future__ import annotations
 

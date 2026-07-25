@@ -1,3 +1,9 @@
+"""定义并持久化 WA Trader v2 的日期级与轮次级状态模型。
+
+作用：记录步骤、失败策略、profile、release、guidance、恢复点和交易许可。
+重要性：状态是断点恢复与失败关闭的事实来源，任何不一致都必须在继续决策前被拒绝。
+"""
+
 from __future__ import annotations
 
 import argparse

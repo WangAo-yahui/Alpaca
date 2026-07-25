@@ -1,4 +1,5 @@
 {
+  "_comment": "作用：预留真实 Alpaca 账户的 profile 与保守风险引用。重要性：当前必须保持 disabled，v2 也会拒绝 live，防止未批准策略进入真实交易。",
   "schema_version": "1.0",
   "profile_id": "live",
   "enabled": false,
@@ -8,7 +9,7 @@
   "credential_secret_env": "ALPACA_LIVE_SECRET_KEY",
   "strategy": {
     "strategy_id": "core_long",
-    "strategy_version": "1.0.0"
+    "strategy_version": "1.0.1"
   },
   "risk_profile": "live_conservative@1.0.0"
 }

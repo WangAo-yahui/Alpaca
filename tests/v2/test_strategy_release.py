@@ -22,6 +22,19 @@ class StrategyReleaseTests(unittest.TestCase):
             project_root=PROJECT_ROOT,
         )
         self.assertEqual(len(release.release_hash), 64)
+        documented = load_strategy_release(
+            "core_long",
+            "1.0.1",
+            project_root=PROJECT_ROOT,
+        )
+        self.assertEqual(
+            documented.strategy_version,
+            "1.0.1",
+        )
+        self.assertEqual(
+            len(documented.release_hash),
+            64,
+        )
         with tempfile.TemporaryDirectory() as temp:
             root = Path(temp)
             shutil.copytree(

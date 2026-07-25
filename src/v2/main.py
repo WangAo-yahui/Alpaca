@@ -1,3 +1,9 @@
+"""WA Trader v2 Stage C.5 主流程入口。
+
+作用：装载 profile/release/risk 身份，建立轮次状态，刷新基础数据并运行粗选。
+重要性：当前版本必须停在 RUN_PORTFOLIO，不执行组合、执行或订单提交，是阶段门控总边界。
+"""
+
 from __future__ import annotations
 
 import sys
