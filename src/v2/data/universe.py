@@ -1,3 +1,9 @@
+"""构建并持久化 WA Trader v2 的共享、去重标的池。
+
+作用：合并股票、ETF、must-include 与排除清单并生成稳定签名。
+重要性：候选空间必须与账户产物隔离且可复现，避免研究输入在轮次间静默漂移。
+"""
+
 from __future__ import annotations
 
 import hashlib

@@ -1,3 +1,9 @@
+"""读取并规范化 Alpaca paper 持仓与可用数量。
+
+作用：统一数量、成本、市场价值、盈亏和 qty_available 字段。
+重要性：可用数量防止超卖，写后持仓变化也是下一轮重平衡的事实依据。
+"""
+
 from __future__ import annotations
 
 from typing import Any

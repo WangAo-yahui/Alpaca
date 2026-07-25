@@ -18,7 +18,7 @@ from typing import Any
 from zoneinfo import ZoneInfo
 
 
-SCRIPT_VERSION = "2026-07-25-v2-runtime-stage-f-v1"
+SCRIPT_VERSION = "2026-07-25-v2-runtime-stage-g-v1"
 
 NEW_YORK_TZ = ZoneInfo("America/New_York")
 
@@ -111,6 +111,8 @@ class CyclePaths:
     order_request_specs: Path
     order_action_plan: Path
     order_validation_summary: Path
+    submission_intent: Path
+    submission_journal: Path
     broker_submission: Path
     reconciliation: Path
 
@@ -482,6 +484,12 @@ def build_cycle_paths(
         order_action_plan=orders_directory / "action_plan.json",
         order_validation_summary=(
             orders_directory / "validation_summary.json"
+        ),
+        submission_intent=(
+            orders_directory / "submission_intent.json"
+        ),
+        submission_journal=(
+            orders_directory / "submission_journal.json"
         ),
         broker_submission=orders_directory / "broker_submission.json",
         reconciliation=orders_directory / "reconciliation.json",

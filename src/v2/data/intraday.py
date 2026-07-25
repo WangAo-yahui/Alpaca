@@ -1,3 +1,9 @@
+"""读取并规范化执行时段所需的分钟线、成交与市场阶段。
+
+作用：提供短窗口行情摘要并按纽约时区识别 regular、extended、overnight 与 closed。
+重要性：市场阶段决定订单类型和扩展时段能力，识别不明时必须保守阻止。
+"""
+
 from __future__ import annotations
 
 import math

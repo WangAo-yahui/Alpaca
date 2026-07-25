@@ -43,6 +43,7 @@ class Profile:
     strategy_version: str
     risk_profile: str
     order_policy: str | None
+    submission_policy: str | None
     source_path: Path
 
     def validate(self) -> None:
@@ -111,6 +112,16 @@ class Profile:
                 "order_policy必须使用name@version格式",
                 code="ORDER_POLICY_REFERENCE_INVALID",
             )
+        if (
+            self.submission_policy is not None
+            and not VERSIONED_REFERENCE.fullmatch(
+                self.submission_policy
+            )
+        ):
+            raise ConfigurationError(
+                "submission_policy必须使用name@version格式",
+                code="SUBMISSION_POLICY_REFERENCE_INVALID",
+            )
 
 
 @dataclass(frozen=True)
@@ -148,6 +159,23 @@ class OrderPolicy:
             f"{self.order_policy_id}@"
             f"{self.order_policy_version}"
         )
+
+
+@dataclass(frozen=True)
+class SubmissionPolicy:
+    """装载后的版本化 paper 券商写操作规则。"""
+
+    schema_version: str
+    policy_id: str
+    version: str
+    broker: str
+    environment: str
+    settings: Mapping[str, Any]
+    source_path: Path
+
+    @property
+    def reference(self) -> str:
+        return f"{self.policy_id}@{self.version}"
 
 
 def _project_root(
@@ -259,6 +287,11 @@ def load_profile(
         order_policy=(
             str(payload["order_policy"]).strip()
             if payload.get("order_policy") is not None
+            else None
+        ),
+        submission_policy=(
+            str(payload["submission_policy"]).strip()
+            if payload.get("submission_policy") is not None
             else None
         ),
         source_path=path,
@@ -425,6 +458,95 @@ def load_order_policy(
         raise ConfigurationError(
             "order policy内容与引用不一致",
             code="ORDER_POLICY_INVALID",
+        )
+    return result
+
+
+def load_submission_policy(
+    reference: str,
+    *,
+    project_root: Path | None = None,
+) -> SubmissionPolicy:
+    """装载并严格校对 Stage G paper submission policy。"""
+
+    match = VERSIONED_REFERENCE.fullmatch(
+        str(reference).strip()
+    )
+    if match is None:
+        raise ConfigurationError(
+            "submission policy引用格式无效",
+            code="SUBMISSION_POLICY_REFERENCE_INVALID",
+        )
+    policy_id, version = match.groups()
+    path = (
+        _project_root(project_root)
+        / "config"
+        / "v2"
+        / "submission_policies"
+        / f"{policy_id}-{version}.json"
+    )
+    if not path.is_file():
+        raise ConfigurationError(
+            f"submission policy不存在：{reference}",
+            code="SUBMISSION_POLICY_NOT_FOUND",
+        )
+    payload = load_json_object(path)
+    result = SubmissionPolicy(
+        schema_version=_required_string(
+            payload,
+            "schema_version",
+            code="SUBMISSION_POLICY_INVALID",
+        ),
+        policy_id=_required_string(
+            payload,
+            "policy_id",
+            code="SUBMISSION_POLICY_INVALID",
+        ),
+        version=_required_string(
+            payload,
+            "version",
+            code="SUBMISSION_POLICY_INVALID",
+        ),
+        broker=_required_string(
+            payload,
+            "broker",
+            code="SUBMISSION_POLICY_INVALID",
+        ),
+        environment=_required_string(
+            payload,
+            "environment",
+            code="SUBMISSION_POLICY_INVALID",
+        ),
+        settings={
+            key: value
+            for key, value in payload.items()
+            if key not in {
+                "_comment",
+                "schema_version",
+                "policy_id",
+                "version",
+                "broker",
+                "environment",
+            }
+        },
+        source_path=path,
+    )
+    retry = result.settings.get("write_retry")
+    switches = result.settings.get("deployment_switches")
+    if (
+        result.schema_version != "1.0"
+        or result.reference != reference
+        or result.broker != "alpaca"
+        or result.environment != "paper"
+        or result.settings.get("allow_direct_replace") is not False
+        or not isinstance(retry, dict)
+        or retry.get("blind_retry_count") != 0
+        or not isinstance(switches, dict)
+        or switches.get("live_submission_enabled") is not False
+    ):
+        raise ConfigurationError(
+            "submission policy不是安全的Stage G paper配置",
+            code="SUBMISSION_POLICY_INVALID",
         )
     return result
 

@@ -1,7 +1,7 @@
-"""静态验证 Stage F 生产安全边界。
+"""静态验证 Stage F 决策层与 Stage G 写白名单边界。
 
-作用：扫描券商写调用、v1 导入和 order_submitter 文件。
-重要性：防止未来重构意外把 Stage G 能力提前接入当前可达流程。
+作用：扫描券商写调用、v1 导入，并确认写能力只位于两个指定执行器。
+重要性：防止未来重构把 Stage G 写调用扩散到规划、校验、对账或报告模块。
 """
 
 from __future__ import annotations
@@ -20,9 +20,14 @@ class StageFSafetyTests(unittest.TestCase):
             / "src"
             / "v2"
         )
+        whitelist = {
+            root / "trading" / "order_submitter.py",
+            root / "trading" / "order_action_executor.py",
+        }
         sources = "\n".join(
             path.read_text(encoding="utf-8")
             for path in root.rglob("*.py")
+            if path not in whitelist
         )
         for name in (
             "submit_order",
@@ -41,13 +46,7 @@ class StageFSafetyTests(unittest.TestCase):
             sources,
             r"\b(?:from|import)\s+v1\b",
         )
-        self.assertFalse(
-            (
-                root
-                / "trading"
-                / "order_submitter.py"
-            ).exists()
-        )
+        self.assertTrue(all(path.is_file() for path in whitelist))
 
 
 if __name__ == "__main__":

@@ -1,3 +1,9 @@
+"""提供 v2 broker 数据层共享的严格规范化原语。
+
+作用：安全读取对象字段、枚举、有限数值、时间戳、symbol 和脱敏错误。
+重要性：统一入口防止 NaN、缺失值、秘密或 SDK 对象差异污染持久化交易事实。
+"""
+
 from __future__ import annotations
 
 import math

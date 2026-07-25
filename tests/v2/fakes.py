@@ -94,6 +94,9 @@ def fake_asset(
         "exchange": "NASDAQ",
         "asset_class": "us_equity",
         "status": "active",
+        "attributes": [],
+        "overnight_tradable": False,
+        "overnight_halted": False,
     }
     values.update(overrides)
     return SimpleNamespace(**values)

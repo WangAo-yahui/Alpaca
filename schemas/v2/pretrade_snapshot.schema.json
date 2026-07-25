@@ -67,6 +67,7 @@
       "enum": [
         "regular_session",
         "overnight",
+        "overnight_session",
         "before_market_open",
         "after_market_close",
         "market_closed_weekend",

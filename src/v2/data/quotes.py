@@ -1,3 +1,9 @@
+"""读取并规范化 Alpaca 最新报价及价差、时效性。
+
+作用：计算 bid、ask、mid、spread 与 quote age，明确缺失和 crossed quote。
+重要性：价格陈旧或价差异常时必须阻止订单，不能把缺失报价当作零价格。
+"""
+
 from __future__ import annotations
 
 from datetime import datetime

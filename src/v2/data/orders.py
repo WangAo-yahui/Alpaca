@@ -1,3 +1,9 @@
+"""读取并规范化 Alpaca paper 订单及其完整生命周期状态。
+
+作用：提供 open、today、recent、broker id 和 client id 的只读查询与统一字段。
+重要性：Stage G 用这些查询做幂等去重、取消确认和即时对账；本模块绝不调用写接口。
+"""
+
 from __future__ import annotations
 
 from datetime import datetime, time, timedelta
@@ -69,6 +75,9 @@ def normalize_order(
             filled_quantity
             if filled_quantity is not None
             else 0.0
+        ),
+        "average_fill_price": finite_float(
+            read_field(order, "filled_avg_price")
         ),
         "limit_price": finite_float(
             read_field(order, "limit_price")
@@ -205,6 +214,32 @@ def fetch_recent_orders(
         ),
         "get_recent_orders",
     )
+
+
+def fetch_order_by_id(
+    clients: AlpacaClients,
+    broker_order_id: str,
+) -> dict[str, Any]:
+    clients.validate()
+    raw = call_api(
+        "get_order_by_id",
+        clients.trading.get_order_by_id,
+        broker_order_id,
+    )
+    return normalize_order(raw)
+
+
+def fetch_order_by_client_id(
+    clients: AlpacaClients,
+    client_order_id: str,
+) -> dict[str, Any]:
+    clients.validate()
+    raw = call_api(
+        "get_order_by_client_id",
+        clients.trading.get_order_by_client_id,
+        client_order_id,
+    )
+    return normalize_order(raw)
 
 
 def system_submitted_orders(

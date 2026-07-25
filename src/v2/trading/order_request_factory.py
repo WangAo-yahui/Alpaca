@@ -6,6 +6,8 @@
 
 from __future__ import annotations
 
+from decimal import Decimal
+from collections.abc import Mapping
 from typing import Any
 
 from alpaca.trading.enums import (
@@ -59,6 +61,46 @@ def build_sdk_request(
         )
     raise ValueError(
         f"Stage F不支持的订单类型：{order.order_type}"
+    )
+
+
+def build_sdk_request_from_spec(
+    spec: Mapping[str, Any],
+) -> MarketOrderRequest | LimitOrderRequest:
+    """Rebuild only a locally validated persisted request specification."""
+
+    if spec.get("local_sdk_validated") is not True:
+        raise ValueError("request spec尚未通过本地SDK校验")
+    common: dict[str, Any] = {
+        "symbol": str(spec["symbol"]),
+        "qty": Decimal(str(spec["qty"])),
+        "side": OrderSide(str(spec["side"])),
+        "time_in_force": TimeInForce(
+            str(spec["time_in_force"])
+        ),
+        "extended_hours": bool(
+            spec.get("extended_hours", False)
+        ),
+        "client_order_id": str(
+            spec["client_order_id"]
+        ),
+    }
+    request_class = str(spec["request_class"])
+    if request_class == "MarketOrderRequest":
+        if common["extended_hours"]:
+            raise ValueError("market订单不能启用extended_hours")
+        return MarketOrderRequest(**common)
+    if request_class == "LimitOrderRequest":
+        if spec.get("limit_price") is None:
+            raise ValueError("LimitOrderRequest缺少limit_price")
+        return LimitOrderRequest(
+            **common,
+            limit_price=Decimal(
+                str(spec["limit_price"])
+            ),
+        )
+    raise ValueError(
+        f"不支持的request_class：{request_class}"
     )
 
 

@@ -1,8 +1,7 @@
-"""Deterministic, resumable step routing for WA Trader v2 Phase A.
+"""管理 WA Trader v2 的确定性步骤顺序、恢复点与 cycle 终态。
 
-This module does not fetch data, invoke Codex, or place orders.  Later phases
-provide handlers for the steps defined here.  Phase A owns sequencing,
-skip/reuse routing, persisted attempts, and error-to-state classification.
+作用：路由各类 cycle，记录步骤尝试，并把 dry、no-action、open、partial、reject、uncertain 映射为明确状态。
+重要性：本模块不直接访问券商；它保证 Stage G 写结果不会跳步、重复恢复或被误报为另一种终态。
 """
 
 from __future__ import annotations
@@ -419,6 +418,9 @@ def complete_current_step(
             CycleStatus.COMPLETED_NO_SUBMISSION,
             CycleStatus.COMPLETED_WITH_SUBMISSIONS,
             CycleStatus.COMPLETED_WITH_OPEN_ORDERS,
+            CycleStatus.COMPLETED_WITH_PARTIAL_FILLS,
+            CycleStatus.COMPLETED_WITH_REJECTIONS,
+            CycleStatus.BLOCKED_SUBMISSION_UNCERTAIN,
         }:
             raise StateValidationError(
                 "COMPLETE步骤的final_status不是成功终态",
@@ -531,6 +533,8 @@ def mark_daily_cycle_terminal(
         CycleStatus.COMPLETED_NO_SUBMISSION,
         CycleStatus.COMPLETED_WITH_SUBMISSIONS,
         CycleStatus.COMPLETED_WITH_OPEN_ORDERS,
+        CycleStatus.COMPLETED_WITH_PARTIAL_FILLS,
+        CycleStatus.COMPLETED_WITH_REJECTIONS,
     }
     if (
         cycle_state.status in successful

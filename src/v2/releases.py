@@ -67,6 +67,8 @@ class StrategyRelease:
         order_policy: str,
         order_policy_hash: str,
         git_commit: str,
+        submission_policy: str = "legacy-unversioned",
+        submission_policy_hash: str = "unknown",
     ) -> dict[str, Any]:
         return {
             "app_version": APP_VERSION,
@@ -77,6 +79,8 @@ class StrategyRelease:
             "risk_profile_hash": risk_profile_hash,
             "order_policy": order_policy,
             "order_policy_hash": order_policy_hash,
+            "submission_policy": submission_policy,
+            "submission_policy_hash": submission_policy_hash,
             "release_hash": self.release_hash,
             "prompt_hashes": dict(
                 self.prompt_hashes

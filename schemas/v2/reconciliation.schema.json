@@ -1,0 +1,56 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "reconciliation.schema.json",
+  "$comment": "作用：约束写后账户、持仓与订单的即时对账。重要性：它以券商最新事实决定 open、partial、reject、uncertain 与下一轮再平衡。",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "profile_id",
+    "environment",
+    "cycle_id",
+    "reconciled_at",
+    "account",
+    "positions",
+    "open_orders",
+    "today_orders",
+    "tracked_orders",
+    "summary",
+    "capital",
+    "requires_next_cycle_rebalance",
+    "reasons",
+    "errors",
+    "warnings"
+  ],
+  "properties": {
+    "schema_version": {"const": "1.0"},
+    "profile_id": {"const": "paper1"},
+    "environment": {"const": "paper"},
+    "cycle_id": {"type": "string"},
+    "reconciled_at": {"type": "string"},
+    "account": {"type": "object"},
+    "positions": {"type": "array"},
+    "open_orders": {"type": "array"},
+    "today_orders": {"type": "array"},
+    "tracked_orders": {"type": "array"},
+    "summary": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["filled", "partially_filled", "open", "canceled", "rejected", "expired", "uncertain"],
+      "properties": {
+        "filled": {"type": "integer", "minimum": 0},
+        "partially_filled": {"type": "integer", "minimum": 0},
+        "open": {"type": "integer", "minimum": 0},
+        "canceled": {"type": "integer", "minimum": 0},
+        "rejected": {"type": "integer", "minimum": 0},
+        "expired": {"type": "integer", "minimum": 0},
+        "uncertain": {"type": "integer", "minimum": 0}
+      }
+    },
+    "capital": {"type": "object"},
+    "requires_next_cycle_rebalance": {"type": "boolean"},
+    "reasons": {"type": "array", "items": {"type": "string"}},
+    "errors": {"type": "array"},
+    "warnings": {"type": "array"}
+  }
+}
