@@ -1,0 +1,14 @@
+{
+  "_comment": "作用：定义 core_long@1.0.1 粗选阶段的候选数量、guidance 语义和禁止字段。重要性：它确保粗选只形成研究池，不能越界生成组合或订单。",
+  "schema_version": "1.0",
+  "stage": "coarse_selection",
+  "selection_count": 60,
+  "initial_guidance_semantics": "preference_not_trade_mandate",
+  "forbidden_decision_fields": [
+    "new_position_allowed",
+    "target_weight",
+    "order",
+    "orders",
+    "quantity"
+  ]
+}

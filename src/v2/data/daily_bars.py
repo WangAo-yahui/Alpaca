@@ -1,3 +1,9 @@
+"""管理账户无关的共享日线行情及增量刷新。
+
+作用：规范化、合并、校验并持久化股票日线，同时只读兼容旧 Stage C 数据目录。
+重要性：粗选签名和质量门控依赖这里的数据，损坏或过期行情不能被当作可执行事实。
+"""
+
 from __future__ import annotations
 
 from dataclasses import dataclass

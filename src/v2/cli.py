@@ -1,3 +1,9 @@
+"""WA Trader v2 命令行合同。
+
+作用：集中定义 profile、initial guidance、复查、交易许可和轮次模式参数。
+重要性：这里是所有运行身份与人工输入的第一道校验边界，冲突参数必须在写入状态前失败。
+"""
+
 from __future__ import annotations
 
 import argparse

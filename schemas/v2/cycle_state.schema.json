@@ -1,5 +1,6 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$comment": "作用：校验单个运行轮次的步骤、权限、profile、release 与 guidance 元数据。重要性：它保证恢复和失败关闭所依赖的 cycle_state 结构完整。",
   "$id": "https://wa-trader.local/schemas/v2/cycle_state.schema.json",
   "title": "WA Trader v2 Cycle State",
   "type": "object",

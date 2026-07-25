@@ -1,4 +1,8 @@
-"""Deterministic inputs and screening for the Stage C coarse selection."""
+"""构建确定性的 Stage C 粗选输入并执行 Python 质量筛选。
+
+作用：从共享日线、静态股票池和基础快照生成研究候选及稳定 input signature。
+重要性：签名决定 revision 复用；现金、报价和日内仓位变化不得污染账户无关的粗选身份。
+"""
 
 from __future__ import annotations
 

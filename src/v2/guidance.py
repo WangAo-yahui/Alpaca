@@ -1,4 +1,8 @@
-"""Initial guidance collection and immutable cycle-local persistence."""
+"""采集并不可变保存每个轮次的 initial guidance。
+
+作用：统一处理 CLI、TTY、无人值守模式、文本规范化和 SHA-256 身份。
+重要性：guidance 会影响三个决策阶段和 coarse revision，恢复轮次时绝不能静默改变。
+"""
 
 from __future__ import annotations
 

@@ -1,4 +1,8 @@
-"""Create the minimal Stage C Codex workspace."""
+"""为 Stage C 创建最小化、隔离的 Codex 工作区。
+
+作用：只复制固定 release 中的 prompt、schema、policy 和本次粗选输入。
+重要性：它限制 Codex 可读取和写入的范围，避免接触凭据、账户状态及其他轮次产物。
+"""
 
 from __future__ import annotations
 

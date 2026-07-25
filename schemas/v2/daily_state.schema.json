@@ -1,5 +1,6 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$comment": "作用：校验指定 profile 与策略版本在单日范围内的共享状态和 coarse 指针。重要性：它防止不同身份的轮次或无效粗选结果被错误复用。",
   "$id": "https://wa-trader.local/schemas/v2/daily_state.schema.json",
   "title": "WA Trader v2 Daily State",
   "type": "object",

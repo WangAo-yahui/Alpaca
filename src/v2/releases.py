@@ -1,4 +1,8 @@
-"""Immutable strategy release discovery and hash verification."""
+"""解析并验证不可变的策略 release。
+
+作用：校验 prompt、schema、策略配置的文件集合与 SHA-256，并记录 Git/release 身份。
+重要性：任何原地修改都会改变策略行为，因此必须在运行 Codex 前失败并阻止继续。
+"""
 
 from __future__ import annotations
 

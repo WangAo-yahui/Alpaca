@@ -1,4 +1,5 @@
 {
+  "_comment": "作用：定义未来 live 环境的独立保守风险上限。重要性：策略版本与风险版本分离，live 晋级时不能沿用更宽松的 paper 风险参数。",
   "schema_version": "1.0",
   "risk_profile_id": "live_conservative",
   "risk_profile_version": "1.0.0",

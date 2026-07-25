@@ -1,4 +1,5 @@
 {
+  "_comment": "作用：为旧 ALPACA_API_KEY/ALPACA_SECRET_KEY 环境变量提供显式 default profile。重要性：只保存变量名称而非密钥，确保旧凭据可迁移且不会进入版本控制。",
   "schema_version": "1.0",
   "profile_id": "default",
   "enabled": true,
@@ -8,7 +9,7 @@
   "credential_secret_env": "ALPACA_SECRET_KEY",
   "strategy": {
     "strategy_id": "core_long",
-    "strategy_version": "1.0.0"
+    "strategy_version": "1.0.1"
   },
   "risk_profile": "paper_standard@1.0.0"
 }

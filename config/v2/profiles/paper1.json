@@ -1,4 +1,5 @@
 {
+  "_comment": "作用：定义 paper1 的凭据变量、策略 release 和风险 profile。重要性：它将该账户的运行状态、报告与其他 paper 账户完全隔离。",
   "schema_version": "1.0",
   "profile_id": "paper1",
   "enabled": true,
@@ -8,7 +9,7 @@
   "credential_secret_env": "ALPACA_PAPER1_SECRET_KEY",
   "strategy": {
     "strategy_id": "core_long",
-    "strategy_version": "1.0.0"
+    "strategy_version": "1.0.1"
   },
   "risk_profile": "paper_standard@1.0.0"
 }

@@ -1,4 +1,5 @@
 {
+  "_comment": "作用：定义 paper2 的凭据变量、策略 release 和风险 profile。重要性：它是独立账户身份，必须通过 account hash 绑定后才能运行 broker 数据阶段。",
   "schema_version": "1.0",
   "profile_id": "paper2",
   "enabled": true,
@@ -8,7 +9,7 @@
   "credential_secret_env": "ALPACA_PAPER2_SECRET_KEY",
   "strategy": {
     "strategy_id": "core_long",
-    "strategy_version": "1.0.0"
+    "strategy_version": "1.0.1"
   },
   "risk_profile": "paper_standard@1.0.0"
 }
