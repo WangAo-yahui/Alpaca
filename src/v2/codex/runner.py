@@ -1,4 +1,8 @@
-"""Safe subprocess wrapper for one Stage C Codex call and one retry."""
+"""安全运行 Stage C/Stage D 的单次 Codex 调用与有限重试。
+
+作用：在隔离工作区执行结构化输出调用，并记录脱敏后的尝试信息。
+重要性：统一超时、重试和环境变量白名单，防止凭据泄露或无限重试。
+"""
 
 from __future__ import annotations
 
@@ -11,7 +15,10 @@ from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any, Callable
 
-from v2.codex.workspace import CoarseWorkspace
+from v2.codex.workspace import (
+    CoarseWorkspace,
+    PortfolioWorkspace,
+)
 from v2.exceptions import (
     CodexTimeoutError,
     TemporaryDataError,
@@ -111,19 +118,23 @@ def _redact(value: str) -> str:
     )
 
 
-def _load_json_message(path: Path) -> dict[str, Any]:
+def _load_json_message(
+    path: Path,
+    *,
+    label: str = "粗选",
+) -> dict[str, Any]:
     try:
         payload = json.loads(
             path.read_text(encoding="utf-8")
         )
     except FileNotFoundError as error:
         raise TemporaryDataError(
-            "Codex未生成粗选JSON输出",
+            f"Codex未生成{label}JSON输出",
             code="CODEX_OUTPUT_MISSING",
         ) from error
     except json.JSONDecodeError as error:
         raise TemporaryDataError(
-            "Codex粗选输出不是严格JSON",
+            f"Codex{label}输出不是严格JSON",
             code="CODEX_OUTPUT_NOT_JSON",
             details={
                 "line": error.lineno,
@@ -132,7 +143,7 @@ def _load_json_message(path: Path) -> dict[str, Any]:
         ) from error
     if not isinstance(payload, dict):
         raise TemporaryDataError(
-            "Codex粗选输出顶层必须是对象",
+            f"Codex{label}输出顶层必须是对象",
             code="CODEX_OUTPUT_NOT_OBJECT",
         )
     return payload
@@ -178,6 +189,12 @@ class CodexRunner:
             instruction,
         ]
 
+    def _stage_name(self) -> str:
+        return "coarse_selection"
+
+    def _label(self) -> str:
+        return "粗选"
+
     def run(
         self,
         workspace: CoarseWorkspace,
@@ -187,7 +204,7 @@ class CodexRunner:
         last_error: BaseException | None = None
         self.last_call_record = {
             "schema_version": "1.0",
-            "stage": "coarse_selection",
+            "stage": self._stage_name(),
             "status": "running",
             "working_directory": str(
                 workspace.root
@@ -241,7 +258,7 @@ class CodexRunner:
                 attempts.append(attempt)
                 if completed.returncode != 0:
                     last_error = TemporaryDataError(
-                        "Codex粗选进程执行失败",
+                        f"Codex{self._label()}进程执行失败",
                         code="CODEX_PROCESS_FAILED",
                         details={
                             "return_code": (
@@ -253,7 +270,8 @@ class CodexRunner:
                     continue
                 try:
                     payload = _load_json_message(
-                        workspace.last_message
+                        workspace.last_message,
+                        label=self._label(),
                     )
                 except TemporaryDataError as error:
                     last_error = error
@@ -285,7 +303,7 @@ class CodexRunner:
                     }
                 )
                 last_error = CodexTimeoutError(
-                    "Codex粗选调用超时",
+                    f"Codex{self._label()}调用超时",
                     details={
                         "attempt": attempt_number,
                         "timeout_seconds": (
@@ -311,6 +329,53 @@ class CodexRunner:
         if isinstance(last_error, CodexTimeoutError):
             raise last_error
         raise TemporaryDataError(
-            "Codex粗选调用失败",
+            f"Codex{self._label()}调用失败",
             code="CODEX_CALL_FAILED",
         ) from last_error
+
+
+@dataclass
+class PortfolioCodexRunner(CodexRunner):
+    """Use the common safe runner with Stage D's prompt and identity."""
+
+    def _command(
+        self,
+        workspace: PortfolioWorkspace,
+    ) -> list[str]:
+        instruction = (
+            "Read prompts/portfolio.md and "
+            "data/portfolio_input.json, then return only "
+            "the required JSON object. Do not create orders."
+        )
+        return [
+            self.executable,
+            "exec",
+            "--skip-git-repo-check",
+            "--ephemeral",
+            "--ignore-user-config",
+            "--sandbox",
+            "workspace-write",
+            "--config",
+            'approval_policy="never"',
+            "--config",
+            'web_search="live"',
+            "--cd",
+            str(workspace.root),
+            "--output-schema",
+            str(workspace.schema_file),
+            "--output-last-message",
+            str(workspace.last_message),
+            instruction,
+        ]
+
+    def _stage_name(self) -> str:
+        return "portfolio_decision"
+
+    def _label(self) -> str:
+        return "组合"
+
+    def run(
+        self,
+        workspace: PortfolioWorkspace,
+    ) -> CodexRunResult:
+        return super().run(workspace)  # type: ignore[arg-type]

@@ -7,7 +7,16 @@ from pathlib import Path
 from typing import Any
 
 from v2.codex.runner import CodexRunResult
+from v2.cli import parse_cli_args
+from v2.data.alpaca_client import AlpacaClients
 from v2.runtime import load_json_object, utc_now_iso
+from tests.v2.fakes import (
+    FakeStockDataClient,
+    FakeTradingClient,
+    fake_account,
+    fake_order,
+    fake_position,
+)
 
 
 PROJECT_ROOT = Path(__file__).resolve().parents[2]
@@ -323,3 +332,257 @@ class FakeCoarseRunner:
                 "completed_at": utc_now_iso(),
             },
         )
+
+
+def valid_portfolio_output(
+    input_payload: dict[str, Any],
+    *,
+    status: str = "success_local_only",
+) -> dict[str, Any]:
+    """Build a small valid strategic-weight output with no order fields."""
+
+    candidates = [
+        item
+        for item in input_payload["candidates"]
+        if item[
+            "screen_new_position_eligible"
+        ]
+        and not any(
+            position["symbol"]
+            == item["symbol"]
+            for position in input_payload[
+                "positions"
+            ]
+        )
+    ][:3]
+    generated = datetime.now(
+        timezone.utc
+    )
+    valid_until = generated + timedelta(
+        hours=3
+    )
+    return {
+        "schema_version": "1.0",
+        "stage": "portfolio_decision",
+        "profile_id": input_payload[
+            "profile"
+        ]["profile_id"],
+        "strategy_id": input_payload[
+            "release"
+        ]["strategy_id"],
+        "strategy_version": input_payload[
+            "release"
+        ]["strategy_version"],
+        "run_date": input_payload["run_date"],
+        "cycle_id": input_payload["cycle_id"],
+        "generated_at": generated.isoformat(),
+        "input_signature": input_payload[
+            "input_signature"
+        ],
+        "status": status,
+        "network_research": {
+            "status": (
+                "unavailable"
+                if status == "success_local_only"
+                else "completed"
+            ),
+            "web_access": (
+                status != "success_local_only"
+            ),
+            "summary": "Deterministic test research",
+            "warnings": (
+                ["local only"]
+                if status == "success_local_only"
+                else []
+            ),
+        },
+        "guidance_response": {
+            "summary": "Guidance considered",
+            "accepted_points": [],
+            "modified_points": [],
+            "rejected_points": [
+                input_payload[
+                    "initial_guidance"
+                ].get("raw_text", "")
+            ]
+            if input_payload[
+                "initial_guidance"
+            ].get("raw_text")
+            else [],
+            "constraint_conflicts": [],
+        },
+        "market_assessment": {
+            "regime": "neutral",
+            "summary": "Test market",
+            "key_risks": ["Market risk"],
+        },
+        "allocation": {
+            "target_cash_weight": "0.76",
+            "target_invested_weight": "0.24",
+            "target_position_count": 3,
+            "maximum_single_symbol_weight": "0.08",
+            "maximum_sector_weight": "0.30",
+            "deployment_posture": "gradual",
+            "rationale": "Diversified test allocation",
+        },
+        "decisions": [
+            {
+                "symbol": item["symbol"],
+                "current_position": False,
+                "in_current_coarse": True,
+                "action": "open",
+                "conviction": "medium",
+                "target_weight": "0.08",
+                "maximum_weight": "0.08",
+                "priority": index,
+                "price_plan": {
+                    "currency": "USD",
+                    "entry_zone_low": None,
+                    "entry_zone_high": None,
+                    "do_not_chase_above": None,
+                    "review_below": None,
+                    "notes": "Recheck live price",
+                },
+                "protection_plan": {
+                    "style": "thesis_break",
+                    "reference_price": None,
+                    "maximum_loss_fraction": "0.10",
+                    "notes": "Review thesis",
+                },
+                "thesis": "Eligible candidate",
+                "risks": ["Market risk"],
+                "catalysts": [],
+                "portfolio_role": "Diversifier",
+                "execution_checks": [
+                    "Refresh price"
+                ],
+                "source_references": ["input"],
+            }
+            for index, item in enumerate(
+                candidates,
+                start=1,
+            )
+        ],
+        "open_order_assessments": [
+            {
+                "order_reference": (
+                    f"{order['symbol']}:"
+                    f"{order['side']}"
+                ),
+                "symbol": order["symbol"],
+                "assessment": "review",
+                "reason": "Refresh before execution",
+                "conflicts_with_target": False,
+            }
+            for order in input_payload[
+                "open_orders"
+            ]
+        ],
+        "watchlist": [],
+        "execution_focus": [
+            "Refresh quotes before any order"
+        ],
+        "requires_rebalance_next_cycle": False,
+        "valid_until": valid_until.isoformat(),
+        "warnings": (
+            ["local only"]
+            if status == "success_local_only"
+            else []
+        ),
+        "source_references": [
+            {
+                "id": "input",
+                "title": "Portfolio input",
+                "url": "",
+                "source_type": "input",
+                "retrieved_at": (
+                    input_payload["generated_at"]
+                ),
+            }
+        ],
+    }
+
+
+class FakePortfolioRunner:
+    def __init__(
+        self,
+        *,
+        mutate: Any = None,
+    ) -> None:
+        self.calls = 0
+        self.mutate = mutate
+
+    def run(
+        self,
+        workspace: Any,
+    ) -> CodexRunResult:
+        self.calls += 1
+        input_payload = load_json_object(
+            workspace.input_file
+        )
+        output = valid_portfolio_output(
+            input_payload
+        )
+        if self.mutate is not None:
+            self.mutate(output)
+        return CodexRunResult(
+            payload=output,
+            call_record={
+                "schema_version": "1.0",
+                "stage": "portfolio_decision",
+                "status": "success",
+                "working_directory": str(
+                    workspace.root
+                ),
+                "command": ["fake-codex"],
+                "timeout_seconds": 1,
+                "retry_count": 0,
+                "attempts": [
+                    {
+                        "attempt": 1,
+                        "return_code": 0,
+                    }
+                ],
+                "completed_at": utc_now_iso(),
+            },
+        )
+
+
+def stage_d_options(*extra: str):
+    return parse_cli_args(
+        [
+            "--profile",
+            "paper2",
+            "--run-date",
+            "2026-07-23",
+            "--unattended",
+            "--allow-trade",
+            "--bind-account",
+            *extra,
+        ]
+    )
+
+
+def stage_d_clients(
+    *,
+    cash: str = "10000.50",
+    positions: list[object] | None = None,
+    orders: list[object] | None = None,
+) -> AlpacaClients:
+    return AlpacaClients(
+        trading=FakeTradingClient(
+            account=fake_account(cash=cash),
+            positions=(
+                positions
+                if positions is not None
+                else [fake_position("S064")]
+            ),
+            open_orders=(
+                orders
+                if orders is not None
+                else [fake_order("S063")]
+            ),
+            today_orders=[],
+        ),
+        stock_data=FakeStockDataClient(),
+    )

@@ -1,7 +1,7 @@
-"""为 Stage C 创建最小化、隔离的 Codex 工作区。
+"""为 Stage C 与 Stage D 创建最小化、隔离的 Codex 工作区。
 
-作用：只复制固定 release 中的 prompt、schema、policy 和本次粗选输入。
-重要性：它限制 Codex 可读取和写入的范围，避免接触凭据、账户状态及其他轮次产物。
+作用：只复制固定 release 中的 prompt、schema、policy 和当前阶段必要输入。
+重要性：它限制 Codex 可读取和写入的范围，避免接触凭据、账户绑定及其他身份产物。
 """
 
 from __future__ import annotations
@@ -13,6 +13,7 @@ from typing import Any, Mapping
 from v2.config import V2Config
 from v2.runtime import (
     CoarseRevisionPaths,
+    CyclePaths,
     DailyPaths,
     atomic_write_json,
     atomic_write_text,
@@ -32,6 +33,19 @@ class CoarseWorkspace:
     temp_directory: Path
     last_message: Path
     output_directory: Path
+
+
+@dataclass(frozen=True)
+class PortfolioWorkspace:
+    root: Path
+    agents: Path
+    input_file: Path
+    policy_file: Path
+    risk_file: Path
+    prompt_file: Path
+    schema_file: Path
+    temp_directory: Path
+    last_message: Path
 
 
 def _read_required(path: Path) -> str:
@@ -206,4 +220,161 @@ def prepare_coarse_workspace(
             / "last_message.json"
         ),
         output_directory=output_directory,
+    )
+
+
+def prepare_portfolio_workspace(
+    paths: CyclePaths,
+    *,
+    input_payload: Mapping[str, Any],
+    release: StrategyRelease,
+    risk_profile_payload: Mapping[str, Any],
+) -> PortfolioWorkspace:
+    """Create a cycle-local, credential-free Stage D research workspace."""
+
+    root = paths.portfolio_workspace
+    data_directory = root / "data"
+    market_directory = data_directory / "market"
+    config_directory = root / "config"
+    prompts_directory = root / "prompts"
+    schemas_directory = root / "schemas"
+    temp_directory = root / ".tmp" / "codex"
+    for directory in (
+        root,
+        data_directory,
+        market_directory,
+        config_directory,
+        prompts_directory,
+        schemas_directory,
+        temp_directory,
+    ):
+        directory.mkdir(
+            parents=True,
+            exist_ok=True,
+        )
+
+    agents = root / "AGENTS.md"
+    input_file = (
+        data_directory / "portfolio_input.json"
+    )
+    policy_file = (
+        config_directory / "portfolio_policy.json"
+    )
+    risk_file = (
+        config_directory / "risk_profile.json"
+    )
+    prompt_file = (
+        prompts_directory / "portfolio.md"
+    )
+    schema_file = (
+        schemas_directory
+        / "portfolio_output.schema.json"
+    )
+    atomic_write_text(
+        agents,
+        _read_required(
+            release.root
+            / "prompts"
+            / "portfolio_AGENTS.md"
+        ),
+    )
+    atomic_write_json(
+        input_file,
+        dict(input_payload),
+    )
+    base_workspace_payload = {
+        key: input_payload.get(key)
+        for key in (
+            "run_date",
+            "cycle_id",
+            "account",
+            "capital",
+            "positions",
+            "open_orders",
+            "data_quality",
+            "market_context",
+        )
+    }
+    for filename, payload in (
+        (
+            "initial_guidance.json",
+            input_payload.get(
+                "initial_guidance",
+                {},
+            ),
+        ),
+        (
+            "coarse_output.json",
+            input_payload.get("coarse", {}),
+        ),
+        (
+            "base_snapshot.json",
+            base_workspace_payload,
+        ),
+    ):
+        if filename == "coarse_output.json" and isinstance(
+            payload,
+            Mapping,
+        ):
+            payload = payload.get("output", {})
+        atomic_write_json(
+            data_directory / filename,
+            dict(payload)
+            if isinstance(payload, Mapping)
+            else {},
+        )
+    atomic_write_json(
+        market_directory / "context.json",
+        dict(
+            input_payload.get(
+                "market_context",
+                {},
+            )
+        )
+        if isinstance(
+            input_payload.get("market_context"),
+            Mapping,
+        )
+        else {},
+    )
+    atomic_write_json(
+        policy_file,
+        load_json_object(
+            release.root
+            / "config"
+            / "portfolio_policy.json"
+        ),
+    )
+    atomic_write_json(
+        risk_file,
+        dict(risk_profile_payload),
+    )
+    atomic_write_text(
+        prompt_file,
+        _read_required(
+            release.root
+            / "prompts"
+            / "portfolio.md"
+        ),
+    )
+    atomic_write_text(
+        schema_file,
+        _read_required(
+            release.root
+            / "schemas"
+            / "portfolio_output.schema.json"
+        ),
+    )
+    return PortfolioWorkspace(
+        root=root,
+        agents=agents,
+        input_file=input_file,
+        policy_file=policy_file,
+        risk_file=risk_file,
+        prompt_file=prompt_file,
+        schema_file=schema_file,
+        temp_directory=temp_directory,
+        last_message=(
+            temp_directory / "last_message.json"
+        ),
     )

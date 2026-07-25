@@ -39,7 +39,7 @@ from v2.runtime import (  # noqa: E402
 )
 
 
-SCRIPT_VERSION = "2026-07-25-v2-state-models-stage-c5-v1"
+SCRIPT_VERSION = "2026-07-25-v2-state-models-stage-d-v1"
 SCHEMA_VERSION = "1.0"
 
 
@@ -456,6 +456,10 @@ class DailyState:
     coarse_status: CoarseStatus
     coarse_output_path: str | None
     coarse_input_signature: str | None
+    latest_valid_portfolio_cycle_id: str | None
+    latest_valid_portfolio_output_path: str | None
+    latest_portfolio_input_signature: str | None
+    latest_portfolio_valid_until: str | None
 
     detailed_report_created: bool
     cycle_ids: list[str]
@@ -555,6 +559,17 @@ class DailyState:
                 "必须存在于cycle_ids"
             )
 
+        if (
+            self.latest_valid_portfolio_cycle_id
+            is not None
+            and self.latest_valid_portfolio_cycle_id
+            not in self.cycle_ids
+        ):
+            raise ValueError(
+                "latest_valid_portfolio_cycle_id"
+                "必须存在于cycle_ids"
+            )
+
         for item in self.warnings:
             item.validate()
 
@@ -591,6 +606,18 @@ class DailyState:
             ),
             "coarse_input_signature": (
                 self.coarse_input_signature
+            ),
+            "latest_valid_portfolio_cycle_id": (
+                self.latest_valid_portfolio_cycle_id
+            ),
+            "latest_valid_portfolio_output_path": (
+                self.latest_valid_portfolio_output_path
+            ),
+            "latest_portfolio_input_signature": (
+                self.latest_portfolio_input_signature
+            ),
+            "latest_portfolio_valid_until": (
+                self.latest_portfolio_valid_until
             ),
             "detailed_report_created": (
                 self.detailed_report_created
@@ -675,6 +702,26 @@ class DailyState:
             ),
             coarse_input_signature=payload.get(
                 "coarse_input_signature"
+            ),
+            latest_valid_portfolio_cycle_id=(
+                payload.get(
+                    "latest_valid_portfolio_cycle_id"
+                )
+            ),
+            latest_valid_portfolio_output_path=(
+                payload.get(
+                    "latest_valid_portfolio_output_path"
+                )
+            ),
+            latest_portfolio_input_signature=(
+                payload.get(
+                    "latest_portfolio_input_signature"
+                )
+            ),
+            latest_portfolio_valid_until=(
+                payload.get(
+                    "latest_portfolio_valid_until"
+                )
             ),
             detailed_report_created=bool(
                 payload.get(
@@ -1279,6 +1326,10 @@ def new_daily_state(
         coarse_status=CoarseStatus.MISSING,
         coarse_output_path=None,
         coarse_input_signature=None,
+        latest_valid_portfolio_cycle_id=None,
+        latest_valid_portfolio_output_path=None,
+        latest_portfolio_input_signature=None,
+        latest_portfolio_valid_until=None,
         detailed_report_created=False,
         cycle_ids=[],
         created_at=now,
