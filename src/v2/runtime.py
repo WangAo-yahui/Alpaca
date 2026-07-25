@@ -18,7 +18,7 @@ from typing import Any
 from zoneinfo import ZoneInfo
 
 
-SCRIPT_VERSION = "2026-07-25-v2-runtime-stage-g-v1"
+SCRIPT_VERSION = "2026-07-25-v2-runtime-stage-h-v1"
 
 NEW_YORK_TZ = ZoneInfo("America/New_York")
 
@@ -30,6 +30,23 @@ CYCLE_ID_PATTERN = re.compile(r"^\d{8}T\d{6}$")
 IDENTITY_COMPONENT_PATTERN = re.compile(
     r"^[A-Za-z0-9][A-Za-z0-9._-]*$"
 )
+
+
+def configured_storage_root(
+    environment_name: str,
+    default: Path,
+) -> Path:
+    """Resolve one optional absolute Stage H shared-storage override."""
+
+    raw = os.environ.get(environment_name, "").strip()
+    if not raw:
+        return default.expanduser().resolve()
+    candidate = Path(raw).expanduser()
+    if not candidate.is_absolute():
+        raise ValueError(
+            f"{environment_name}必须是绝对路径"
+        )
+    return candidate.resolve()
 
 
 @dataclass(frozen=True)
@@ -277,7 +294,10 @@ def build_shared_data_paths(
         if project_root is not None
         else get_project_root()
     )
-    shared = root / "shared_data"
+    shared = configured_storage_root(
+        "WA_SHARED_DATA_ROOT",
+        root / "shared_data",
+    )
     market = shared / "market"
     return SharedDataPaths(
         root=shared,
@@ -324,7 +344,10 @@ def build_daily_paths(
         field="strategy_version",
     )
 
-    runtime_root = root / RUNTIME_ROOT_NAME
+    runtime_root = configured_storage_root(
+        "WA_RUNTIME_ROOT",
+        root / RUNTIME_ROOT_NAME,
+    )
     identity_root = (
         runtime_root
         / "accounts"
@@ -339,7 +362,10 @@ def build_daily_paths(
     cycles_directory = day_directory / "cycles"
 
     report_root = (
-        root.joinpath(*REPORT_ROOT_PARTS)
+        configured_storage_root(
+            "WA_REPORTS_ROOT",
+            root.joinpath(*REPORT_ROOT_PARTS),
+        )
         / "accounts"
         / normalized_profile
         / "strategies"

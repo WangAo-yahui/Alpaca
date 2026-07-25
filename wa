@@ -1,0 +1,25 @@
+#!/usr/bin/env python3
+"""WA Trader v2 Stage H 的唯一顶层运维入口。
+
+作用：从仓库自身的 ``src`` 加载部署 CLI，使 bootstrap 在虚拟环境尚未创建时也能运行。
+重要性：用户和 launchd 都通过本文件进入，避免散落脚本绕过防重入、release 或交易门禁。
+"""
+
+from __future__ import annotations
+
+import sys
+from pathlib import Path
+
+
+PROJECT_ROOT = Path(__file__).resolve().parent
+SOURCE_ROOT = PROJECT_ROOT / "src"
+if str(SOURCE_ROOT) not in sys.path:
+    sys.path.insert(0, str(SOURCE_ROOT))
+
+from v2.deployment.cli import main  # noqa: E402
+
+
+if __name__ == "__main__":
+    raise SystemExit(
+        main(project_root=PROJECT_ROOT)
+    )
