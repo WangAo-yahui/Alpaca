@@ -1,0 +1,839 @@
+<!--
+作用：WA Trader v2 的统一操作手册、架构说明与文件索引。
+重要性：本文件替代旧阶段性实施文档，任何运行、部署、交易授权或维护操作都应先参考这里。
+-->
+
+# WA Trader v2 操作手册
+
+## 1. 系统定位
+
+WA Trader v2 是一个仅面向 Alpaca Paper Trading 的美股组合决策、订单规划、
+提交、对账和 macOS 自动运行系统。当前生产入口是根目录的 `./wa`，业务代码全部
+位于 `src/v2`，旧版 `src/v1` 已删除。
+
+当前默认运行身份：
+
+| 项目 | 当前值 |
+| --- | --- |
+| Profile | `paper1` |
+| Broker 环境 | Alpaca paper |
+| 策略 | `core_long@1.2.0` |
+| 风险配置 | `paper_standard@1.1.0` |
+| 订单配置 | `paper_equity@1.0.0` |
+| 提交配置 | `alpaca_paper@1.0.0` |
+| macOS 服务 | `com.wa.trader.paper1` |
+| 自动运行间隔 | 3600 秒 |
+| Live 交易 | 禁止 |
+
+系统的核心原则是 fail closed：数据、市场阶段、账户绑定、配置、模型输出、
+订单能力或券商写入结果只要不确定，就停止交易，而不是猜测或重试。
+
+## 2. 最快开始
+
+### 2.1 环境要求
+
+- macOS；
+- 项目虚拟环境 `.Alpaca/`；
+- 可用的 `codex` CLI；
+- 根目录 `.env` 中存在 `paper1` 的 Alpaca paper 凭据；
+- `account_bindings/paper1.json` 已绑定正确 paper 账户；
+- 当前工作树在部署前必须干净。
+
+`.env` 至少使用以下变量名：
+
+```dotenv
+ALPACA_API_KEY=...
+ALPACA_SECRET_KEY=...
+```
+
+不要把真实值写入 README、Git、LaunchAgent plist、日志或 release。
+
+### 2.2 首次检查
+
+```bash
+./wa doctor
+./wa bootstrap
+```
+
+`doctor` 只检查环境。`bootstrap` 会核验锁定依赖、准备共享目录、复制账户绑定、
+运行完整测试和静态检查，并执行一次真实数据 dry-run。dry-run 会访问 Alpaca 和
+Codex，但不会提交订单。
+
+### 2.3 安全部署
+
+```bash
+./wa deploy
+./wa status
+./wa health
+./wa logs
+```
+
+不带 `--enable-trading` 的部署永远以 dry-run 服务模式运行。
+
+### 2.4 手工运行
+
+只读决策和订单规划：
+
+```bash
+./wa run
+```
+
+允许自然产生的 approved 订单写入 Alpaca paper：
+
+```bash
+./wa run --allow-trade
+```
+
+`--allow-trade` 不会强制生成订单。没有合格订单时，正常结果是
+`completed_no_action`，退出码为 20。
+
+### 2.5 自动 Paper 交易
+
+只有第一次自然 paper 订单已经完成提交、日志落盘、券商查询和对账，并人工确认
+Alpaca Dashboard 一致后，才允许：
+
+```bash
+./wa deploy --enable-trading
+```
+
+如果缺少 `var/deployment/paper_submit_verified.json` 验证标记，命令会以安全门禁
+退出，不能提前启用自动交易。
+
+## 3. 整体运行流程
+
+```text
+./wa
+  └─ deployment CLI / manager
+      ├─ 读取 current release
+      ├─ 获取部署锁或运行锁
+      ├─ 注入共享 runtime / report / market-data 路径
+      └─ 启动 src/v2/main.py
+           ├─ 环境、Profile、账户绑定和策略 release 校验
+           ├─ 维护历史未完成订单
+           ├─ 账户、持仓、订单、资产和行情快照
+           ├─ Coarse：大股票池缩减为候选集
+           ├─ Portfolio：形成分散目标组合
+           ├─ Execution：根据当前市场阶段调整执行意图
+           ├─ Python 硬风控和订单规格构建
+           ├─ 可选的 Paper submit / cancel
+           ├─ 券商状态查询与 reconciliation
+           └─ cycle summary 和 daily report
+```
+
+各阶段的职责严格分离：
+
+1. Codex 负责研究判断和结构化建议；
+2. Python 负责数据合同、状态机、数量、现金、集中度、市场阶段和订单能力硬约束；
+3. 只有交易模块中的白名单调用点能执行券商写操作；
+4. 所有计划、写入前状态、响应和对账都先后落盘；
+5. 不允许模型、命令行参数或部署选项绕过风控。
+
+## 4. `core_long@1.2.0` 整体策略
+
+### 4.1 Coarse 候选筛选
+
+- 从静态股票池和客观市场数据形成候选输入；
+- 目标候选数量为 60；
+- 用户 guidance 只能作为偏好，不能成为强制交易指令；
+- Coarse 输出禁止包含数量、订单、目标权重和强制开仓字段；
+- 数据缺失或质量告警必须保留，不能静默删除问题标的。
+
+### 4.2 Portfolio 组合构建
+
+- 目标持仓数 3–20；
+- 允许空组合，因此没有合格机会时可以全部持有现金；
+- 组合建议有效期 240 分钟；
+- 权重容差为 0.005；
+- 最小目标权重为 0.005；
+- 策略层行业权重上限为 30%；
+- 不允许在 Coarse 候选集之外增加仓位；
+- 资金绝对变化 100 美元或相对变化 1% 时视为需要重新判断。
+
+### 4.3 Execution 执行阶段
+
+- 执行意图有效期为 30 分钟；
+- 单次目标权重绝对调整不超过 0.02；
+- 单次目标权重相对调整不超过 25%；
+- 执行比例只能在 0–1 之间；
+- 扩展时段必须使用 limit 意图并具备新鲜报价；
+- 执行阶段只能缩减或调整组合意图，不能绕过 Python 风控扩大权限。
+
+### 4.4 Python 硬风控
+
+当前 `paper_standard@1.1.0`：
+
+| 风控项 | 限制 |
+| --- | --- |
+| 最大总敞口 | 75% |
+| 最大单一仓位 | 8% |
+| 最大行业权重 | 25% |
+| 最低现金 | 25% |
+| 每轮最大新增资金 | 20% |
+| 每轮最大订单数 | 10 |
+| 最小订单价值 | 10 美元 |
+| 做空 | 禁止 |
+| 报价最大年龄 | 15 秒 |
+| 常规时段最大点差 | 30 bps |
+| 扩展时段最大点差 | 30 bps |
+
+策略层与风险层同时存在上限时，执行更严格的限制。
+
+### 4.5 订单规则
+
+当前 `paper_equity@1.0.0`：
+
+- 仅支持 Alpaca paper 美股；
+- 常规时段允许 market 或 limit；
+- 扩展时段只允许 limit；
+- 默认 TIF 为 `day`，支持 `day` 和 `gtc`；
+- 数量最多 6 位小数，价格最多 2 位小数；
+- 周末、节假日和未知市场状态禁止排队订单；
+- client order ID 最大 48 个字符；
+- fractional、extended-hours 和资产能力均在提交前检查。
+
+### 4.6 提交和对账规则
+
+当前 `alpaca_paper@1.0.0`：
+
+- 只允许 paper submit 和按订单 ID cancel；
+- 禁止 live；
+- 禁止券商 direct replace；
+- 多个订单必须顺序提交，不能并发；
+- 每次写入前后都持久化 journal；
+- 写错误后盲重试次数为 0；
+- 写错误后先使用稳定 client order ID 查询券商；
+- 无法确认结果时标记 uncertain，并停止后续写入；
+- 提交后立即轮询并对账；
+- cancel race 必须以券商最终状态为准；
+- 不允许批量取消或直接平仓 API。
+
+## 5. 状态机与常见结果
+
+主要轮次类型：
+
+- `daily_full`：当天第一次完整研究、组合和执行轮次；
+- `execution_refresh`：复用仍有效的研究或组合，只刷新执行；
+- `maintenance_only`：只处理历史未完成订单和对账；
+- `execution_only`：只运行明确允许的执行阶段；
+- `force_full` / `force_rebalance`：人工要求重新研究或组合，但仍不能绕过风控。
+
+正常终态：
+
+- `completed_dry_run`：完整运行但不允许券商写入；
+- `completed_no_action`：允许 paper 写入，但自然没有订单；
+- `completed_with_submissions`：存在已提交订单；
+- `completed_with_open_orders`：存在仍未终结的订单；
+- `completed_with_partial_fills`：存在部分成交；
+- `completed_with_rejections`：券商明确拒绝，结果已记录。
+
+`running` 是处理中状态，不是失败。服务运行期间 health 可能暂时显示
+`degraded/no_recent_normal_terminal_cycle`，轮次正常结束后应恢复 healthy。
+
+## 6. 运维命令
+
+| 命令 | 作用 | 是否可能写 Paper 订单 |
+| --- | --- | --- |
+| `./wa doctor` | 检查 macOS、Python、Codex、凭据、绑定和 policy | 否 |
+| `./wa bootstrap` | 准备依赖和共享目录、测试并执行 dry-run | 否 |
+| `./wa deploy` | 构建不可变 release，dry-run 验证并安装 LaunchAgent | 否 |
+| `./wa deploy --enable-trading` | 在真实提交验证后部署自动 paper 交易 | 是 |
+| `./wa run` | 前台执行一次 dry-run | 否 |
+| `./wa run --allow-trade` | 前台运行并允许自然 approved paper 订单 | 是 |
+| `./wa start` | 加载并启动当前 LaunchAgent | 取决于当前 release 模式 |
+| `./wa stop` | 停止并卸载 LaunchAgent | 否 |
+| `./wa restart` | 重启 LaunchAgent | 取决于当前 release 模式 |
+| `./wa status` | 查看 release、策略、订单和服务摘要 | 否 |
+| `./wa status --json` | 输出机器可读状态 | 否 |
+| `./wa health` | 验证 release、服务、轮次和安全状态 | 否 |
+| `./wa health --json` | 输出机器可读健康报告 | 否 |
+| `./wa logs` | 显示最近脱敏日志 | 否 |
+| `./wa logs --follow` | 持续跟随脱敏日志 | 否 |
+| `./wa rollback` | current/previous 原子互换并重启服务 | 否 |
+
+`./wa _service-run` 是 LaunchAgent 内部入口，不应手工调用。
+
+### 6.1 稳定退出码
+
+| 退出码 | 含义 |
+| --- | --- |
+| 0 | 成功 |
+| 10 | 已有运行中的同类进程 |
+| 20 | 正常无操作 |
+| 30 | 配置或文件错误 |
+| 40 | 可重试的读取/外部服务错误 |
+| 50 | 安全门禁阻止 |
+| 60 | 券商写入结果不确定，禁止自动重试 |
+| 70 | 部署、release 或服务错误 |
+
+自动化脚本应把 20 当作正常业务结果，不能当作系统故障。
+
+## 7. 推荐操作流程
+
+### 7.1 每日观察
+
+```bash
+cd /Users/wangao/Alpaca
+./wa status
+./wa health
+./wa logs
+```
+
+重点检查：
+
+- `current_release` 是否有效；
+- `trading_enabled` 是否符合预期；
+- `last_cycle_status` 是否为正常终态；
+- `last_submit_count`、`open_orders` 和 `uncertain_operations`；
+- health 的 `reasons` 是否为空。
+
+### 7.2 手工 Paper 验收
+
+```bash
+./wa run --allow-trade
+```
+
+如果出现自然 approved 订单，核对：
+
+1. `submission_journal.json`；
+2. `broker_submission.json`；
+3. `reconciliation.json`；
+4. `cycle_summary.json`；
+5. 当日日报；
+6. Alpaca Dashboard。
+
+必须确认 profile、symbol、side、qty、limit price 和 client order ID 一致，没有重复
+提交，并且券商最终状态与 reconciliation 一致。
+
+### 7.3 发布新代码
+
+```bash
+git status --short
+PYTHONPATH=src PYTHONPYCACHEPREFIX=/private/tmp/wa_v2_pycache \
+  .Alpaca/bin/python -m unittest discover -s tests/v2 -p 'test_*.py'
+./wa doctor
+./wa deploy
+./wa health
+```
+
+部署要求 Git 工作树干净。release 会从已跟踪白名单文件构建，并记录每个文件
+SHA-256。验证失败时不会切换 current 指针。
+
+### 7.4 回滚
+
+```bash
+./wa rollback
+./wa status
+./wa health
+```
+
+回滚只切换代码和配置 release，不删除 runtime、不撤销已提交订单，也不覆盖报告。
+
+## 8. 根目录结构
+
+```text
+Alpaca/
+├── README.md                 # 本操作手册
+├── wa                        # 唯一运维入口
+├── requirements.txt          # 兼容依赖范围
+├── requirements.lock         # 部署使用的精确依赖版本
+├── src/v2/                   # v2 应用源码
+├── config/v2/                # 系统、Profile、风险和订单配置
+├── config/universe/          # 静态股票池
+├── strategies/               # 不可变策略 release
+├── prompts/v2/               # 应用级 Coarse prompt
+├── schemas/v2/               # 运行工件 JSON Schema
+├── tests/v2/                 # 完整自动化测试
+├── data/                     # 可用于 bootstrap 的历史行情和资产种子
+├── var/                      # 部署、共享 runtime、报告、日志和锁
+├── .Alpaca/                  # Python 虚拟环境，不进入 Git
+├── .env                      # 凭据，不进入 Git
+└── account_bindings/         # 账户绑定，不进入 Git
+```
+
+## 9. 根级文件说明
+
+| 文件 | 作用 |
+| --- | --- |
+| `README.md` | 唯一维护和操作手册 |
+| `wa` | 把 `src` 加入 Python 路径并进入 Stage H 运维 CLI |
+| `requirements.txt` | 开发环境允许的依赖版本范围 |
+| `requirements.lock` | bootstrap/deploy 使用的精确依赖版本 |
+| `.gitignore` | 阻止凭据、绑定、runtime、日志、缓存进入 Git |
+| `.env` | Alpaca 凭据；必须保留但永远不能提交 |
+
+`.git/`、`.Alpaca/` 和 `account_bindings/` 是必要的本地基础设施，不属于 release。
+
+## 10. `src/v2` 文件逐项说明
+
+### 10.1 应用核心
+
+| 文件 | 作用 |
+| --- | --- |
+| `src/v2/__init__.py` | 声明 v2 包及与旧实现隔离的边界 |
+| `src/v2/main.py` | 主编排器；连接状态机、数据、三阶段、订单、提交、对账和报告 |
+| `src/v2/cli.py` | 解析业务轮次参数和互斥选项 |
+| `src/v2/config.py` | 加载并校验系统、市场数据、阶段和通用配置 |
+| `src/v2/profiles.py` | 加载 Profile、版本化 policy，并管理账户绑定路径 |
+| `src/v2/releases.py` | 加载和验证不可变策略 manifest、hash 与 Git commit |
+| `src/v2/runtime.py` | 构建日期/轮次/共享路径并提供原子 JSON 持久化 |
+| `src/v2/state_machine.py` | 定义步骤顺序、状态转移、恢复和最终完成条件 |
+| `src/v2/exceptions.py` | 定义配置、数据、状态、Codex 和安全相关异常 |
+| `src/v2/guidance.py` | 保存、规范化并签名初始用户 guidance |
+| `src/v2/review.py` | 处理人工复查与无人值守复查结果 |
+
+### 10.2 Alpaca 数据层
+
+| 文件 | 作用 |
+| --- | --- |
+| `src/v2/data/__init__.py` | 数据层包入口 |
+| `src/v2/data/_normalization.py` | Decimal、时间、枚举和券商对象的公共规范化 |
+| `src/v2/data/alpaca_client.py` | 从安全 dotenv 创建 paper/live 只读或交易客户端 |
+| `src/v2/data/account.py` | 获取并规范化账户资金和权限 |
+| `src/v2/data/assets.py` | 获取资产能力、tradable、fractionable 等字段 |
+| `src/v2/data/daily_bars.py` | 增量读取和更新日线缓存 |
+| `src/v2/data/intraday.py` | 获取当前交易日分时数据 |
+| `src/v2/data/quotes.py` | 获取最新 bid/ask、时间和点差输入 |
+| `src/v2/data/positions.py` | 获取并规范化当前持仓 |
+| `src/v2/data/orders.py` | 获取 open/today/history 订单并规范化状态 |
+| `src/v2/data/snapshots.py` | 组合基础账户、持仓、订单、资产和市场快照 |
+| `src/v2/data/execution_snapshot.py` | 构造 Execution 阶段所需的市场和组合快照 |
+| `src/v2/data/pretrade_snapshot.py` | 在生成订单请求前重新抓取关键事实 |
+| `src/v2/data/universe.py` | 加载并合并 S&P 500、ETF 和核心标的股票池 |
+
+### 10.3 领域模型
+
+| 文件 | 作用 |
+| --- | --- |
+| `src/v2/models/__init__.py` | 模型包入口 |
+| `src/v2/models/state.py` | Daily/Cycle 状态和步骤数据合同 |
+| `src/v2/models/coarse.py` | Coarse 输入输出模型 |
+| `src/v2/models/portfolio.py` | 组合目标、权重和复用模型 |
+| `src/v2/models/execution.py` | 执行意图、市场阶段和约束模型 |
+| `src/v2/models/orders.py` | Proposed、Validated、Action Plan 和请求规格模型 |
+| `src/v2/models/submission.py` | Journal、Broker Submission 和 Reconciliation 模型 |
+
+### 10.4 Codex 适配层
+
+| 文件 | 作用 |
+| --- | --- |
+| `src/v2/codex/__init__.py` | Codex 适配包入口 |
+| `src/v2/codex/workspace.py` | 为各阶段创建隔离的输入、prompt、schema 和输出工作区 |
+| `src/v2/codex/runner.py` | 以受限参数调用 Codex CLI，处理超时、输出和重试边界 |
+| `src/v2/codex/validation.py` | 对 Codex JSON 输出执行 Schema 和语义校验 |
+
+### 10.5 三阶段决策
+
+| 文件 | 作用 |
+| --- | --- |
+| `src/v2/stages/__init__.py` | 阶段包入口 |
+| `src/v2/stages/coarse.py` | 准备、运行、校验和缓存 Coarse 筛选 |
+| `src/v2/stages/portfolio.py` | 准备、运行、校验和复用组合决策 |
+| `src/v2/stages/execution.py` | 准备、运行并约束执行意图 |
+
+### 10.6 订单与 Paper 写入
+
+| 文件 | 作用 |
+| --- | --- |
+| `src/v2/trading/__init__.py` | 交易包入口和写入边界说明 |
+| `src/v2/trading/order_builder.py` | 根据目标组合和事实生成本地 proposed orders |
+| `src/v2/trading/order_validator.py` | 执行现金、敞口、集中度、报价和市场阶段硬校验 |
+| `src/v2/trading/order_request_factory.py` | 将 validated order 转换为 alpaca-py OrderRequest |
+| `src/v2/trading/idempotency.py` | 生成稳定且长度受限的 client order ID |
+| `src/v2/trading/submission_guard.py` | 校验 paper/profile/policy/双开关和执行授权 |
+| `src/v2/trading/submission_journal.py` | 在每次券商写入前后原子记录意图与结果 |
+| `src/v2/trading/order_submitter.py` | 唯一订单提交调用点，处理超时和幂等查询 |
+| `src/v2/trading/order_action_executor.py` | 唯一按订单 ID 取消调用点，处理 cancel race |
+| `src/v2/trading/reconciliation.py` | 查询券商最终状态并生成可审计对账结果 |
+
+### 10.7 报告
+
+| 文件 | 作用 |
+| --- | --- |
+| `src/v2/reports/__init__.py` | 报告包入口 |
+| `src/v2/reports/daily_report.py` | 增量生成同日 Markdown 决策、订单和对账报告 |
+
+### 10.8 macOS 部署
+
+| 文件 | 作用 |
+| --- | --- |
+| `src/v2/deployment/__init__.py` | Stage H 部署包入口 |
+| `src/v2/deployment/cli.py` | 实现 `wa` 的所有运维子命令 |
+| `src/v2/deployment/constants.py` | 服务身份、运行间隔、正常终态和稳定退出码 |
+| `src/v2/deployment/paths.py` | 定义 release、shared、logs、locks 和 plist 路径 |
+| `src/v2/deployment/locks.py` | 原子部署锁和运行锁，识别存活 PID 与陈旧锁 |
+| `src/v2/deployment/redaction.py` | 从日志中清除 dotenv 凭据值和常见 token |
+| `src/v2/deployment/release.py` | 构建白名单 release、记录 hash、校验并只读安装 |
+| `src/v2/deployment/launchd.py` | 生成安全 plist 并执行 bootstrap/bootout/kickstart |
+| `src/v2/deployment/manager.py` | 编排 bootstrap、deploy、run、health、logs 和 rollback |
+
+## 11. 配置文件说明
+
+### 11.1 股票池
+
+| 文件 | 作用 |
+| --- | --- |
+| `config/universe/sp500.json` | S&P 500 静态股票池 |
+| `config/universe/etfs.json` | ETF、行业和风险观察标的 |
+| `config/universe/core_symbols.json` | 必须持续关注的核心标的 |
+
+### 11.2 应用配置
+
+| 文件 | 作用 |
+| --- | --- |
+| `config/v2/system.json` | 超时、默认 runtime/report 和 Codex 运行参数 |
+| `config/v2/market_data.json` | 日线、分时、报价和数据新鲜度规则 |
+| `config/v2/stages.json` | 阶段启用和流程级设置 |
+| `config/v2/universe.json` | v2 股票池来源与合并规则 |
+| `config/v2/risk.json` | 旧兼容风险入口；版本化 Profile 优先 |
+| `config/v2/order_policy.json` | 旧兼容订单入口；版本化 policy 优先 |
+
+### 11.3 Profiles
+
+| 文件 | 作用 |
+| --- | --- |
+| `config/v2/profiles/default.json` | 兼容默认 Profile |
+| `config/v2/profiles/paper1.json` | 当前正式 paper1 身份和版本绑定 |
+| `config/v2/profiles/paper2.json` | 隔离的第二 paper 账户配置 |
+| `config/v2/profiles/paper3.json` | 隔离的第三 paper 账户配置 |
+| `config/v2/profiles/live.json` | Live 身份定义；提交开关保持禁止 |
+
+### 11.4 版本化 Policies
+
+| 文件 | 作用 |
+| --- | --- |
+| `config/v2/risk_profiles/paper_standard-1.0.0.json` | 旧 paper 风险版本，用于历史 release 验证 |
+| `config/v2/risk_profiles/paper_standard-1.1.0.json` | 当前 paper1 硬风控 |
+| `config/v2/risk_profiles/live_conservative-1.0.0.json` | Live 风险定义；不代表允许 live 写入 |
+| `config/v2/order_policies/paper_equity-1.0.0.json` | Alpaca paper 美股订单能力合同 |
+| `config/v2/submission_policies/alpaca_paper-1.0.0.json` | Paper 提交、取消、幂等和对账合同 |
+
+版本化文件一旦被 release 使用，不应原地修改；应新增版本并更新 Profile。
+
+## 12. 策略 Release
+
+`strategies/core_long/` 保留多个版本是为了历史轮次可重现和 hash 校验：
+
+| 版本 | 作用 |
+| --- | --- |
+| `1.0.0` | 初始 Coarse release |
+| `1.0.1` | Coarse 修订 release |
+| `1.1.0` | 加入 Portfolio 阶段 |
+| `1.2.0` | 当前 Coarse + Portfolio + Execution 完整策略 |
+
+每个版本中的文件类型：
+
+- `manifest.json`：策略身份、兼容应用版本和所有配置/prompt/schema hash；
+- `config/coarse_policy.json`：Coarse 数量和禁止字段；
+- `config/portfolio_policy.json`：组合有效期、持仓数和权重约束；
+- `config/execution_policy.json`：执行有效期和调整边界；
+- `prompts/*.md`：对应阶段的模型任务；
+- `prompts/*_AGENTS.md`：工作区内强制执行规则；
+- `schemas/*.schema.json`：对应阶段的结构化输出合同。
+
+当前 `1.2.0` 的任何文件都不能原地编辑，否则 manifest hash 校验会失败。
+
+## 13. JSON Schemas
+
+| 文件 | 作用 |
+| --- | --- |
+| `schemas/v2/daily_state.schema.json` | 日期级状态 |
+| `schemas/v2/cycle_state.schema.json` | 单轮状态和步骤 |
+| `schemas/v2/base_snapshot.schema.json` | 基础账户、持仓、订单和市场快照 |
+| `schemas/v2/coarse_output.schema.json` | Coarse 输出 |
+| `schemas/v2/proposed_orders.schema.json` | 本地拟议订单 |
+| `schemas/v2/pretrade_snapshot.schema.json` | 下单前事实快照 |
+| `schemas/v2/validated_orders.schema.json` | 通过 Python 风控的订单 |
+| `schemas/v2/submission_intent.schema.json` | 写入前意图 |
+| `schemas/v2/broker_submission.schema.json` | 券商提交响应 |
+| `schemas/v2/reconciliation.schema.json` | 对账结果 |
+| `schemas/v2/cycle_summary.schema.json` | 最终轮次摘要 |
+
+## 14. Prompts
+
+| 文件 | 作用 |
+| --- | --- |
+| `prompts/v2/coarse.md` | 应用级 Coarse 任务说明 |
+| `prompts/v2/coarse_AGENTS.md` | Coarse 工作区约束 |
+
+正式运行优先使用策略 release 内与 manifest hash 绑定的 prompts。
+
+## 15. 数据目录
+
+| 路径 | 作用 |
+| --- | --- |
+| `data/bars/daily/<SYMBOL>.json` | bootstrap 可用的有效历史日线种子 |
+| `data/bars/intraday/<DATE>/<SYMBOL>.json` | 保留的历史分时数据 |
+| `data/snapshots/assets.json` | bootstrap 可用的资产能力种子 |
+| `var/shared/market_data/` | 当前部署实际使用和更新的共享行情 |
+
+账户、持仓、订单等易变快照不再保存在 Git 的 `data/snapshots` 中。
+
+## 16. 测试目录
+
+`tests/v2` 是维护所必需的安全资产，不应为了缩小目录而删除。
+
+支持文件：
+
+- `support.py`：基础临时仓库、配置和状态 fixture；
+- `fakes.py`：Alpaca/Codex 假客户端；
+- `order_support.py`：订单测试 fixture；
+- `submission_support.py`：提交与对账 fixture。
+
+测试按职责分组：
+
+- `test_account_*`、`test_assets_*`、`test_positions_*`、`test_orders_*`、
+  `test_quotes_*`：券商对象规范化；
+- `test_daily_bars.py`、`test_shared_data_paths.py`：行情缓存与共享路径；
+- `test_coarse_*`：Coarse 模型、workspace、Codex、Schema 和复用；
+- `test_portfolio_*`：组合模型、约束、复用和人工复查；
+- `test_execution_*`：执行模型、市场阶段、workspace、签名和扩展时段；
+- `test_order_*`、`test_pretrade_snapshot.py`：订单构建、精度、风控和幂等；
+- `test_submission_*`、`test_reconciliation.py`、
+  `test_partial_fill_reconciliation.py`：提交 journal、超时、恢复和对账；
+- `test_cancel_race.py`、`test_replacement_dependency.py`：取消竞争与替换依赖；
+- `test_main_stage_*.py`、`test_cycle_*.py`：主流程、恢复和最终状态；
+- `test_stage_c_safety.py`、`test_stage_f_safety.py`、
+  `test_stage_g_write_whitelist.py`：架构和券商写入白名单；
+- `test_stage_h_*.py`：CLI、路径、锁、release、LaunchAgent、脱敏和部署管理；
+- `test_strategy_*`、`test_risk_profile.py`、`test_order_policy_version.py`：
+  版本化配置和策略 hash。
+
+当前完整测试命令：
+
+```bash
+PYTHONPATH=src \
+PYTHONPYCACHEPREFIX=/private/tmp/wa_v2_pycache \
+.Alpaca/bin/python -m unittest discover -s tests/v2 -p 'test_*.py'
+```
+
+## 17. `var` 运行与部署目录
+
+`var/` 不进入 Git，但属于当前系统的必要状态，不能随意删除。
+
+```text
+var/
+├── deployment/
+│   ├── current.json
+│   ├── previous.json
+│   ├── history/
+│   ├── releases/
+│   ├── staging/
+│   └── paper_submit_verified.json   # 仅在真实提交和对账成功后存在
+├── shared/
+│   ├── runtime/
+│   ├── reports/
+│   ├── market_data/
+│   └── logs/
+├── locks/
+│   ├── deploy.lock
+│   └── paper1.run.lock
+└── archive/
+    └── pre-stage-h/                 # Stage H 前的历史 paper 审计记录
+```
+
+关键规则：
+
+- release 只读，不保存业务状态；
+- current/previous 原子切换；
+- runtime/report/market data/logs 跨 release 共享；
+- 部署锁和运行锁防止并发；
+- 存活 PID 对应的锁不能被抢占；
+- 陈旧锁可在确认进程不存在后恢复；
+- rollback 不删除订单或运行状态。
+
+## 18. 单轮产物
+
+典型轮次目录：
+
+```text
+var/shared/runtime/accounts/paper1/strategies/core_long/1.2.0/
+└── YYYY-MM-DD/
+    ├── daily_state.json
+    └── cycles/<CYCLE_ID>/
+        ├── initial_guidance.json
+        ├── user_review.json
+        ├── base_snapshot.json
+        ├── coarse/
+        ├── portfolio/
+        ├── execution/
+        ├── orders/
+        ├── cycle_state.json
+        └── cycle_summary.json
+```
+
+订单目录中的重要文件：
+
+- `action_plan.json`：取消/替换/新增依赖计划；
+- `pretrade_snapshot.json`：写入前最新账户、订单、持仓和报价；
+- `proposed.json`：策略与 Python 构造的拟议订单；
+- `validation_summary.json`：每条订单通过或拒绝原因；
+- `validated.json`：唯一允许进入提交层的订单；
+- `request_specs.json`：最终 broker request 规格；
+- `submission_intent.json`：每次券商写入前的持久化意图；
+- `submission_journal.json`：幂等写入状态机；
+- `broker_submission.json`：券商响应；
+- `reconciliation.json`：券商最终状态对账。
+
+没有自然 approved 订单时，不要求生成 submission 文件。
+
+## 19. LaunchAgent
+
+用户 LaunchAgent：
+
+```text
+~/Library/LaunchAgents/com.wa.trader.paper1.plist
+```
+
+plist 只包含安全路径和运行参数，不包含 Alpaca 凭据变量名或值。服务通过根目录
+`wa _service-run` 解析 current release，并由 release 中的业务代码运行。
+
+常用检查：
+
+```bash
+launchctl print "gui/$(id -u)/com.wa.trader.paper1"
+./wa status --json
+./wa health --json
+```
+
+优先使用 `wa` 命令，不要直接编辑 plist 或手工杀进程。
+
+## 20. Release 安全边界
+
+release 白名单：
+
+- `src/v2/`
+- `config/v2/`
+- `config/universe/`
+- `schemas/v2/`
+- `strategies/`
+- `prompts/v2/`
+- `requirements.txt`
+- `requirements.lock`
+- `wa`
+
+明确排除：
+
+- `.env`
+- `.Alpaca`
+- `account_bindings`
+- `var`
+- runtime、reports、market data 和 logs
+- `.git`
+- 测试和本地历史数据
+
+安装步骤：
+
+1. 检查工作树干净；
+2. 从 Git 已跟踪白名单构建 staging；
+3. 记录每个文件 SHA-256；
+4. 运行测试、compile 和券商写入静态扫描；
+5. 检查 release 不含凭据值；
+6. 在 staging release 内运行真实 dry-run；
+7. 验证文件集合与 manifest 完全一致；
+8. 原子安装并设为只读；
+9. 切换 current；
+10. 启动 LaunchAgent 并执行 health；
+11. health 失败时自动回滚。
+
+## 21. 故障处理
+
+### 21.1 `doctor` 失败
+
+```bash
+./wa doctor
+```
+
+逐项修复：
+
+- `.Alpaca/bin/python` 不存在：重新建立虚拟环境；
+- `codex` 不可用：修复 Codex CLI；
+- credentials 缺失：只修改 `.env`；
+- account binding 缺失：在确认账户后重新绑定；
+- live 未禁用：停止操作，恢复 paper policy。
+
+### 21.2 退出码 10
+
+已有轮次或部署运行。使用：
+
+```bash
+./wa status
+```
+
+不要删除仍对应存活 PID 的锁。
+
+### 21.3 退出码 20
+
+正常无订单，不需要重试或强制买入。
+
+### 21.4 退出码 50
+
+安全门禁阻止。常见原因：
+
+- 未完成自然 paper 提交验收就尝试自动交易；
+- profile、账户或 policy 不符合；
+- 市场阶段禁止；
+- 数据过期或能力字段缺失。
+
+不要通过修改状态文件绕过门禁。
+
+### 21.5 退出码 60
+
+写入结果 uncertain。必须停止自动重试，并按 client order ID 在 Alpaca 查询；
+以 `submission_journal.json`、broker 查询和 reconciliation 恢复。
+
+### 21.6 health degraded/unhealthy
+
+```bash
+./wa status --json
+./wa health --json
+./wa logs
+```
+
+检查 health 的 `reasons`。运行中的轮次可暂时 degraded；release hash 失败、服务未加载、
+uncertain 写入或长时间无正常终态需要人工处理。
+
+### 21.7 部署失败
+
+部署不会在验证失败时切换 current。查看：
+
+```bash
+./wa logs
+find var/deployment/history -type f -maxdepth 1 -print
+```
+
+修复代码后先运行完整测试并提交，再重新部署。
+
+## 22. 修改代码的规则
+
+1. 只修改 `src/v2`，不要重新引入 v1；
+2. 新文件开头必须说明作用和重要性；
+3. 保持 broker 写调用只位于提交器和取消执行器；
+4. 不得加入强制买入、live 写入、盲重试或绕过风控的后门；
+5. 不要原地修改已发布策略和版本化 policy；
+6. 修改后运行 242 项测试、compile 和静态写扫描；
+7. 部署前提交代码并确保工作树干净；
+8. 不得提交 `.env`、账户绑定或 runtime；
+9. 所有交易事实、计划和已执行操作必须分开记录；
+10. 日报和轮次工件是审计记录，不得为了清理目录而删除。
+
+## 23. 备份与恢复
+
+- 已跟踪代码和配置由 Git 恢复；
+- 当前和上一 release 位于 `var/deployment/releases`；
+- `./wa rollback` 用于应用版本回退；
+- Stage H 前的历史审计记录保存在 `var/archive/pre-stage-h`；
+- `.env` 和账户绑定应另行安全备份，不能提交 Git；
+- 不要使用 `git reset --hard` 或直接删除 `var/shared/runtime` 处理一般故障。
+
+## 24. 当前验收基线
+
+本手册建立时的已验证基线：
+
+- 242 项 v2 测试通过；
+- macOS bootstrap、dry-run deploy、status、health、logs 和 rollback 已验证；
+- release 文件只读、manifest hash 有效；
+- LaunchAgent 不包含凭据；
+- 手工 `--allow-trade` 在无自然 approved 订单时返回 `completed_no_action`；
+- 自动交易保持关闭，直到第一次自然 paper submit 和人工对账完成；
+- Live 交易始终关闭。
+
