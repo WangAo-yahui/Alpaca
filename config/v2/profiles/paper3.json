@@ -2,7 +2,7 @@
   "_comment": "作用：定义 paper3 的凭据变量、策略 release 和风险 profile。重要性：显式 profile 防止凭据、状态和决策产物与其他账户混用。",
   "schema_version": "1.0",
   "profile_id": "paper3",
-  "enabled": true,
+  "enabled": false,
   "broker": "alpaca",
   "environment": "paper",
   "credential_key_env": "ALPACA_PAPER3_API_KEY",

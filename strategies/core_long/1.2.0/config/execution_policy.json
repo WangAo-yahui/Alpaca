@@ -1,0 +1,17 @@
+{
+  "_comment": "作用：定义 Stage E 执行意图有效期、组合调整幅度和扩展时段条件。重要性：第三阶段只能在这些不可变边界内调整权重，不能借研究输出绕过 Python 风控。",
+  "schema_version": "1.0",
+  "valid_minutes": 30,
+  "target_weight_adjustment": {
+    "maximum_absolute_change": "0.02",
+    "maximum_relative_change": "0.25"
+  },
+  "execution_fraction": {
+    "minimum": "0",
+    "maximum": "1"
+  },
+  "extended_hours": {
+    "require_limit_intent": true,
+    "require_fresh_quote": true
+  }
+}

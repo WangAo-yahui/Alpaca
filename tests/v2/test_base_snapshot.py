@@ -194,7 +194,7 @@ class BaseSnapshotTests(unittest.TestCase):
                 parse_cli_args(
                     [
                         "--profile",
-                        "default",
+                        "paper1",
                         "--run-date",
                         "2026-07-23",
                         "--no-review",

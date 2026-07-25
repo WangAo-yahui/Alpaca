@@ -39,7 +39,7 @@ def options(
         "--run-date",
         "2026-07-23",
         "--profile",
-        "paper2",
+        "paper1",
         "--guidance",
         guidance,
         "--no-review",

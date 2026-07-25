@@ -8,10 +8,16 @@ from __future__ import annotations
 
 import argparse
 from dataclasses import dataclass
+from pathlib import Path
 from typing import Sequence
 
+from v2.runtime import (
+    get_project_root,
+    load_json_object,
+)
 
-SCRIPT_VERSION = "2026-07-25-v2-cli-stage-c5-v1"
+
+SCRIPT_VERSION = "2026-07-25-v2-cli-stage-e-v1"
 
 
 @dataclass(frozen=True)
@@ -33,7 +39,7 @@ class CLIOptions:
     # Defaults keep direct programmatic Stage A-C callers compatible.  The
     # command-line parser deliberately defaults to no explicit guidance so a
     # non-interactive invocation must opt in to --no-guidance/--unattended.
-    profile: str = "default"
+    profile: str = "paper1"
     guidance: str | None = None
     no_guidance: bool = True
     unattended: bool = False
@@ -45,7 +51,32 @@ class CLIOptions:
         return self.no_review
 
 
-def build_parser() -> argparse.ArgumentParser:
+def configured_default_profile(
+    *,
+    project_root: Path | None = None,
+) -> str:
+    root = (
+        project_root.expanduser().resolve()
+        if project_root is not None
+        else get_project_root()
+    )
+    payload = load_json_object(
+        root / "config" / "v2" / "system.json"
+    )
+    profile = str(
+        payload.get("default_profile", "")
+    ).strip()
+    if not profile or profile == "live":
+        raise ValueError(
+            "default_profile必须配置为非live profile"
+        )
+    return profile
+
+
+def build_parser(
+    *,
+    project_root: Path | None = None,
+) -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(
         description=(
             "WA Trader v2 主流程。默认使用paper模式。"
@@ -62,9 +93,11 @@ def build_parser() -> argparse.ArgumentParser:
 
     parser.add_argument(
         "--profile",
-        required=True,
+        default=configured_default_profile(
+            project_root=project_root
+        ),
         help=(
-            "账户配置名称；可显式使用default兼容旧凭据环境变量"
+            "账户配置名称；默认读取system.json.default_profile"
         ),
     )
 
@@ -133,7 +166,7 @@ def build_parser() -> argparse.ArgumentParser:
         action="store_true",
         help=(
             "允许后续阶段提交Alpaca paper订单；"
-            "阶段B仍不会真正提交"
+            "当前Stage E仍只生成执行意图且提交数为0"
         ),
     )
 
@@ -195,8 +228,12 @@ def build_parser() -> argparse.ArgumentParser:
 
 def parse_cli_args(
     argv: Sequence[str] | None = None,
+    *,
+    project_root: Path | None = None,
 ) -> CLIOptions:
-    parser = build_parser()
+    parser = build_parser(
+        project_root=project_root
+    )
     args = parser.parse_args(argv)
 
     if args.cycle_id and args.new_cycle:

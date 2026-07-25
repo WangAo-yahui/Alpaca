@@ -17,16 +17,16 @@ class ProfileLoadingTests(unittest.TestCase):
             root = Path(temp)
             copy_v2_config(root)
             profile = load_profile(
-                "paper2",
+                "paper1",
                 project_root=root,
             )
             self.assertEqual(
                 profile.credential_key_env,
-                "ALPACA_PAPER2_API_KEY",
+                "ALPACA_API_KEY",
             )
             self.assertEqual(
                 profile.credential_secret_env,
-                "ALPACA_PAPER2_SECRET_KEY",
+                "ALPACA_SECRET_KEY",
             )
 
     def test_missing_and_disabled_profiles_fail(
@@ -37,6 +37,8 @@ class ProfileLoadingTests(unittest.TestCase):
             copy_v2_config(root)
             for profile_id, code in (
                 ("missing", "PROFILE_NOT_FOUND"),
+                ("paper2", "PROFILE_DISABLED"),
+                ("paper3", "PROFILE_DISABLED"),
                 ("live", "PROFILE_DISABLED"),
             ):
                 with self.assertRaises(

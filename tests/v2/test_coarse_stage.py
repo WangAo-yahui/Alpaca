@@ -54,7 +54,7 @@ def options(*extra: str):
     return parse_cli_args(
         [
             "--profile",
-            "default",
+            "paper1",
             "--run-date",
             "2026-07-23",
             "--no-review",

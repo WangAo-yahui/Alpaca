@@ -20,7 +20,7 @@ class AccountBindingTests(unittest.TestCase):
             root = Path(temp)
             copy_v2_config(root)
             profile = load_profile(
-                "paper2",
+                "paper1",
                 project_root=root,
             )
             with self.assertRaises(

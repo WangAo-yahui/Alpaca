@@ -1,0 +1,18 @@
+{
+  "_comment": "作用：定义 core_long 1.1.0 的组合有效期、资金变化阈值、持仓数量与行业硬上限。重要性：关键组合约束集中在不可变 release，避免散落在代码或提示词中漂移。",
+  "schema_version": "1.0",
+  "portfolio_valid_minutes": 240,
+  "capital_change_materiality": {
+    "absolute_usd": "100",
+    "relative_fraction": "0.01"
+  },
+  "target_holdings": {
+    "minimum": 3,
+    "maximum": 20
+  },
+  "weight_tolerance": "0.005",
+  "minimum_target_weight": "0.005",
+  "maximum_sector_weight": "0.30",
+  "allow_increase_outside_coarse": false,
+  "allow_empty_portfolio": true
+}

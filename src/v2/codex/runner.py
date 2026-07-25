@@ -1,4 +1,4 @@
-"""安全运行 Stage C/Stage D 的单次 Codex 调用与有限重试。
+"""安全运行 Stage C、Stage D 与 Stage E 的单次 Codex 调用与有限重试。
 
 作用：在隔离工作区执行结构化输出调用，并记录脱敏后的尝试信息。
 重要性：统一超时、重试和环境变量白名单，防止凭据泄露或无限重试。
@@ -17,6 +17,7 @@ from typing import Any, Callable
 
 from v2.codex.workspace import (
     CoarseWorkspace,
+    ExecutionWorkspace,
     PortfolioWorkspace,
 )
 from v2.exceptions import (
@@ -166,7 +167,9 @@ class CodexRunner:
     ) -> list[str]:
         instruction = (
             "Read prompts/coarse.md and data/input.json, "
-            "then return only the required JSON object."
+            "then return only the required JSON object. "
+            "When status is success_local_only, include an "
+            "explicit non-empty network limitation warning."
         )
         return [
             self.executable,
@@ -345,7 +348,13 @@ class PortfolioCodexRunner(CodexRunner):
         instruction = (
             "Read prompts/portfolio.md and "
             "data/portfolio_input.json, then return only "
-            "the required JSON object. Do not create orders."
+            "the required JSON object. Express every weight "
+            "and fraction as a base-one decimal string such "
+            "as \"1.0\", \"0.25\", or \"0\", never as a "
+            "percentage string. When status is "
+            "success_local_only, include an explicit "
+            "non-empty network limitation warning. "
+            "Do not create orders."
         )
         return [
             self.executable,
@@ -377,5 +386,57 @@ class PortfolioCodexRunner(CodexRunner):
     def run(
         self,
         workspace: PortfolioWorkspace,
+    ) -> CodexRunResult:
+        return super().run(workspace)  # type: ignore[arg-type]
+
+
+@dataclass
+class ExecutionCodexRunner(CodexRunner):
+    """Use the safe common runner for Stage E execution intent."""
+
+    def _command(
+        self,
+        workspace: ExecutionWorkspace,
+    ) -> list[str]:
+        instruction = (
+            "Read prompts/execution.md and "
+            "data/execution_input.json, then return only "
+            "the required JSON object. Express every weight "
+            "and execution fraction as a base-one decimal "
+            "string, never as a percentage string. When "
+            "status is success_local_only, include explicit "
+            "non-empty network limitation warnings. "
+            "Do not create orders."
+        )
+        return [
+            self.executable,
+            "exec",
+            "--skip-git-repo-check",
+            "--ephemeral",
+            "--ignore-user-config",
+            "--sandbox",
+            "workspace-write",
+            "--config",
+            'approval_policy="never"',
+            "--config",
+            'web_search="live"',
+            "--cd",
+            str(workspace.root),
+            "--output-schema",
+            str(workspace.schema_file),
+            "--output-last-message",
+            str(workspace.last_message),
+            instruction,
+        ]
+
+    def _stage_name(self) -> str:
+        return "execution_decision"
+
+    def _label(self) -> str:
+        return "执行"
+
+    def run(
+        self,
+        workspace: ExecutionWorkspace,
     ) -> CodexRunResult:
         return super().run(workspace)  # type: ignore[arg-type]

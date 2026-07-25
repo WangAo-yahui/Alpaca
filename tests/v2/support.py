@@ -1,9 +1,16 @@
+"""构造 WA Trader v2 各阶段的隔离测试项目与确定性 Codex 输出。
+
+作用：集中生成合法 coarse、portfolio、execution 合同和 fake broker 客户端。
+重要性：共享基线让安全校验测试只改变一个事实，避免误把 fixture 漂移当成业务结果。
+"""
+
 from __future__ import annotations
 
 import json
 import shutil
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
+from types import SimpleNamespace
 from typing import Any
 
 from v2.codex.runner import CodexRunResult
@@ -548,11 +555,264 @@ class FakePortfolioRunner:
         )
 
 
+def valid_execution_output(
+    input_payload: dict[str, Any],
+    *,
+    status: str = "success_local_only",
+) -> dict[str, Any]:
+    """Build a valid Stage E intent without quantities or broker requests."""
+
+    generated = datetime.now(
+        timezone.utc
+    )
+    snapshot = input_payload[
+        "execution_snapshot"
+    ]
+    market_phase = snapshot["market_phase"]
+    permission = input_payload[
+        "trade_permission"
+    ]["submission_enabled"]
+    executable_phase = market_phase in {
+        "regular_session",
+        "before_market_open",
+        "after_market_close",
+    }
+    decisions: list[dict[str, Any]] = []
+    for item in input_payload[
+        "portfolio"
+    ]["decisions"]:
+        symbol = item["symbol"]
+        action = item["action"]
+        directional = action in {
+            "open",
+            "increase",
+            "reduce",
+            "close",
+        }
+        executable = (
+            permission
+            and executable_phase
+            and directional
+        )
+        side = (
+            "buy"
+            if action in {"open", "increase"}
+            else "sell"
+            if action in {"reduce", "close"}
+            else "none"
+        )
+        quote = snapshot["quotes"].get(
+            symbol,
+            {},
+        )
+        decisions.append(
+            {
+                "symbol": symbol,
+                "portfolio_action": action,
+                "execution_decision": (
+                    "approve"
+                    if executable
+                    else "defer"
+                ),
+                "side": side if executable else "none",
+                "target_weight": item[
+                    "target_weight"
+                ],
+                "maximum_weight": item[
+                    "maximum_weight"
+                ],
+                "execution_fraction": (
+                    "0.50" if executable else "0"
+                ),
+                "urgency": (
+                    "normal" if executable else "none"
+                ),
+                "price_condition": {
+                    "reference": (
+                        "ask" if executable else "none"
+                    ),
+                    "limit_price": (
+                        str(quote.get("ask_price"))
+                        if executable
+                        else None
+                    ),
+                    "do_not_execute_above": None,
+                    "review_below": None,
+                },
+                "order_intent": {
+                    "preferred_type": (
+                        "limit" if executable else "none"
+                    ),
+                    "time_in_force_preference": (
+                        "day" if executable else "none"
+                    ),
+                    "extended_hours_requested": (
+                        executable
+                        and market_phase
+                        != "regular_session"
+                    ),
+                    "allow_queue": executable,
+                    "allow_partial_fill": executable,
+                },
+                "decision_reason": (
+                    "Fresh facts permit an intent"
+                    if executable
+                    else "No executable market phase"
+                ),
+                "execution_risks": [],
+                "required_checks": [
+                    "Order builder must revalidate"
+                ],
+                "source_references": ["input"],
+            }
+        )
+    local_only = status == "success_local_only"
+    return {
+        "schema_version": "1.0",
+        "stage": "execution_decision",
+        "profile_id": input_payload[
+            "profile"
+        ]["profile_id"],
+        "strategy_id": input_payload[
+            "release"
+        ]["strategy_id"],
+        "strategy_version": input_payload[
+            "release"
+        ]["strategy_version"],
+        "run_date": input_payload["run_date"],
+        "cycle_id": input_payload["cycle_id"],
+        "generated_at": generated.isoformat(),
+        "input_signature": input_payload[
+            "input_signature"
+        ],
+        "status": status,
+        "network_research": {
+            "status": (
+                "unavailable"
+                if local_only
+                else "completed"
+            ),
+            "web_access": not local_only,
+            "summary": "Deterministic execution test",
+            "warnings": (
+                ["local only"] if local_only else []
+            ),
+        },
+        "market_assessment": {
+            "market_phase": market_phase,
+            "summary": "Latest execution facts reviewed",
+            "key_risks": [],
+        },
+        "review_response": {
+            "summary": "Review honored",
+            "honored_prohibitions": [],
+            "honored_constraints": [],
+            "rejected_requests": [],
+            "unresolved_hard_constraints": [],
+        },
+        "portfolio_response": {
+            "summary": "Portfolio checked",
+            "modified_symbols": [],
+            "deferred_symbols": [
+                item["symbol"]
+                for item in decisions
+                if item["execution_decision"]
+                == "defer"
+            ],
+            "rejected_symbols": [],
+        },
+        "decisions": decisions,
+        "open_order_actions": [
+            {
+                "order_reference": str(
+                    order.get(
+                        "client_order_id",
+                        order.get("id", ""),
+                    )
+                ),
+                "symbol": order["symbol"],
+                "action": "review",
+                "reason": "No broker action in Stage E",
+            }
+            for order in snapshot[
+                "open_orders"
+            ]
+        ],
+        "requires_portfolio_replan": False,
+        "requires_manual_review": False,
+        "valid_until": (
+            generated
+            + timedelta(minutes=30)
+        ).isoformat(),
+        "warnings": (
+            ["network unavailable; local only"]
+            if local_only
+            else []
+        ),
+        "source_references": [
+            {
+                "id": "input",
+                "title": "Stage E input",
+                "url": "",
+                "source_type": "input",
+                "retrieved_at": (
+                    input_payload["generated_at"]
+                ),
+            }
+        ],
+    }
+
+
+class FakeExecutionRunner:
+    def __init__(
+        self,
+        *,
+        mutate: Any = None,
+    ) -> None:
+        self.calls = 0
+        self.mutate = mutate
+
+    def run(
+        self,
+        workspace: Any,
+    ) -> CodexRunResult:
+        self.calls += 1
+        input_payload = load_json_object(
+            workspace.input_file
+        )
+        output = valid_execution_output(
+            input_payload
+        )
+        if self.mutate is not None:
+            self.mutate(output)
+        return CodexRunResult(
+            payload=output,
+            call_record={
+                "schema_version": "1.0",
+                "stage": "execution_decision",
+                "status": "success",
+                "working_directory": str(
+                    workspace.root
+                ),
+                "command": ["fake-codex"],
+                "timeout_seconds": 1,
+                "retry_count": 0,
+                "attempts": [
+                    {
+                        "attempt": 1,
+                        "return_code": 0,
+                    }
+                ],
+                "completed_at": utc_now_iso(),
+            },
+        )
+
+
 def stage_d_options(*extra: str):
     return parse_cli_args(
         [
             "--profile",
-            "paper2",
+            "paper1",
             "--run-date",
             "2026-07-23",
             "--unattended",
@@ -584,5 +844,74 @@ def stage_d_clients(
             ),
             today_orders=[],
         ),
-        stock_data=FakeStockDataClient(),
+        stock_data=FakeStockDataClient(
+            quotes={
+                symbol: SimpleNamespace(
+                    bid_price="99.90",
+                    ask_price="100.00",
+                    bid_size="10",
+                    ask_size="12",
+                    timestamp=datetime.now(
+                        timezone.utc
+                    ),
+                )
+                for symbol in [
+                    *(
+                        f"S{index:03d}"
+                        for index in range(65)
+                    ),
+                    "SPY",
+                    "QQQ",
+                    "IWM",
+                    "DIA",
+                    "GLD",
+                    "TLT",
+                ]
+            },
+            trades={
+                symbol: SimpleNamespace(
+                    price="99.95",
+                    size="5",
+                    timestamp=datetime.now(
+                        timezone.utc
+                    ),
+                )
+                for symbol in [
+                    *(
+                        f"S{index:03d}"
+                        for index in range(65)
+                    ),
+                    "SPY",
+                    "QQQ",
+                    "IWM",
+                    "DIA",
+                    "GLD",
+                    "TLT",
+                ]
+            },
+        ),
+    )
+
+
+def stage_e_fixture(
+    target_root: Path,
+    *,
+    execution_runner: Any = None,
+    clients: AlpacaClients | None = None,
+):
+    """Create an isolated, fully validated Stage E test cycle."""
+
+    from v2.main import run_stage_e
+
+    prepare_stage_c_project(target_root)
+    return run_stage_e(
+        stage_d_options(),
+        project_root=target_root,
+        clients=clients or stage_d_clients(),
+        coarse_runner=FakeCoarseRunner(),
+        portfolio_runner=FakePortfolioRunner(),
+        execution_runner=(
+            execution_runner
+            or FakeExecutionRunner()
+        ),
     )

@@ -1,3 +1,9 @@
+"""提供 v2 单元测试使用的无网络 Alpaca 对象。
+
+作用：模拟账户、持仓、订单、资产、报价、成交和分钟线读取。
+重要性：验证 Stage E 时绝不能因测试而触发真实 broker 写操作。
+"""
+
 from __future__ import annotations
 
 from types import SimpleNamespace
@@ -173,10 +179,12 @@ class FakeStockDataClient:
         self,
         *,
         quotes: dict[str, object] | None = None,
+        trades: dict[str, object] | None = None,
         bars: dict[str, list[object]] | None = None,
         failures: set[str] | None = None,
     ) -> None:
         self.quotes = quotes or {}
+        self.trades = trades or {}
         self.bars = bars or {}
         self.failures = failures or set()
 
@@ -195,3 +203,11 @@ class FakeStockDataClient:
         if "bars" in self.failures:
             raise RuntimeError("fake bars failure")
         return self.bars
+
+    def get_stock_latest_trade(
+        self,
+        request: object,
+    ) -> dict[str, object]:
+        if "trades" in self.failures:
+            raise RuntimeError("fake trade failure")
+        return self.trades

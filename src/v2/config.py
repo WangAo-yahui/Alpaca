@@ -1,4 +1,8 @@
-"""Load and validate the six WA Trader v2 configuration documents."""
+"""装载并验证 WA Trader v2 的六份全局配置。
+
+作用：统一检查 paper 模式、默认 profile、风险、阶段、行情、订单策略和标的池。
+重要性：任何配置身份或安全边界不一致都必须在 broker/Codex 调用之前失败。
+"""
 
 from __future__ import annotations
 
@@ -133,6 +137,17 @@ def _validate_system(payload: Mapping[str, Any]) -> None:
         "system.json.allow_live必须为false",
         file_name=file_name,
         field="allow_live",
+    )
+    default_profile = payload.get(
+        "default_profile"
+    )
+    _require(
+        isinstance(default_profile, str)
+        and bool(default_profile.strip())
+        and default_profile != "live",
+        "system.json.default_profile必须是非live的profile名称",
+        file_name=file_name,
+        field="default_profile",
     )
     _require(
         _integer(
@@ -719,6 +734,38 @@ def load_config(
     _validate_universe_sources(
         root,
         documents["universe.json"],
+    )
+    default_profile = str(
+        documents["system.json"][
+            "default_profile"
+        ]
+    )
+    default_profile_path = (
+        directory
+        / "profiles"
+        / f"{default_profile}.json"
+    )
+    try:
+        default_payload = load_json_object(
+            default_profile_path
+        )
+    except (FileNotFoundError, ValueError) as error:
+        raise ConfigurationError(
+            "默认profile不存在或无效",
+            code="DEFAULT_PROFILE_INVALID",
+            details={
+                "profile_id": default_profile
+            },
+        ) from error
+    _require(
+        default_payload.get("profile_id")
+        == default_profile
+        and default_payload.get("enabled") is True
+        and default_payload.get("environment")
+        == "paper",
+        "默认profile必须存在、启用且属于paper环境",
+        file_name="system.json",
+        field="default_profile",
     )
     extended_policy = documents[
         "order_policy.json"

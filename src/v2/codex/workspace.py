@@ -1,4 +1,4 @@
-"""为 Stage C 与 Stage D 创建最小化、隔离的 Codex 工作区。
+"""为 Stage C、Stage D 与 Stage E 创建最小化、隔离的 Codex 工作区。
 
 作用：只复制固定 release 中的 prompt、schema、policy 和当前阶段必要输入。
 重要性：它限制 Codex 可读取和写入的范围，避免接触凭据、账户绑定及其他身份产物。
@@ -37,6 +37,19 @@ class CoarseWorkspace:
 
 @dataclass(frozen=True)
 class PortfolioWorkspace:
+    root: Path
+    agents: Path
+    input_file: Path
+    policy_file: Path
+    risk_file: Path
+    prompt_file: Path
+    schema_file: Path
+    temp_directory: Path
+    last_message: Path
+
+
+@dataclass(frozen=True)
+class ExecutionWorkspace:
     root: Path
     agents: Path
     input_file: Path
@@ -376,5 +389,132 @@ def prepare_portfolio_workspace(
         temp_directory=temp_directory,
         last_message=(
             temp_directory / "last_message.json"
+        ),
+    )
+
+
+def prepare_execution_workspace(
+    paths: CyclePaths,
+    *,
+    input_payload: Mapping[str, Any],
+    release: StrategyRelease,
+) -> ExecutionWorkspace:
+    """Create the Stage E workspace without credentials or other profiles."""
+
+    root = paths.execution_workspace
+    data_directory = root / "data"
+    config_directory = root / "config"
+    prompts_directory = root / "prompts"
+    schemas_directory = root / "schemas"
+    temp_directory = root / ".tmp" / "codex"
+    for directory in (
+        root,
+        data_directory,
+        config_directory,
+        prompts_directory,
+        schemas_directory,
+        temp_directory,
+    ):
+        directory.mkdir(
+            parents=True,
+            exist_ok=True,
+        )
+    agents = root / "AGENTS.md"
+    input_file = (
+        data_directory / "execution_input.json"
+    )
+    policy_file = (
+        config_directory / "execution_policy.json"
+    )
+    risk_file = (
+        config_directory / "risk_profile.json"
+    )
+    prompt_file = (
+        prompts_directory / "execution.md"
+    )
+    schema_file = (
+        schemas_directory
+        / "execution_output.schema.json"
+    )
+    atomic_write_text(
+        agents,
+        _read_required(
+            release.root
+            / "prompts"
+            / "execution_AGENTS.md"
+        ),
+    )
+    atomic_write_json(
+        input_file,
+        dict(input_payload),
+    )
+    for filename, key in (
+        (
+            "initial_guidance.json",
+            "initial_guidance",
+        ),
+        ("user_review.json", "user_review"),
+        ("portfolio_output.json", "portfolio"),
+        (
+            "execution_snapshot.json",
+            "execution_snapshot",
+        ),
+    ):
+        value = input_payload.get(key, {})
+        atomic_write_json(
+            data_directory / filename,
+            dict(value)
+            if isinstance(value, Mapping)
+            else {},
+        )
+    atomic_write_json(
+        policy_file,
+        load_json_object(
+            release.root
+            / "config"
+            / "execution_policy.json"
+        ),
+    )
+    risk_payload = input_payload.get(
+        "risk_profile",
+        {},
+    )
+    atomic_write_json(
+        risk_file,
+        dict(risk_payload)
+        if isinstance(
+            risk_payload,
+            Mapping,
+        )
+        else {},
+    )
+    atomic_write_text(
+        prompt_file,
+        _read_required(
+            release.root
+            / "prompts"
+            / "execution.md"
+        ),
+    )
+    atomic_write_text(
+        schema_file,
+        _read_required(
+            release.root
+            / "schemas"
+            / "execution_output.schema.json"
+        ),
+    )
+    return ExecutionWorkspace(
+        root=root,
+        agents=agents,
+        input_file=input_file,
+        policy_file=policy_file,
+        risk_file=risk_file,
+        prompt_file=prompt_file,
+        schema_file=schema_file,
+        temp_directory=temp_directory,
+        last_message=(
+            temp_directory
+            / "last_message.json"
         ),
     )
