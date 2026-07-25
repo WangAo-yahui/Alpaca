@@ -1,0 +1,5 @@
+# 作用：锁定 WA Trader v2 Stage H 本地 release 已验证的 Python 直接依赖版本。
+# 重要性：bootstrap 与回滚必须获得相同 SDK、dotenv 和 schema 行为，避免部署漂移。
+alpaca-py==0.43.5
+python-dotenv==1.2.2
+jsonschema==4.26.0

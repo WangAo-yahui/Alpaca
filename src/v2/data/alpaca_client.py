@@ -117,8 +117,29 @@ def create_alpaca_clients(
             if project_root is not None
             else get_project_root()
         )
+        dotenv_override = os.environ.get(
+            "WA_DOTENV_PATH", ""
+        ).strip()
+        override_path = (
+            Path(dotenv_override).expanduser()
+            if dotenv_override
+            else None
+        )
+        if (
+            override_path is not None
+            and not override_path.is_absolute()
+        ):
+            raise ConfigurationError(
+                "WA_DOTENV_PATH必须是绝对路径",
+                code="DOTENV_PATH_INVALID",
+            )
+        dotenv_path = (
+            override_path.resolve()
+            if override_path is not None
+            else root / ".env"
+        )
         load_dotenv(
-            dotenv_path=root / ".env",
+            dotenv_path=dotenv_path,
             override=False,
         )
         source_environment: Mapping[str, str] = (

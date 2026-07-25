@@ -8,6 +8,8 @@ from __future__ import annotations
 
 import hashlib
 import json
+import os
+import re
 import subprocess
 from dataclasses import dataclass
 from pathlib import Path
@@ -274,6 +276,11 @@ def get_git_commit(
 ) -> tuple[str, bool]:
     """Return commit and whether the value is verified."""
 
+    deployed_commit = os.environ.get(
+        "WA_RELEASE_GIT_COMMIT", ""
+    ).strip().lower()
+    if re.fullmatch(r"[0-9a-f]{40}", deployed_commit):
+        return deployed_commit, True
     try:
         result = subprocess.run(
             [

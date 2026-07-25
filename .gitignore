@@ -8,6 +8,7 @@ reports/v2/
 account_bindings/
 archive/
 shared_data/
+var/
 __pycache__/
 *.pyc
 .DS_Store

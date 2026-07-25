@@ -7,6 +7,7 @@
 from __future__ import annotations
 
 import hashlib
+import os
 import re
 from dataclasses import dataclass
 from pathlib import Path
@@ -580,11 +581,30 @@ def account_binding_path(
             "profile名称格式无效",
             code="PROFILE_INVALID",
         )
-    return (
-        _project_root(project_root)
-        / "account_bindings"
-        / f"{profile_id}.json"
+    root = _project_root(project_root)
+    runtime_override = os.environ.get(
+        "WA_RUNTIME_ROOT", ""
+    ).strip()
+    override_path = (
+        Path(runtime_override).expanduser()
+        if runtime_override
+        else None
     )
+    if (
+        override_path is not None
+        and not override_path.is_absolute()
+    ):
+        raise ConfigurationError(
+            "WA_RUNTIME_ROOT必须是绝对路径",
+            code="RUNTIME_ROOT_INVALID",
+        )
+    binding_root = (
+        override_path.resolve()
+        / "account_bindings"
+        if override_path is not None
+        else root / "account_bindings"
+    )
+    return binding_root / f"{profile_id}.json"
 
 
 def verify_or_bind_account(
