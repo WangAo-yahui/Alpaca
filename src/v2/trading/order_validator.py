@@ -29,6 +29,7 @@ from v2.runtime import utc_now_iso
 
 EXTENDED_PHASES = {
     "overnight",
+    "overnight_session",
     "before_market_open",
     "after_market_close",
 }
@@ -456,6 +457,20 @@ def _order_checks(
     phase = str(
         snapshot.get("market_phase", "unknown")
     )
+    if (
+        phase in {"overnight", "overnight_session"}
+        and (
+            asset.get("overnight_tradable") is not True
+            or asset.get("overnight_halted") is True
+        )
+    ):
+        issues.append(
+            _issue(
+                "ASSET_NOT_OVERNIGHT_TRADABLE",
+                "资产不支持overnight或当前已暂停",
+                plan_id=plan_id,
+            )
+        )
     if phase not in VALID_MARKET_PHASES:
         issues.append(
             _issue(

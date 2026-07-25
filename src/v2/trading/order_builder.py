@@ -56,6 +56,7 @@ ACTIVE_ORDER_STATUSES = {
 }
 EXTENDED_PHASES = {
     "overnight",
+    "overnight_session",
     "before_market_open",
     "after_market_close",
 }
@@ -771,6 +772,19 @@ def build_order_plan(
         if asset.get("tradable") is not True:
             status = OrderStatus.BLOCKED
             reasons.append("asset_not_tradable")
+        if (
+            market_phase
+            in {"overnight", "overnight_session"}
+            and (
+                asset.get("overnight_tradable")
+                is not True
+                or asset.get("overnight_halted") is True
+            )
+        ):
+            status = OrderStatus.BLOCKED
+            reasons.append(
+                "asset_not_overnight_tradable"
+            )
         supported_classes = set(
             order_policy.settings.get(
                 "supported_asset_classes",

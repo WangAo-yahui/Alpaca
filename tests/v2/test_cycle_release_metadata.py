@@ -1,6 +1,6 @@
 """验证轮次状态记录完整 release 身份。
 
-作用：检查策略、风险、订单策略及 hash 与恢复轮次保持一致。
+作用：检查策略、风险、订单、提交策略及 hash 与恢复轮次保持一致。
 重要性：防止同一轮次在配置版本变化后静默沿用旧决策产物。
 """
 
@@ -74,6 +74,18 @@ class CycleReleaseMetadataTests(unittest.TestCase):
                 len(
                     state.release[
                         "order_policy_hash"
+                    ]
+                ),
+                64,
+            )
+            self.assertEqual(
+                state.release["submission_policy"],
+                "alpaca_paper@1.0.0",
+            )
+            self.assertEqual(
+                len(
+                    state.release[
+                        "submission_policy_hash"
                     ]
                 ),
                 64,

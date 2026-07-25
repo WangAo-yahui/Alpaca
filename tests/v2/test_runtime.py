@@ -1,3 +1,9 @@
+"""验证 v2 隔离路径、cycle ID 和原子文件操作。
+
+作用：检查日期/账户/策略路径、Stage G submission 产物位置和 JSON 原子替换。
+重要性：错误路径会污染账户或破坏恢复点，因此必须在任何运行前保持确定、可验证。
+"""
+
 from __future__ import annotations
 
 import json
@@ -73,6 +79,14 @@ class RuntimeTests(unittest.TestCase):
             self.assertEqual(
                 cycle.reconciliation.name,
                 "reconciliation.json",
+            )
+            self.assertEqual(
+                cycle.submission_intent.name,
+                "submission_intent.json",
+            )
+            self.assertEqual(
+                cycle.submission_journal.name,
+                "submission_journal.json",
             )
 
     def test_create_cycle_is_unique_with_same_clock(

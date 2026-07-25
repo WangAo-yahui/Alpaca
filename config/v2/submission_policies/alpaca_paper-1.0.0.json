@@ -1,0 +1,48 @@
+{
+  "_comment": "作用：集中定义 Alpaca paper 提交、取消、轮询、恢复与双开关规则。重要性：这是 Stage G 唯一允许券商写操作的版本化部署门禁，live 与直接 replace 始终关闭。",
+  "schema_version": "1.0",
+  "policy_id": "alpaca_paper",
+  "version": "1.0.0",
+  "broker": "alpaca",
+  "environment": "paper",
+  "allow_submit": true,
+  "allow_cancel": true,
+  "allow_direct_replace": false,
+  "submit_orders_sequentially": true,
+  "stop_after_uncertain_write": true,
+  "status_poll": {
+    "enabled": true,
+    "initial_seconds": 1,
+    "maximum_seconds": 10,
+    "interval_seconds": 1
+  },
+  "write_retry": {
+    "blind_retry_count": 0,
+    "lookup_by_client_order_id_after_error": true
+  },
+  "immediate_reconciliation": true,
+  "persist_before_each_write": true,
+  "persist_after_each_response": true,
+  "broker_capability_adapter": {
+    "sdk": "alpaca-py",
+    "submit_method": "submit_order(OrderRequest)",
+    "idempotency_lookup": "get_order_by_client_id",
+    "cancel_method": "cancel_order_by_id",
+    "extended_hours_order_type": "limit",
+    "extended_hours_time_in_force": [
+      "day",
+      "gtc"
+    ],
+    "overnight_tradable_field": "overnight_tradable",
+    "overnight_halted_field": "overnight_halted",
+    "fail_closed_when_overnight_capability_missing": true,
+    "fractional_quantity_max_decimals": 9
+  },
+  "deployment_switches": {
+    "paper_submission_enabled": true,
+    "live_submission_enabled": false,
+    "cancel_enabled": true,
+    "emergency_stop": false,
+    "global_kill_switch": false
+  }
+}

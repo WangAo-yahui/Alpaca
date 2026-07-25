@@ -1,3 +1,9 @@
+"""读取并规范化 Alpaca paper 账户状态与资本字段。
+
+作用：提供脱敏 account hash、cash、buying power、equity 和交易阻止标志。
+重要性：账户身份与可交易状态是每次 Stage G 写前门禁和写后对账的关键事实。
+"""
+
 from __future__ import annotations
 
 import hashlib

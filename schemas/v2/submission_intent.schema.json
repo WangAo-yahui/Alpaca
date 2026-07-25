@@ -1,0 +1,79 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "submission_intent.schema.json",
+  "$comment": "作用：约束任何 paper 写调用前的版本化 intent，并保留取消后重校验产生的旧哈希。重要性：每一版哈希、权限、policy 与预计操作未落盘时都禁止券商写。",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "profile_id",
+    "environment",
+    "run_date",
+    "cycle_id",
+    "created_at",
+    "allow_trade",
+    "validated_orders_hash",
+    "request_specs_hash",
+    "action_plan_hash",
+    "submission_policy",
+    "submission_policy_hash",
+    "approved_plan_ids",
+    "dependent_plan_ids",
+    "cancel_action_ids",
+    "expected_write_count",
+    "intent_revision",
+    "prior_revisions",
+    "status"
+  ],
+  "properties": {
+    "schema_version": {"const": "1.0"},
+    "profile_id": {"const": "paper1"},
+    "environment": {"const": "paper"},
+    "run_date": {"type": "string", "format": "date"},
+    "cycle_id": {"type": "string", "pattern": "^[0-9]{8}T[0-9]{6}$"},
+    "created_at": {"type": "string"},
+    "allow_trade": {"type": "boolean"},
+    "validated_orders_hash": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
+    "request_specs_hash": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
+    "action_plan_hash": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
+    "submission_policy": {"const": "alpaca_paper@1.0.0"},
+    "submission_policy_hash": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
+    "approved_plan_ids": {"type": "array", "items": {"type": "string"}, "uniqueItems": true},
+    "dependent_plan_ids": {"type": "array", "items": {"type": "string"}, "uniqueItems": true},
+    "cancel_action_ids": {"type": "array", "items": {"type": "string"}, "uniqueItems": true},
+    "expected_write_count": {"type": "integer", "minimum": 0},
+    "intent_revision": {"type": "integer", "minimum": 1},
+    "prior_revisions": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "intent_revision",
+          "created_at",
+          "superseded_at",
+          "validated_orders_hash",
+          "request_specs_hash",
+          "action_plan_hash",
+          "approved_plan_ids",
+          "dependent_plan_ids",
+          "cancel_action_ids",
+          "expected_write_count"
+        ],
+        "properties": {
+          "intent_revision": {"type": "integer", "minimum": 1},
+          "created_at": {"type": "string"},
+          "superseded_at": {"type": "string"},
+          "validated_orders_hash": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
+          "request_specs_hash": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
+          "action_plan_hash": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
+          "approved_plan_ids": {"type": "array", "items": {"type": "string"}, "uniqueItems": true},
+          "dependent_plan_ids": {"type": "array", "items": {"type": "string"}, "uniqueItems": true},
+          "cancel_action_ids": {"type": "array", "items": {"type": "string"}, "uniqueItems": true},
+          "expected_write_count": {"type": "integer", "minimum": 0}
+        }
+      }
+    },
+    "status": {"const": "prepared"}
+  }
+}

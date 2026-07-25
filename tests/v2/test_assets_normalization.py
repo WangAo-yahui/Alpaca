@@ -44,6 +44,19 @@ class AssetNormalizationTests(unittest.TestCase):
             ["MU"],
         )
 
+    def test_overnight_attributes_are_normalized(
+        self,
+    ) -> None:
+        result = normalize_asset(
+            fake_asset(
+                "MU",
+                overnight_tradable=True,
+                overnight_halted=False,
+            )
+        )
+        self.assertTrue(result["overnight_tradable"])
+        self.assertFalse(result["overnight_halted"])
+
     def test_partial_asset_failure_is_reported(
         self,
     ) -> None:

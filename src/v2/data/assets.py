@@ -1,3 +1,9 @@
+"""读取并缓存 Alpaca 美股资产能力。
+
+作用：规范化 tradable、fractionable、shortable、交易所、资产类别和状态。
+重要性：订单构建与最终校验必须依据券商当前能力，不能假设标的始终可交易。
+"""
+
 from __future__ import annotations
 
 from dataclasses import dataclass, field
@@ -24,6 +30,25 @@ def normalize_asset(
     )
     if not symbol:
         raise ValueError("资产缺少symbol")
+    raw_attributes = read_field(
+        asset, "attributes", []
+    )
+    try:
+        attributes = sorted(
+            {
+                enum_text(item).lower()
+                for item in raw_attributes
+                if enum_text(item)
+            }
+        )
+    except TypeError:
+        attributes = []
+    raw_overnight_tradable = read_field(
+        asset, "overnight_tradable", None
+    )
+    raw_overnight_halted = read_field(
+        asset, "overnight_halted", None
+    )
     return {
         "symbol": symbol,
         "tradable": bool(
@@ -55,6 +80,17 @@ def normalize_asset(
         "status": enum_text(
             read_field(asset, "status")
         ).lower(),
+        "attributes": attributes,
+        "overnight_tradable": (
+            bool(raw_overnight_tradable)
+            if raw_overnight_tradable is not None
+            else "overnight_tradable" in attributes
+        ),
+        "overnight_halted": (
+            bool(raw_overnight_halted)
+            if raw_overnight_halted is not None
+            else "overnight_halted" in attributes
+        ),
     }
 
 

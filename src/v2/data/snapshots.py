@@ -1,3 +1,9 @@
+"""创建并原子保存 WA Trader v2 的基础账户与市场快照。
+
+作用：汇总账户、持仓、订单、资产和行情错误，形成后续决策的客观输入。
+重要性：即使部分读取失败也必须保存证据，并在关键事实缺失时阻止进入决策或交易。
+"""
+
 from __future__ import annotations
 
 from dataclasses import dataclass

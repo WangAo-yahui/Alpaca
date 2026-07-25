@@ -39,7 +39,7 @@ from v2.runtime import (  # noqa: E402
 )
 
 
-SCRIPT_VERSION = "2026-07-25-v2-state-models-stage-d-v1"
+SCRIPT_VERSION = "2026-07-25-v2-state-models-stage-g-v1"
 SCHEMA_VERSION = "1.0"
 
 
@@ -75,6 +75,15 @@ class CycleStatus(StrEnum):
     )
     COMPLETED_WITH_OPEN_ORDERS = (
         "completed_with_open_orders"
+    )
+    COMPLETED_WITH_PARTIAL_FILLS = (
+        "completed_with_partial_fills"
+    )
+    COMPLETED_WITH_REJECTIONS = (
+        "completed_with_rejections"
+    )
+    BLOCKED_SUBMISSION_UNCERTAIN = (
+        "blocked_submission_uncertain"
     )
 
 
@@ -286,6 +295,9 @@ TERMINAL_CYCLE_STATUSES = {
     CycleStatus.COMPLETED_NO_SUBMISSION,
     CycleStatus.COMPLETED_WITH_SUBMISSIONS,
     CycleStatus.COMPLETED_WITH_OPEN_ORDERS,
+    CycleStatus.COMPLETED_WITH_PARTIAL_FILLS,
+    CycleStatus.COMPLETED_WITH_REJECTIONS,
+    CycleStatus.BLOCKED_SUBMISSION_UNCERTAIN,
 }
 
 
@@ -863,6 +875,8 @@ class CycleState:
             "risk_profile_hash",
             "order_policy",
             "order_policy_hash",
+            "submission_policy",
+            "submission_policy_hash",
             "release_hash",
             "prompt_hashes",
             "schema_hashes",
@@ -1314,6 +1328,14 @@ class CycleState:
             "order_policy_hash",
             "unknown",
         )
+        state.release.setdefault(
+            "submission_policy",
+            "legacy-unversioned",
+        )
+        state.release.setdefault(
+            "submission_policy_hash",
+            "unknown",
+        )
         state.validate()
         return state
 
@@ -1371,6 +1393,20 @@ def new_cycle_state(
 ) -> CycleState:
     """创建新的轮次级状态对象。"""
     now = utc_now_iso()
+    normalized_release = (
+        dict(release)
+        if release is not None
+        else None
+    )
+    if normalized_release is not None:
+        normalized_release.setdefault(
+            "submission_policy",
+            "legacy-unversioned",
+        )
+        normalized_release.setdefault(
+            "submission_policy_hash",
+            "unknown",
+        )
 
     state = CycleState(
         schema_version=SCHEMA_VERSION,
@@ -1393,8 +1429,8 @@ def new_cycle_state(
         ),
         profile_id=paths.profile_id,
         release=(
-            dict(release)
-            if release is not None
+            normalized_release
+            if normalized_release is not None
             else {
                 "app_version": "2.0.0",
                 "git_commit": "unknown",
@@ -1410,6 +1446,10 @@ def new_cycle_state(
                     "paper_equity@1.0.0"
                 ),
                 "order_policy_hash": "unknown",
+                "submission_policy": (
+                    "alpaca_paper@1.0.0"
+                ),
+                "submission_policy_hash": "unknown",
                 "release_hash": "unknown",
                 "prompt_hashes": {},
                 "schema_hashes": {},
