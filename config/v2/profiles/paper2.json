@@ -9,7 +9,7 @@
   "credential_secret_env": "ALPACA_PAPER2_SECRET_KEY",
   "strategy": {
     "strategy_id": "core_long",
-    "strategy_version": "1.0.1"
+    "strategy_version": "1.1.0"
   },
   "risk_profile": "paper_standard@1.0.0"
 }

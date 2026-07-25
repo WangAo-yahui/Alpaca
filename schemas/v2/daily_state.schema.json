@@ -19,6 +19,10 @@
     "coarse_status",
     "coarse_output_path",
     "coarse_input_signature",
+    "latest_valid_portfolio_cycle_id",
+    "latest_valid_portfolio_output_path",
+    "latest_portfolio_input_signature",
+    "latest_portfolio_valid_until",
     "detailed_report_created",
     "cycle_ids",
     "created_at",
@@ -79,6 +83,27 @@
       ]
     },
     "coarse_input_signature": {
+      "type": [
+        "string",
+        "null"
+      ]
+    },
+    "latest_valid_portfolio_cycle_id": {
+      "$ref": "#/$defs/nullable_cycle_id"
+    },
+    "latest_valid_portfolio_output_path": {
+      "type": [
+        "string",
+        "null"
+      ]
+    },
+    "latest_portfolio_input_signature": {
+      "type": [
+        "string",
+        "null"
+      ]
+    },
+    "latest_portfolio_valid_until": {
       "type": [
         "string",
         "null"

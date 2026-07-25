@@ -77,7 +77,7 @@ class CycleReleaseMetadataTests(unittest.TestCase):
                 project_root=root,
                 profile_id="paper2",
                 strategy_id="core_long",
-                strategy_version="1.0.1",
+                strategy_version="1.1.0",
                 now=datetime(
                     2026,
                     7,

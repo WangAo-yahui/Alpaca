@@ -1,7 +1,7 @@
-"""WA Trader v2 Stage C.5 主流程入口。
+"""WA Trader v2 Stage D 主流程入口。
 
-作用：装载 profile/release/risk 身份，建立轮次状态，刷新基础数据并运行粗选。
-重要性：当前版本必须停在 RUN_PORTFOLIO，不执行组合、执行或订单提交，是阶段门控总边界。
+作用：装载运行身份，刷新基础数据，运行或复用粗选与组合，并收集执行前意见。
+重要性：当前版本必须停在 REFRESH_EXECUTION_DATA，不运行执行逻辑或生成、提交订单。
 """
 
 from __future__ import annotations
@@ -9,6 +9,7 @@ from __future__ import annotations
 import sys
 from dataclasses import dataclass
 from pathlib import Path
+from typing import Callable, TextIO
 
 
 # 支持直接运行：
@@ -44,6 +45,11 @@ from v2.exceptions import (  # noqa: E402
 from v2.guidance import (  # noqa: E402
     collect_initial_guidance,
 )
+from v2.review import (  # noqa: E402
+    UserReview,
+    collect_user_review,
+    write_skipped_review,
+)
 from v2.models.state import (  # noqa: E402
     CoarseStatus,
     CycleKind,
@@ -77,12 +83,10 @@ from v2.releases import (  # noqa: E402
 )
 from v2.runtime import (  # noqa: E402
     CyclePaths,
-    atomic_write_json,
     build_cycle_paths,
     build_daily_paths,
     create_cycle_paths,
     ensure_cycle_directories,
-    new_york_now_iso,
     normalize_cycle_id,
     normalize_run_date,
     utc_now_iso,
@@ -95,6 +99,7 @@ from v2.state_machine import (  # noqa: E402
     fail_current_step,
     mark_daily_cycle_terminal,
     next_step,
+    pause_for_review,
     prepare_state,
     validate_resume_compatibility,
 )
@@ -103,9 +108,14 @@ from v2.stages.coarse import (  # noqa: E402
     CoarseStageResult,
     execute_coarse_selection,
 )
+from v2.stages.portfolio import (  # noqa: E402
+    PortfolioRunner,
+    PortfolioStageResult,
+    execute_portfolio_decision,
+)
 
 
-SCRIPT_VERSION = "2026-07-25-v2-stage-c5-v1"
+SCRIPT_VERSION = "2026-07-25-v2-stage-d-v1"
 
 
 @dataclass(frozen=True)
@@ -137,6 +147,15 @@ class StageCRunResult:
     resolution: CycleResolution
     base_result: StageBRunResult
     coarse: CoarseStageResult | None
+    stopped_at: StepName | None
+
+
+@dataclass(frozen=True)
+class StageDRunResult:
+    resolution: CycleResolution
+    stage_c_result: StageCRunResult
+    portfolio: PortfolioStageResult | None
+    review: UserReview | None
     stopped_at: StepName | None
 
 
@@ -227,32 +246,10 @@ def determine_review_mode(
 def create_skipped_review_file(
     paths: CyclePaths,
 ) -> None:
-    """
-    无人值守模式下提前建立空人工意见文件。
-
-    后续第二阶段结束时无需暂停。
-    """
+    """无人值守模式下提前建立可验证的空人工意见文件。"""
     if paths.user_review.exists():
         return
-
-    atomic_write_json(
-        paths.user_review,
-        {
-            "schema_version": "1.0",
-            "run_date": paths.run_date,
-            "cycle_id": paths.cycle_id,
-            "created_at": utc_now_iso(),
-            "created_at_new_york": (
-                new_york_now_iso()
-            ),
-            "mode": "skipped_by_flag",
-            "raw_comment": "",
-            "constraints": [],
-            "prohibitions": [],
-            "preferences": [],
-            "trade_requests": [],
-        },
-    )
+    write_skipped_review(paths)
 
 
 def load_resumable_cycle(
@@ -1166,15 +1163,235 @@ def print_stage_c_result(
     )
 
 
+def run_stage_d(
+    options: CLIOptions,
+    *,
+    project_root: Path | None = None,
+    clients: AlpacaClients | None = None,
+    coarse_runner: CoarseRunner | None = None,
+    portfolio_runner: PortfolioRunner | None = None,
+    bar_store: DailyBarStore | None = None,
+    review_input_func: Callable[[str], str] = input,
+    review_stdin: TextIO | None = None,
+) -> StageDRunResult:
+    """Run through portfolio and review, then stop before execution refresh."""
+
+    stage_c_result = run_stage_c(
+        options,
+        project_root=project_root,
+        clients=clients,
+        coarse_runner=coarse_runner,
+        bar_store=bar_store,
+    )
+    resolution = stage_c_result.resolution
+    paths = resolution.paths
+    state = resolution.state
+    portfolio_result: (
+        PortfolioStageResult | None
+    ) = None
+    review_result: UserReview | None = None
+
+    if next_step(state) == StepName.RUN_PORTFOLIO:
+        begin_next_step(state)
+        save_cycle_state(
+            paths.cycle_state,
+            state,
+        )
+        try:
+            portfolio_result = (
+                execute_portfolio_decision(
+                    paths=paths,
+                    state=state,
+                    options=options,
+                    config=load_config(
+                        project_root=project_root,
+                    ),
+                    runner=portfolio_runner,
+                )
+            )
+            complete_current_step(
+                state,
+                skipped=(
+                    portfolio_result.reused
+                ),
+                output_path=str(
+                    portfolio_result.output_path
+                ),
+                message=(
+                    "复用同日有效组合方案"
+                    if portfolio_result.reused
+                    else "完成并验证组合方案"
+                ),
+            )
+            save_cycle_state(
+                paths.cycle_state,
+                state,
+            )
+        except Exception as error:
+            fail_current_step(
+                state,
+                error,
+            )
+            save_cycle_state(
+                paths.cycle_state,
+                state,
+            )
+            if state.status in TERMINAL_CYCLE_STATUSES:
+                daily_state = load_daily_state(
+                    paths.daily_state
+                )
+                mark_daily_cycle_terminal(
+                    daily_state,
+                    state,
+                )
+                save_daily_state(
+                    paths.daily_state,
+                    daily_state,
+                )
+            raise
+
+    if next_step(state) == StepName.COLLECT_REVIEW:
+        begin_next_step(state)
+        save_cycle_state(
+            paths.cycle_state,
+            state,
+        )
+        try:
+            if (
+                not options.no_review
+                and not options.unattended
+            ):
+                pause_for_review(state)
+                save_cycle_state(
+                    paths.cycle_state,
+                    state,
+                )
+            review_result = collect_user_review(
+                options,
+                paths,
+                input_func=review_input_func,
+                stdin=review_stdin,
+            )
+            complete_current_step(
+                state,
+                skipped=(
+                    review_result.mode
+                    == "skipped_by_flag"
+                ),
+                output_path=str(
+                    paths.user_review
+                ),
+                message=(
+                    "执行前复查已跳过"
+                    if review_result.mode
+                    == "skipped_by_flag"
+                    else "执行前补充意见已保存"
+                ),
+            )
+            save_cycle_state(
+                paths.cycle_state,
+                state,
+            )
+        except Exception as error:
+            fail_current_step(
+                state,
+                error,
+            )
+            save_cycle_state(
+                paths.cycle_state,
+                state,
+            )
+            if state.status in TERMINAL_CYCLE_STATUSES:
+                daily_state = load_daily_state(
+                    paths.daily_state
+                )
+                mark_daily_cycle_terminal(
+                    daily_state,
+                    state,
+                )
+                save_daily_state(
+                    paths.daily_state,
+                    daily_state,
+                )
+            raise
+
+    stopped_at = next_step(state)
+    return StageDRunResult(
+        resolution=CycleResolution(
+            paths=paths,
+            state=state,
+            resumed=resolution.resumed,
+            reason=resolution.reason,
+        ),
+        stage_c_result=stage_c_result,
+        portfolio=portfolio_result,
+        review=review_result,
+        stopped_at=stopped_at,
+    )
+
+
+def print_stage_d_result(
+    result: StageDRunResult,
+) -> None:
+    print_bootstrap_result(result.resolution)
+    state = result.resolution.state
+    print(
+        "交易提交权限："
+        + (
+            "enabled"
+            if state.trade_permission
+            .submission_enabled
+            else "dry-run"
+        )
+    )
+    coarse = result.stage_c_result.coarse
+    if coarse is not None:
+        print(f"第一阶段动作：{coarse.action}")
+        print(
+            "候选数量："
+            f"{len(coarse.output['selections'])}"
+        )
+    if result.portfolio is not None:
+        portfolio = result.portfolio
+        print(
+            f"第二阶段动作：{portfolio.action}"
+        )
+        print(
+            "目标现金比例："
+            f"{portfolio.target_cash_weight:.2%}"
+        )
+        print(
+            "目标持仓数量："
+            f"{portfolio.target_symbol_count}"
+        )
+        print(
+            "第二阶段联网："
+            f"{portfolio.network_status}"
+        )
+        print("第二阶段校验：通过")
+    if result.review is not None:
+        print(
+            "执行前复查："
+            f"{result.review.mode}"
+        )
+    print(
+        "下一步骤："
+        f"{result.stopped_at.value if result.stopped_at else '无'}"
+    )
+    print("第三阶段尚未实现")
+    print("提交订单数：0")
+    print("未生成或提交订单")
+
+
 def main() -> int:
     print(f"脚本版本：{SCRIPT_VERSION}")
 
     try:
         options = parse_cli_args()
-        result = run_stage_c(
+        result = run_stage_d(
             options
         )
-        print_stage_c_result(
+        print_stage_d_result(
             result
         )
         return 0
