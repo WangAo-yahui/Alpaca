@@ -1,7 +1,7 @@
-"""WA Trader v2 Stage E 主流程入口。
+"""WA Trader v2 Stage F 主流程入口。
 
-作用：装载 paper1 身份，刷新基础与执行数据，并运行粗选、组合、复查和执行意图代理。
-重要性：当前版本必须停在 BUILD_ORDERS，不生成最终数量、Alpaca OrderRequest 或提交订单。
+作用：在前三个决策阶段后刷新 pre-trade 事实，构建并硬校验本地订单与 Alpaca 请求规格。
+重要性：当前版本必须停在 SUBMIT_ORDERS；即使 --allow-trade 也只能批准计划，实际提交始终为零。
 """
 
 from __future__ import annotations
@@ -10,7 +10,9 @@ import sys
 from dataclasses import dataclass
 from datetime import datetime, timezone
 from pathlib import Path
-from typing import Callable, TextIO
+from typing import Any, Callable, Mapping, TextIO
+
+from jsonschema import Draft202012Validator
 
 
 # 支持直接运行：
@@ -41,10 +43,15 @@ from v2.data.execution_snapshot import (  # noqa: E402
     ExecutionSnapshotResult,
     create_execution_snapshot,
 )
+from v2.data.pretrade_snapshot import (  # noqa: E402
+    PreTradeSnapshotResult,
+    create_pretrade_snapshot,
+)
 from v2.exceptions import (  # noqa: E402
     ConfigurationError,
     LiveTradingRejected,
     SafetyBlockedError,
+    StateValidationError,
     TemporaryDataError,
     V2Error,
 )
@@ -76,8 +83,15 @@ from v2.models.state import (  # noqa: E402
     update_invocation,
     StateMessage,
 )
+from v2.models.orders import (  # noqa: E402
+    BrokerRequestSpec,
+    ProposedOrderPlan,
+    ValidatedOrderPlan,
+)
 from v2.profiles import (  # noqa: E402
     Profile,
+    account_binding_path,
+    load_order_policy,
     load_profile,
     load_risk_profile,
     verify_or_bind_account,
@@ -86,6 +100,7 @@ from v2.releases import (  # noqa: E402
     StrategyRelease,
     get_git_commit,
     load_strategy_release,
+    sha256_file,
 )
 from v2.runtime import (  # noqa: E402
     CyclePaths,
@@ -126,9 +141,19 @@ from v2.stages.execution import (  # noqa: E402
     ExecutionStageResult,
     execute_execution_decision,
 )
+from v2.trading.order_builder import (  # noqa: E402
+    build_order_plan,
+)
+from v2.trading.order_request_factory import (  # noqa: E402
+    create_request_specs,
+    request_specs_document,
+)
+from v2.trading.order_validator import (  # noqa: E402
+    validate_order_plan,
+)
 
 
-SCRIPT_VERSION = "2026-07-25-v2-stage-e-v1"
+SCRIPT_VERSION = "2026-07-25-v2-stage-f-v1"
 
 
 @dataclass(frozen=True)
@@ -180,6 +205,20 @@ class StageERunResult:
         ExecutionSnapshotResult | None
     )
     execution: ExecutionStageResult | None
+    stopped_at: StepName | None
+
+
+@dataclass(frozen=True)
+class StageFRunResult:
+    resolution: CycleResolution
+    stage_e_result: StageERunResult
+    pretrade_snapshot: (
+        PreTradeSnapshotResult | None
+    )
+    proposed: ProposedOrderPlan | None
+    validated: ValidatedOrderPlan | None
+    request_specs: tuple[BrokerRequestSpec, ...]
+    validated_document: Mapping[str, Any] | None
     stopped_at: StepName | None
 
 
@@ -327,6 +366,15 @@ def load_runtime_identity(
         profile.risk_profile,
         project_root=root,
     )
+    if profile.order_policy is None:
+        raise ConfigurationError(
+            "Stage F profile必须声明order_policy",
+            code="ORDER_POLICY_REFERENCE_MISSING",
+        )
+    order_policy = load_order_policy(
+        profile.order_policy,
+        project_root=root,
+    )
     if (
         risk_profile.environment
         != profile.environment
@@ -334,6 +382,14 @@ def load_runtime_identity(
         raise ConfigurationError(
             "profile与risk profile环境不一致",
             code="RISK_PROFILE_ENVIRONMENT_MISMATCH",
+        )
+    if (
+        order_policy.environment
+        != profile.environment
+    ):
+        raise ConfigurationError(
+            "profile与order policy环境不一致",
+            code="ORDER_POLICY_ENVIRONMENT_MISMATCH",
         )
     release = load_strategy_release(
         profile.strategy_id,
@@ -348,6 +404,13 @@ def load_runtime_identity(
         release=release,
         release_state=release.state_payload(
             risk_profile=profile.risk_profile,
+            risk_profile_hash=sha256_file(
+                risk_profile.source_path
+            ),
+            order_policy=order_policy.reference,
+            order_policy_hash=sha256_file(
+                order_policy.source_path
+            ),
             git_commit=git_commit,
         ),
         git_verified=git_verified,
@@ -406,6 +469,7 @@ def load_resumable_cycle(
     cycle_id: str,
     project_root: Path | None = None,
     profile: Profile | None = None,
+    expected_release: Mapping[str, Any] | None = None,
 ) -> CycleResolution | None:
     """
     轮次存在、状态可恢复时返回该轮次。
@@ -447,6 +511,23 @@ def load_resumable_cycle(
     state = load_cycle_state(
         paths.cycle_state
     )
+    if expected_release is not None:
+        identity_fields = (
+            "app_version",
+            "strategy_id",
+            "strategy_version",
+            "risk_profile",
+            "risk_profile_hash",
+            "order_policy",
+            "order_policy_hash",
+            "release_hash",
+        )
+        if any(
+            state.release.get(field)
+            != expected_release.get(field)
+            for field in identity_fields
+        ):
+            return None
 
     if (
         state.status
@@ -579,6 +660,7 @@ def resolve_cycle(
     2. 可恢复的active cycle；
     3. 创建新轮次。
     """
+    permission_replan = False
     if options.cycle_id is not None:
         return initialize_existing_empty_cycle(
             run_date=run_date,
@@ -606,10 +688,35 @@ def resolve_cycle(
                 if identity is not None
                 else None
             ),
+            expected_release=(
+                identity.release_state
+                if identity is not None
+                else None
+            ),
         )
 
         if active is not None:
-            return active
+            orders_started = (
+                StepName.BUILD_ORDERS
+                in active.state.completed_steps
+                or active.state.current_step
+                in {
+                    StepName.BUILD_ORDERS,
+                    StepName.VALIDATE_ORDERS,
+                    StepName.SUBMIT_ORDERS,
+                }
+            )
+            permission_changed = (
+                active.state.invocation.allow_trade
+                != options.allow_trade
+            )
+            if (
+                orders_started
+                and permission_changed
+            ):
+                permission_replan = True
+            else:
+                return active
 
     paths = create_cycle_paths(
         run_date,
@@ -631,9 +738,13 @@ def resolve_cycle(
         ),
     )
 
-    cycle_kind = decide_new_cycle_kind(
-        daily_state,
-        options,
+    cycle_kind = (
+        CycleKind.EXECUTION_REFRESH
+        if permission_replan
+        else decide_new_cycle_kind(
+            daily_state,
+            options,
+        )
     )
 
     state = initialize_cycle_state(
@@ -662,7 +773,11 @@ def resolve_cycle(
         paths=paths,
         state=state,
         resumed=False,
-        reason="创建新的主函数运行轮次",
+        reason=(
+            "交易许可改变，创建execution refresh轮次"
+            if permission_replan
+            else "创建新的主函数运行轮次"
+        ),
     )
 
 
@@ -857,6 +972,9 @@ def bootstrap_main(
             "strategy_id",
             "strategy_version",
             "risk_profile",
+            "risk_profile_hash",
+            "order_policy",
+            "order_policy_hash",
             "release_hash",
             "prompt_hashes",
             "schema_hashes",
@@ -1789,15 +1907,465 @@ def print_stage_e_result(
     print("未生成、取消、替换或提交订单")
 
 
+def _validate_stage_f_document(
+    payload: Mapping[str, Any],
+    *,
+    schema_name: str,
+    project_root: Path | None,
+) -> None:
+    root = (
+        project_root.expanduser().resolve()
+        if project_root is not None
+        else Path(__file__).resolve().parents[2]
+    )
+    schema = load_json_object(
+        root / "schemas" / "v2" / schema_name
+    )
+    errors = sorted(
+        Draft202012Validator(schema).iter_errors(
+            dict(payload)
+        ),
+        key=lambda error: tuple(
+            str(item)
+            for item in error.absolute_path
+        ),
+    )
+    if errors:
+        first = errors[0]
+        path = "$" + "".join(
+            (
+                f"[{item}]"
+                if isinstance(item, int)
+                else f".{item}"
+            )
+            for item in first.absolute_path
+        )
+        raise StateValidationError(
+            f"Stage F文档不符合{schema_name}："
+            f"{path}: {first.message}",
+            code="STAGE_F_SCHEMA_INVALID",
+            details={
+                "schema": schema_name,
+                "path": path,
+            },
+        )
+
+
+def _order_action_document(
+    plan: ProposedOrderPlan,
+) -> dict[str, Any]:
+    return {
+        "schema_version": "1.0",
+        "profile_id": plan.profile_id,
+        "strategy_id": plan.strategy_id,
+        "strategy_version": plan.strategy_version,
+        "run_date": plan.run_date,
+        "cycle_id": plan.cycle_id,
+        "generated_at": plan.generated_at,
+        "submission_requested": (
+            plan.permission.submission_requested
+        ),
+        "submission_performed": False,
+        "actions": [
+            action.to_dict()
+            for action in plan.actions
+        ],
+    }
+
+
+def _validation_summary_document(
+    plan: ValidatedOrderPlan,
+) -> dict[str, Any]:
+    payload = plan.to_dict()
+    summary = dict(payload["summary"])
+    return {
+        "schema_version": "1.0",
+        "profile_id": plan.proposed.profile_id,
+        "strategy_id": plan.proposed.strategy_id,
+        "strategy_version": (
+            plan.proposed.strategy_version
+        ),
+        "run_date": plan.proposed.run_date,
+        "cycle_id": plan.proposed.cycle_id,
+        "generated_at": plan.generated_at,
+        "hard_validation_passed": (
+            not plan.global_issues
+            and summary.get("blocked", 0) == 0
+        ),
+        "global_issue_count": len(
+            plan.global_issues
+        ),
+        "global_issues": [
+            issue.to_dict()
+            for issue in plan.global_issues
+        ],
+        "summary": summary,
+        "submission_requested": (
+            plan.proposed.permission
+            .submission_requested
+        ),
+        "submission_performed": False,
+        "submitted_order_count": 0,
+    }
+
+
+def _account_binding_hash(
+    profile_id: str,
+    *,
+    project_root: Path | None,
+) -> str | None:
+    path = account_binding_path(
+        profile_id,
+        project_root=project_root,
+    )
+    if not path.is_file():
+        return None
+    value = load_json_object(path).get(
+        "account_id_hash"
+    )
+    return (
+        str(value)
+        if isinstance(value, str) and value
+        else None
+    )
+
+
+def run_stage_f(
+    options: CLIOptions,
+    *,
+    project_root: Path | None = None,
+    clients: AlpacaClients | None = None,
+    coarse_runner: CoarseRunner | None = None,
+    portfolio_runner: PortfolioRunner | None = None,
+    execution_runner: ExecutionRunner | None = None,
+    bar_store: DailyBarStore | None = None,
+    review_input_func: Callable[[str], str] = input,
+    review_stdin: TextIO | None = None,
+) -> StageFRunResult:
+    """Build and validate local orders, then pause before all broker writes."""
+
+    stage_e_result = run_stage_e(
+        options,
+        project_root=project_root,
+        clients=clients,
+        coarse_runner=coarse_runner,
+        portfolio_runner=portfolio_runner,
+        execution_runner=execution_runner,
+        bar_store=bar_store,
+        review_input_func=review_input_func,
+        review_stdin=review_stdin,
+    )
+    resolution = stage_e_result.resolution
+    paths = resolution.paths
+    state = resolution.state
+    snapshot_result: PreTradeSnapshotResult | None = None
+    proposed: ProposedOrderPlan | None = None
+    validated: ValidatedOrderPlan | None = None
+    request_specs: tuple[BrokerRequestSpec, ...] = ()
+    validated_document: Mapping[str, Any] | None = None
+
+    profile = load_profile(
+        paths.profile_id,
+        project_root=project_root,
+    )
+    if profile.order_policy is None:
+        raise ConfigurationError(
+            "Stage F profile缺少order_policy",
+            code="ORDER_POLICY_REFERENCE_MISSING",
+        )
+    risk_profile = load_risk_profile(
+        profile.risk_profile,
+        project_root=project_root,
+    )
+    order_policy = load_order_policy(
+        profile.order_policy,
+        project_root=project_root,
+    )
+    execution_output = load_json_object(
+        paths.execution_output
+    )
+    portfolio_output = load_json_object(
+        paths.portfolio_output
+    )
+
+    if next_step(state) == StepName.BUILD_ORDERS:
+        begin_next_step(state)
+        save_cycle_state(paths.cycle_state, state)
+        try:
+            active_clients = clients
+            if active_clients is None:
+                active_clients = create_alpaca_clients(
+                    paper=options.paper,
+                    live=options.live,
+                    project_root=project_root,
+                    profile=profile,
+                )
+            snapshot_result = (
+                create_pretrade_snapshot(
+                    paths,
+                    active_clients,
+                    execution_output=(
+                        execution_output
+                    ),
+                    order_policy=order_policy,
+                )
+            )
+            _validate_stage_f_document(
+                snapshot_result.payload,
+                schema_name=(
+                    "pretrade_snapshot.schema.json"
+                ),
+                project_root=project_root,
+            )
+            proposed = build_order_plan(
+                paths=paths,
+                state=state,
+                execution_output=execution_output,
+                pretrade_snapshot=(
+                    snapshot_result.snapshot
+                ),
+                portfolio_output=portfolio_output,
+                risk_profile=risk_profile,
+                order_policy=order_policy,
+            )
+            proposed_document = proposed.to_dict()
+            _validate_stage_f_document(
+                proposed_document,
+                schema_name=(
+                    "proposed_orders.schema.json"
+                ),
+                project_root=project_root,
+            )
+            atomic_write_json(
+                paths.proposed_orders,
+                proposed_document,
+            )
+            atomic_write_json(
+                paths.order_action_plan,
+                _order_action_document(proposed),
+            )
+            complete_current_step(
+                state,
+                output_path=str(
+                    paths.proposed_orders
+                ),
+                message=(
+                    "完成pre-trade刷新与确定性订单构建"
+                ),
+            )
+            save_cycle_state(
+                paths.cycle_state,
+                state,
+            )
+        except Exception as error:
+            fail_current_step(state, error)
+            save_cycle_state(
+                paths.cycle_state,
+                state,
+            )
+            raise
+
+    if next_step(state) == StepName.VALIDATE_ORDERS:
+        begin_next_step(state)
+        save_cycle_state(paths.cycle_state, state)
+        try:
+            if proposed is None:
+                proposed = (
+                    ProposedOrderPlan.from_dict(
+                        load_json_object(
+                            paths.proposed_orders
+                        )
+                    )
+                )
+            pretrade_payload = (
+                dict(snapshot_result.payload)
+                if snapshot_result is not None
+                else load_json_object(
+                    paths.pretrade_snapshot
+                )
+            )
+            validated = validate_order_plan(
+                plan=proposed,
+                execution_output=execution_output,
+                pretrade_snapshot=pretrade_payload,
+                risk_profile=risk_profile,
+                order_policy=order_policy,
+                expected_account_id_hash=(
+                    _account_binding_hash(
+                        paths.profile_id,
+                        project_root=project_root,
+                    )
+                ),
+            )
+            validated_document = (
+                validated.to_dict()
+            )
+            _validate_stage_f_document(
+                validated_document,
+                schema_name=(
+                    "validated_orders.schema.json"
+                ),
+                project_root=project_root,
+            )
+            request_specs = create_request_specs(
+                validated
+            )
+            atomic_write_json(
+                paths.validated_orders,
+                dict(validated_document),
+            )
+            atomic_write_json(
+                paths.order_request_specs,
+                request_specs_document(
+                    validated,
+                    request_specs,
+                ),
+            )
+            atomic_write_json(
+                paths.order_validation_summary,
+                _validation_summary_document(
+                    validated
+                ),
+            )
+            complete_current_step(
+                state,
+                output_path=str(
+                    paths.validated_orders
+                ),
+                message=(
+                    "完成Python订单硬校验与本地SDK请求建模"
+                ),
+            )
+            save_cycle_state(
+                paths.cycle_state,
+                state,
+            )
+        except Exception as error:
+            fail_current_step(state, error)
+            save_cycle_state(
+                paths.cycle_state,
+                state,
+            )
+            raise
+
+    if next_step(state) == StepName.SUBMIT_ORDERS:
+        begin_next_step(state)
+        save_cycle_state(paths.cycle_state, state)
+
+    if (
+        validated_document is None
+        and paths.validated_orders.is_file()
+    ):
+        validated_document = load_json_object(
+            paths.validated_orders
+        )
+    return StageFRunResult(
+        resolution=CycleResolution(
+            paths=paths,
+            state=state,
+            resumed=resolution.resumed,
+            reason=resolution.reason,
+        ),
+        stage_e_result=stage_e_result,
+        pretrade_snapshot=snapshot_result,
+        proposed=proposed,
+        validated=validated,
+        request_specs=request_specs,
+        validated_document=validated_document,
+        stopped_at=next_step(state),
+    )
+
+
+def print_stage_f_result(
+    result: StageFRunResult,
+) -> None:
+    """Print only planning facts and the explicit zero-submission boundary."""
+
+    state = result.resolution.state
+    print_bootstrap_result(result.resolution)
+    print(f"Profile：{state.profile_id}")
+    print(
+        "策略："
+        f"{state.release['strategy_id']}@"
+        f"{state.release['strategy_version']}"
+    )
+    print(f"风险：{state.release['risk_profile']}")
+    print(
+        f"订单策略：{state.release['order_policy']}"
+    )
+    print(
+        "交易提交权限："
+        + (
+            "enabled"
+            if state.trade_permission
+            .submission_enabled
+            else "dry-run"
+        )
+    )
+    print(
+        "Pre-trade刷新："
+        + (
+            "成功"
+            if (
+                result.pretrade_snapshot is None
+                or result.pretrade_snapshot
+                .order_planning_ready
+            )
+            else "关键数据失败，已全局阻止"
+        )
+    )
+    document = result.validated_document or {}
+    summary = document.get("summary", {})
+    summary = (
+        summary
+        if isinstance(summary, Mapping)
+        else {}
+    )
+    print(
+        f"拟定订单：{summary.get('proposed', 0)}"
+    )
+    print(
+        f"批准订单：{summary.get('approved', 0)}"
+    )
+    print(
+        "Dry-run批准："
+        f"{summary.get('dry_run_approved', 0)}"
+    )
+    print(
+        f"阻止订单：{summary.get('blocked', 0)}"
+    )
+    print(
+        f"跳过订单：{summary.get('skipped', 0)}"
+    )
+    print(
+        f"依赖订单：{summary.get('dependent', 0)}"
+    )
+    print(
+        "预计买入资金："
+        f"{summary.get('estimated_buy_value', '0')}"
+    )
+    print(
+        "预计卖出金额："
+        f"{summary.get('estimated_sell_value', '0')}"
+    )
+    print(
+        "下一步骤："
+        f"{result.stopped_at.value if result.stopped_at else '无'}"
+    )
+    print("订单提交阶段尚未实现")
+    print("实际提交订单数：0")
+    print("未调用提交、取消、替换或平仓接口")
+
+
 def main() -> int:
     print(f"脚本版本：{SCRIPT_VERSION}")
 
     try:
         options = parse_cli_args()
-        result = run_stage_e(
+        result = run_stage_f(
             options
         )
-        print_stage_e_result(
+        print_stage_f_result(
             result
         )
         return 0

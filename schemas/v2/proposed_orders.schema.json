@@ -1,0 +1,161 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://wa-trader.local/schemas/v2/proposed_orders.schema.json",
+  "title": "WA Trader v2 proposed order plan",
+  "description": "作用：记录 Stage F 根据目标暴露形成的本地拟定订单与挂单动作。重要性：该文件是计划而非执行事实，必须明确 submission_performed=false。",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "profile_id",
+    "strategy_id",
+    "strategy_version",
+    "risk_profile",
+    "order_policy",
+    "run_date",
+    "cycle_id",
+    "generated_at",
+    "execution_output_hash",
+    "pretrade_snapshot_hash",
+    "submission_requested",
+    "dry_run",
+    "submission_performed",
+    "submitted_order_count",
+    "orders",
+    "actions",
+    "summary",
+    "warnings",
+    "global_issues"
+  ],
+  "properties": {
+    "schema_version": {
+      "const": "1.0"
+    },
+    "profile_id": {
+      "const": "paper1"
+    },
+    "strategy_id": {
+      "const": "core_long"
+    },
+    "strategy_version": {
+      "const": "1.2.0"
+    },
+    "risk_profile": {
+      "const": "paper_standard@1.1.0"
+    },
+    "order_policy": {
+      "const": "paper_equity@1.0.0"
+    },
+    "run_date": {
+      "type": "string"
+    },
+    "cycle_id": {
+      "type": "string"
+    },
+    "generated_at": {
+      "type": "string"
+    },
+    "execution_output_hash": {
+      "type": "string",
+      "pattern": "^[0-9a-f]{64}$"
+    },
+    "pretrade_snapshot_hash": {
+      "type": "string",
+      "pattern": "^[0-9a-f]{64}$"
+    },
+    "submission_requested": {
+      "type": "boolean"
+    },
+    "dry_run": {
+      "type": "boolean"
+    },
+    "submission_performed": {
+      "const": false
+    },
+    "submitted_order_count": {
+      "const": 0
+    },
+    "orders": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/order"
+      }
+    },
+    "actions": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": [
+          "action_id",
+          "order_reference",
+          "symbol",
+          "action",
+          "status",
+          "reason",
+          "depends_on"
+        ]
+      }
+    },
+    "summary": {
+      "type": "object"
+    },
+    "warnings": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "global_issues": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    }
+  },
+  "$defs": {
+    "decimal": {
+      "type": "string",
+      "pattern": "^-?(0|[1-9][0-9]*)(\\.[0-9]+)?$"
+    },
+    "order": {
+      "type": "object",
+      "required": [
+        "plan_id",
+        "symbol",
+        "side",
+        "order_type",
+        "quantity",
+        "planned_value",
+        "reference_price",
+        "time_in_force",
+        "extended_hours",
+        "client_order_id",
+        "status",
+        "reason_codes",
+        "exposure",
+        "depends_on"
+      ],
+      "properties": {
+        "quantity": {
+          "$ref": "#/$defs/decimal"
+        },
+        "planned_value": {
+          "$ref": "#/$defs/decimal"
+        },
+        "reference_price": {
+          "$ref": "#/$defs/decimal"
+        },
+        "status": {
+          "enum": [
+            "proposed",
+            "approved",
+            "blocked",
+            "skipped",
+            "dependent",
+            "dry_run_approved"
+          ]
+        }
+      }
+    }
+  }
+}

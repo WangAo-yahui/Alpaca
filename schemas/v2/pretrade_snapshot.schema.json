@@ -1,0 +1,133 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://wa-trader.local/schemas/v2/pretrade_snapshot.schema.json",
+  "title": "WA Trader v2 pre-trade snapshot",
+  "description": "作用：约束 execution 之后的最终账户、持仓、挂单、报价和券商能力快照。重要性：关键刷新失败必须显式阻止订单批准，不能把缺失数据当作零。",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "stage",
+    "profile_id",
+    "strategy_id",
+    "strategy_version",
+    "run_date",
+    "cycle_id",
+    "execution_generated_at",
+    "retrieved_at",
+    "market_phase",
+    "account",
+    "positions",
+    "open_orders",
+    "today_orders",
+    "quotes",
+    "assets",
+    "broker_capabilities",
+    "order_policy",
+    "order_planning_ready",
+    "data_quality"
+  ],
+  "properties": {
+    "schema_version": {
+      "const": "1.0"
+    },
+    "stage": {
+      "const": "pretrade_snapshot"
+    },
+    "profile_id": {
+      "type": "string",
+      "minLength": 1
+    },
+    "strategy_id": {
+      "type": "string",
+      "minLength": 1
+    },
+    "strategy_version": {
+      "type": "string",
+      "minLength": 1
+    },
+    "run_date": {
+      "type": "string",
+      "minLength": 10
+    },
+    "cycle_id": {
+      "type": "string",
+      "minLength": 15
+    },
+    "execution_generated_at": {
+      "type": "string",
+      "minLength": 10
+    },
+    "retrieved_at": {
+      "type": "string",
+      "minLength": 10
+    },
+    "market_phase": {
+      "type": "string",
+      "enum": [
+        "regular_session",
+        "overnight",
+        "before_market_open",
+        "after_market_close",
+        "market_closed_weekend",
+        "market_closed_holiday",
+        "unknown"
+      ]
+    },
+    "account": {
+      "type": [
+        "object",
+        "null"
+      ]
+    },
+    "positions": {
+      "type": "array",
+      "items": {
+        "type": "object"
+      }
+    },
+    "open_orders": {
+      "type": "array",
+      "items": {
+        "type": "object"
+      }
+    },
+    "today_orders": {
+      "type": "array",
+      "items": {
+        "type": "object"
+      }
+    },
+    "quotes": {
+      "type": "object",
+      "additionalProperties": {
+        "type": "object"
+      }
+    },
+    "assets": {
+      "type": "object",
+      "additionalProperties": {
+        "type": "object"
+      }
+    },
+    "broker_capabilities": {
+      "type": "object"
+    },
+    "order_policy": {
+      "type": "string",
+      "pattern": "^[A-Za-z0-9._-]+@[A-Za-z0-9._-]+$"
+    },
+    "order_planning_ready": {
+      "type": "boolean"
+    },
+    "data_quality": {
+      "type": "object",
+      "required": [
+        "critical_error_count",
+        "warning_count",
+        "errors",
+        "warnings"
+      ]
+    }
+  }
+}

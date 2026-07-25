@@ -63,6 +63,9 @@ class StrategyRelease:
         self,
         *,
         risk_profile: str,
+        risk_profile_hash: str,
+        order_policy: str,
+        order_policy_hash: str,
         git_commit: str,
     ) -> dict[str, Any]:
         return {
@@ -71,6 +74,9 @@ class StrategyRelease:
             "strategy_id": self.strategy_id,
             "strategy_version": self.strategy_version,
             "risk_profile": risk_profile,
+            "risk_profile_hash": risk_profile_hash,
+            "order_policy": order_policy,
+            "order_policy_hash": order_policy_hash,
             "release_hash": self.release_hash,
             "prompt_hashes": dict(
                 self.prompt_hashes

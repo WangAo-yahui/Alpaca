@@ -1,0 +1,20 @@
+{
+  "_comment": "作用：定义 Stage F paper 订单规划使用的版本化硬风控。重要性：数量、现金、集中度、行情新鲜度和点差都必须由 Python 依据此合同约束，不能由模型或 --allow-trade 绕过。",
+  "schema_version": "1.0",
+  "risk_profile_id": "paper_standard",
+  "risk_profile_version": "1.1.0",
+  "environment": "paper",
+  "settings": {
+    "maximum_gross_exposure": "0.75",
+    "maximum_single_position_weight": "0.08",
+    "maximum_sector_weight": "0.25",
+    "minimum_cash_weight": "0.25",
+    "maximum_new_capital_per_cycle_weight": "0.20",
+    "maximum_order_count": 10,
+    "minimum_order_value": "10.00",
+    "allow_short_positions": false,
+    "quote_max_age_seconds": "15",
+    "regular_spread_limit_bps": "30",
+    "extended_spread_limit_bps": "30"
+  }
+}
