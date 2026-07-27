@@ -105,6 +105,8 @@ class DeploymentPaths:
         self,
         *,
         git_commit: str,
+        source_tree_hash: str = "unknown",
+        source_tree_dirty: bool = False,
     ) -> dict[str, str]:
         environment = dict(os.environ)
         environment.update(
@@ -117,6 +119,14 @@ class DeploymentPaths:
                 "WA_LOG_ROOT": str(self.logs),
                 "WA_DOTENV_PATH": str(self.dotenv),
                 "WA_RELEASE_GIT_COMMIT": git_commit,
+                "WA_SOURCE_TREE_HASH": (
+                    source_tree_hash
+                ),
+                "WA_SOURCE_TREE_DIRTY": (
+                    "true"
+                    if source_tree_dirty
+                    else "false"
+                ),
                 "PYTHONDONTWRITEBYTECODE": "1",
                 "PYTHONUNBUFFERED": "1",
             }

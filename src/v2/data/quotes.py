@@ -9,6 +9,7 @@ from __future__ import annotations
 from datetime import datetime
 from typing import Any
 
+from alpaca.data.enums import DataFeed
 from alpaca.data.requests import (
     StockLatestQuoteRequest,
 )
@@ -146,6 +147,7 @@ def fetch_latest_quotes(
     symbols: list[str],
     *,
     now: datetime | None = None,
+    feed: DataFeed | None = None,
 ) -> dict[str, dict[str, Any]]:
     unique = sorted(
         {
@@ -160,7 +162,8 @@ def fetch_latest_quotes(
         "get_stock_latest_quote",
         clients.stock_data.get_stock_latest_quote,
         StockLatestQuoteRequest(
-            symbol_or_symbols=unique
+            symbol_or_symbols=unique,
+            feed=feed,
         ),
     )
     mapping = _quote_mapping(response)

@@ -6,6 +6,7 @@
 
 from __future__ import annotations
 
+import os
 import signal
 import sys
 from dataclasses import dataclass
@@ -187,7 +188,7 @@ from v2.reports.daily_report import (  # noqa: E402
 )
 
 
-SCRIPT_VERSION = "2026-07-27-v2-stall-fix-v1"
+SCRIPT_VERSION = "2026-07-27-v2-overnight-hot-source-v1"
 
 
 @dataclass(frozen=True)
@@ -481,6 +482,17 @@ def load_runtime_identity(
                 submission_policy.source_path
             ),
             git_commit=git_commit,
+            source_tree_hash=os.environ.get(
+                "WA_SOURCE_TREE_HASH",
+                "unknown",
+            ),
+            source_tree_dirty=(
+                os.environ.get(
+                    "WA_SOURCE_TREE_DIRTY",
+                    "false",
+                ).strip().lower()
+                == "true"
+            ),
         ),
         git_verified=git_verified,
     )

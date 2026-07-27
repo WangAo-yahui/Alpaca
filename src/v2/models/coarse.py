@@ -949,7 +949,18 @@ def _asset_map(
             continue
         try:
             payload = load_json_object(snapshot_path)
-            for raw in payload.get("assets", []):
+            records = payload.get("assets")
+            if not isinstance(records, list):
+                envelope = payload.get("data")
+                records = (
+                    envelope.get("assets", [])
+                    if isinstance(
+                        envelope,
+                        Mapping,
+                    )
+                    else []
+                )
+            for raw in records:
                 if not isinstance(raw, dict):
                     continue
                 symbol = str(

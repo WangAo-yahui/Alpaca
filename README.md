@@ -76,7 +76,11 @@ Codex，但不会提交订单。
 
 ```bash
 ./wa run
+./wa run --force-full
 ```
+
+第一条允许程序按状态机复用同日有效组合；第二条强制生成新的完整决策，但仍是
+dry-run，不授予提交权限。
 
 允许自然产生的 approved 订单写入 Alpaca paper：
 
@@ -84,10 +88,31 @@ Codex，但不会提交订单。
 ./wa run --allow-trade
 ```
 
-`--allow-trade` 不会强制生成订单。没有合格订单时，正常结果是
+手工 `run` 直接使用当前工作区源码，不需要先 `deploy`。其中
+`--allow-trade` 会强制启动一个新的完整决策轮次，不会复用同日旧的空组合；
+但它只表示“允许通过全部门禁的 Paper 订单提交”，不会强制模型生成订单，
+也不会绕过 Python 风控。没有合格订单时，正常结果仍是
 `completed_no_action`，退出码为 20。
 
-### 2.5 自动 Paper 交易
+LaunchAgent 与 `./wa start/restart` 始终使用最后一次部署的不可变 release；
+源码小改动要进入自动服务仍需提交并运行 `./wa deploy`。
+
+### 2.5 可交易时段
+
+系统支持 Alpaca 美股常规、盘前、盘后和 24/5 overnight 时段：
+
+- overnight：周日到周四 `20:00–04:00 ET`；
+- 盘前：交易日 `04:00–09:30 ET`；
+- 常规：交易日 `09:30–16:00 ET`；
+- 盘后：交易日 `16:00–20:00 ET`。
+
+隔夜时段会使用 Alpaca overnight 行情 feed，并要求资产具备
+`overnight_tradable` 能力。订单仍必须是限价单、带
+`extended_hours=true`，且满足订单、风险、报价时效和价差门禁。
+周五 `20:00 ET` 到周日 `20:00 ET` 仍是周末闭市；节假日前一晚按下一交易日
+日历保守判断。
+
+### 2.6 自动 Paper 交易
 
 只有第一次自然 paper 订单已经完成提交、日志落盘、券商查询和对账，并人工确认
 Alpaca Dashboard 一致后，才允许：
@@ -104,7 +129,8 @@ Alpaca Dashboard 一致后，才允许：
 ```text
 ./wa
   └─ deployment CLI / manager
-      ├─ 读取 current release
+      ├─ 手工 run：读取当前工作区源码
+      ├─ 服务运行：读取 current release
       ├─ 获取部署锁或运行锁
       ├─ 注入共享 runtime / report / market-data 路径
       └─ 启动 src/v2/main.py
@@ -238,7 +264,8 @@ Alpaca Dashboard 一致后，才允许：
 | `./wa deploy` | 构建不可变 release，dry-run 验证并安装 LaunchAgent | 否 |
 | `./wa deploy --enable-trading` | 在真实提交验证后部署自动 paper 交易 | 是 |
 | `./wa run` | 前台执行一次 dry-run | 否 |
-| `./wa run --allow-trade` | 前台运行并允许自然 approved paper 订单 | 是 |
+| `./wa run --force-full` | 用当前源码强制完整决策，保持 dry-run | 否 |
+| `./wa run --allow-trade` | 用当前源码强制完整决策，并允许 approved paper 订单 | 是 |
 | `./wa start` | 加载并启动当前 LaunchAgent | 取决于当前 release 模式 |
 | `./wa stop` | 停止并卸载 LaunchAgent | 否 |
 | `./wa restart` | 重启 LaunchAgent | 取决于当前 release 模式 |
@@ -303,6 +330,10 @@ cd /Users/wangao/Alpaca
 
 必须确认 profile、symbol、side、qty、limit price 和 client order ID 一致，没有重复
 提交，并且券商最终状态与 reconciliation 一致。
+
+手工验收会读取当前未部署源码，并在轮次身份中记录
+`source_tree_hash` 和 `source_tree_dirty`。因此可以先验证小改动；若要让
+LaunchAgent 使用同一改动，再提交代码并执行部署。
 
 ### 7.3 发布新代码
 
@@ -374,7 +405,7 @@ Alpaca/
 | `src/v2/cli.py` | 解析业务轮次参数和互斥选项 |
 | `src/v2/config.py` | 加载并校验系统、市场数据、阶段和通用配置 |
 | `src/v2/profiles.py` | 加载 Profile、版本化 policy，并管理账户绑定路径 |
-| `src/v2/releases.py` | 加载和验证不可变策略 manifest、hash 与 Git commit |
+| `src/v2/releases.py` | 约束策略文件集合，按实际运行内容生成 hash，并记录 Git 身份 |
 | `src/v2/runtime.py` | 构建日期/轮次/共享路径并提供原子 JSON 持久化 |
 | `src/v2/state_machine.py` | 定义步骤顺序、状态转移、恢复和最终完成条件 |
 | `src/v2/exceptions.py` | 定义配置、数据、状态、Codex 和安全相关异常 |
@@ -507,11 +538,13 @@ Alpaca/
 | `config/v2/order_policies/paper_equity-1.0.0.json` | Alpaca paper 美股订单能力合同 |
 | `config/v2/submission_policies/alpaca_paper-1.0.0.json` | Paper 提交、取消、幂等和对账合同 |
 
-版本化文件一旦被 release 使用，不应原地修改；应新增版本并更新 Profile。
+手工测试时，版本化 policy 的小改动会直接生效，并以新的内容 hash 进入轮次记录。
+若改变策略语义、风险上限或订单能力，仍应新增版本并更新 Profile，避免同一版本名
+对应两种长期行为。LaunchAgent 只有重新部署后才会读取改动。
 
 ## 12. 策略 Release
 
-`strategies/core_long/` 保留多个版本是为了历史轮次可重现和 hash 校验：
+`strategies/core_long/` 保留多个版本是为了历史轮次可重现和内容身份审计：
 
 | 版本 | 作用 |
 | --- | --- |
@@ -522,7 +555,7 @@ Alpaca/
 
 每个版本中的文件类型：
 
-- `manifest.json`：策略身份、兼容应用版本和所有配置/prompt/schema hash；
+- `manifest.json`：策略身份、兼容应用版本和允许的配置/prompt/schema 文件集合；
 - `config/coarse_policy.json`：Coarse 数量和禁止字段；
 - `config/portfolio_policy.json`：组合有效期、持仓数和权重约束；
 - `config/execution_policy.json`：执行有效期和调整边界；
@@ -530,7 +563,11 @@ Alpaca/
 - `prompts/*_AGENTS.md`：工作区内强制执行规则；
 - `schemas/*.schema.json`：对应阶段的结构化输出合同。
 
-当前 `1.2.0` 的任何文件都不能原地编辑，否则 manifest hash 校验会失败。
+manifest 继续严格限制文件集合：文件缺失、多出或路径越界都会阻止运行。允许集合内的
+小内容修改不再因为 manifest 中的旧 hash 被拒绝；程序会按实际内容重新计算
+`release_hash`、各文件 hash 和 `source_tree_hash`，因此修改会立即生效且仍可审计。
+账户绑定 hash、订单幂等 ID、部署 release manifest hash 和 Python 风控不受此放宽
+影响，不能删除或绕过。
 
 ## 13. JSON Schemas
 
@@ -555,7 +592,8 @@ Alpaca/
 | `prompts/v2/coarse.md` | 应用级 Coarse 任务说明 |
 | `prompts/v2/coarse_AGENTS.md` | Coarse 工作区约束 |
 
-正式运行优先使用策略 release 内与 manifest hash 绑定的 prompts。
+正式运行使用当前策略目录中的 prompts，并按实际内容 hash 记录身份；部署服务使用
+不可变应用 release 内的同一组文件。
 
 ## 15. 数据目录
 
@@ -685,7 +723,8 @@ var/shared/runtime/accounts/paper1/strategies/core_long/1.2.0/
 ```
 
 plist 只包含安全路径和运行参数，不包含 Alpaca 凭据变量名或值。服务通过根目录
-`wa _service-run` 解析 current release，并由 release 中的业务代码运行。
+`wa _service-run` 解析 current release，并由 release 中的业务代码运行。与此不同，
+前台 `wa run` 刻意使用当前工作区源码，以便安全小改动无需部署即可先验证。
 
 常用检查：
 
@@ -850,10 +889,12 @@ find var/deployment/history -type f -maxdepth 1 -print
 
 本手册建立时的已验证基线：
 
-- 242 项 v2 测试通过；
+- 258 项 v2 测试通过；
 - macOS bootstrap、dry-run deploy、status、health、logs 和 rollback 已验证；
 - release 文件只读、manifest hash 有效；
 - LaunchAgent 不包含凭据；
-- 手工 `--allow-trade` 在无自然 approved 订单时返回 `completed_no_action`；
+- 手工 `--allow-trade` 强制完整新决策，并在无 approved 订单时返回
+  `completed_no_action`；
+- Sunday overnight 市场阶段、下一交易日日历和 overnight feed 已覆盖；
 - 自动交易保持关闭，直到第一次自然 paper submit 和人工对账完成；
 - Live 交易始终关闭。

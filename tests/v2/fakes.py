@@ -190,11 +190,15 @@ class FakeStockDataClient:
         self.trades = trades or {}
         self.bars = bars or {}
         self.failures = failures or set()
+        self.quote_requests: list[object] = []
+        self.trade_requests: list[object] = []
+        self.bar_requests: list[object] = []
 
     def get_stock_latest_quote(
         self,
         request: object,
     ) -> dict[str, object]:
+        self.quote_requests.append(request)
         if "quotes" in self.failures:
             raise RuntimeError("fake quote failure")
         return self.quotes
@@ -203,6 +207,7 @@ class FakeStockDataClient:
         self,
         request: object,
     ) -> dict[str, list[object]]:
+        self.bar_requests.append(request)
         if "bars" in self.failures:
             raise RuntimeError("fake bars failure")
         return self.bars
@@ -211,6 +216,7 @@ class FakeStockDataClient:
         self,
         request: object,
     ) -> dict[str, object]:
+        self.trade_requests.append(request)
         if "trades" in self.failures:
             raise RuntimeError("fake trade failure")
         return self.trades

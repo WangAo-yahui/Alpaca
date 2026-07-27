@@ -1,3 +1,9 @@
+"""验证策略文件集合与运行时内容身份。
+
+作用：确保 manifest 约束文件集合，同时让当前源码的小内容修改立即形成新 hash。
+重要性：手工热运行必须可审计，又不能因未同步 manifest hash 阻止安全小改动。
+"""
+
 from __future__ import annotations
 
 import shutil
@@ -5,15 +11,17 @@ import tempfile
 import unittest
 from pathlib import Path
 
-from v2.exceptions import ConfigurationError
-from v2.releases import load_strategy_release
+from v2.releases import (
+    load_strategy_release,
+    sha256_file,
+)
 
 
 PROJECT_ROOT = Path(__file__).resolve().parents[2]
 
 
 class StrategyReleaseTests(unittest.TestCase):
-    def test_manifest_hashes_and_mutation_detection(
+    def test_current_content_is_materialized_into_hash(
         self,
     ) -> None:
         release = load_strategy_release(
@@ -51,17 +59,20 @@ class StrategyReleaseTests(unittest.TestCase):
                 + "\nmodified\n",
                 encoding="utf-8",
             )
-            with self.assertRaises(
-                ConfigurationError
-            ) as caught:
-                load_strategy_release(
-                    "core_long",
-                    "1.0.0",
-                    project_root=root,
-                )
+            changed = load_strategy_release(
+                "core_long",
+                "1.0.0",
+                project_root=root,
+            )
             self.assertEqual(
-                caught.exception.code,
-                "STRATEGY_RELEASE_HASH_MISMATCH",
+                changed.prompt_hashes[
+                    "prompts/coarse.md"
+                ],
+                sha256_file(prompt),
+            )
+            self.assertNotEqual(
+                changed.release_hash,
+                release.release_hash,
             )
 
 

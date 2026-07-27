@@ -32,7 +32,7 @@
       "day"
     ],
     "market_phases": [
-      "overnight",
+      "overnight_session",
       "before_market_open",
       "after_market_close"
     ]

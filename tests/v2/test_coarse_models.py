@@ -1,3 +1,9 @@
+"""验证 Coarse 客观输入、硬筛选和共享资产缓存兼容性。
+
+作用：检查技术摘要、输入签名、持仓保留以及资产能力合并。
+重要性：资产缓存解析错误会把整个候选池误判为不可开仓并生成空决策。
+"""
+
 from __future__ import annotations
 
 import json
@@ -224,6 +230,52 @@ class CoarseModelTests(unittest.TestCase):
                     ]["warnings"]
                 )
             )
+
+    def test_nested_shared_asset_envelope_is_eligible(
+        self,
+    ) -> None:
+        with tempfile.TemporaryDirectory() as temp:
+            root = Path(temp)
+            prepare_stage_c_project(root)
+            assets_path = (
+                root / "data/snapshots/assets.json"
+            )
+            original = json.loads(
+                assets_path.read_text(
+                    encoding="utf-8"
+                )
+            )
+            assets_path.write_text(
+                json.dumps(
+                    {
+                        "schema_version": "1.0",
+                        "data": {
+                            "assets": original["assets"]
+                        },
+                    }
+                ),
+                encoding="utf-8",
+            )
+            result = build_coarse_input(
+                config=load_config(
+                    project_root=root
+                ),
+                run_date="2026-07-23",
+                base_snapshot={
+                    "market_phase": "overnight_session",
+                    "positions": [],
+                    "open_orders": [],
+                    "assets": [],
+                },
+            )
+        item = next(
+            candidate
+            for candidate in result.payload["universe"]
+            if candidate["symbol"] == "S000"
+        )
+        self.assertTrue(
+            item["screen_new_position_eligible"]
+        )
 
 
 if __name__ == "__main__":

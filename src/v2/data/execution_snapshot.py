@@ -10,6 +10,7 @@ from dataclasses import dataclass
 from datetime import datetime, timedelta, timezone
 from typing import Any, Callable, TypeVar
 
+from alpaca.data.enums import DataFeed
 from alpaca.data.requests import (
     StockLatestTradeRequest,
 )
@@ -32,6 +33,7 @@ from v2.data.intraday import (
     determine_market_phase,
     fetch_intraday_summaries,
     fetch_market_holiday_status,
+    market_data_feed,
 )
 from v2.data.orders import (
     fetch_open_orders,
@@ -158,6 +160,8 @@ def normalize_latest_trade(
 def fetch_latest_trades(
     clients: AlpacaClients,
     symbols: list[str],
+    *,
+    feed: DataFeed | None = None,
 ) -> dict[str, dict[str, Any]]:
     unique = sorted(
         {
@@ -172,7 +176,8 @@ def fetch_latest_trades(
         "get_stock_latest_trade",
         clients.stock_data.get_stock_latest_trade,
         StockLatestTradeRequest(
-            symbol_or_symbols=unique
+            symbol_or_symbols=unique,
+            feed=feed,
         ),
     )
     mapping = _mapping(response)
@@ -317,12 +322,14 @@ def create_execution_snapshot(
         if holiday is not None
         else "unknown"
     )
+    feed = market_data_feed(phase)
     quotes = _safe_fetch(
         "quotes",
         lambda: fetch_latest_quotes(
             clients,
             symbols,
             now=retrieved,
+            feed=feed,
         ),
         errors=errors,
     )
@@ -339,6 +346,7 @@ def create_execution_snapshot(
         lambda: fetch_latest_trades(
             clients,
             symbols,
+            feed=feed,
         ),
         errors=errors,
     )
@@ -370,6 +378,7 @@ def create_execution_snapshot(
             end=retrieved,
             window=minute_window,
             market_phase=phase,
+            feed=feed,
         ),
         errors=errors,
     )
@@ -445,6 +454,7 @@ def create_execution_snapshot(
         "broker_extended_hours_capability": {
             "supported": True,
             "supported_phases": [
+                "overnight_session",
                 "before_market_open",
                 "after_market_close",
             ],

@@ -12,6 +12,8 @@ from datetime import timedelta
 from pathlib import Path
 from types import SimpleNamespace
 
+from alpaca.data.enums import DataFeed
+
 from v2.data.alpaca_client import AlpacaClients
 from v2.data.pretrade_snapshot import (
     create_pretrade_snapshot,
@@ -116,6 +118,34 @@ class PreTradeSnapshotTests(unittest.TestCase):
                 "critical_error_count"
             ],
             0,
+        )
+
+    def test_sunday_overnight_refresh_uses_overnight_feed(
+        self,
+    ) -> None:
+        _, policy = order_configs()
+        clients = self._clients()
+        with tempfile.TemporaryDirectory() as temp:
+            result = create_pretrade_snapshot(
+                order_paths(Path(temp)),
+                clients,
+                execution_output=execution_output(),
+                order_policy=policy,
+                now=GENERATED_AT.replace(
+                    year=2026,
+                    month=7,
+                    day=27,
+                    hour=2,
+                ),
+                is_market_holiday=False,
+            )
+        self.assertEqual(
+            result.payload["market_phase"],
+            "overnight_session",
+        )
+        self.assertEqual(
+            clients.stock_data.quote_requests[-1].feed,
+            DataFeed.OVERNIGHT,
         )
 
 

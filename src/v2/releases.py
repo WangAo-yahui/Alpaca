@@ -1,7 +1,7 @@
-"""解析并验证不可变的策略 release。
+"""解析并验证策略 release 的文件集合与当前运行内容。
 
-作用：校验 prompt、schema、策略配置的文件集合与 SHA-256，并记录 Git/release 身份。
-重要性：任何原地修改都会改变策略行为，因此必须在运行 Codex 前失败并阻止继续。
+作用：约束 prompt、schema、策略配置文件集合，并按实际内容生成 SHA-256 运行身份。
+重要性：小改动可立即生效，但行为变化仍必须留下不同 hash，缺失或多余文件继续阻止运行。
 """
 
 from __future__ import annotations
@@ -71,10 +71,14 @@ class StrategyRelease:
         git_commit: str,
         submission_policy: str = "legacy-unversioned",
         submission_policy_hash: str = "unknown",
+        source_tree_hash: str = "unknown",
+        source_tree_dirty: bool = False,
     ) -> dict[str, Any]:
         return {
             "app_version": APP_VERSION,
             "git_commit": git_commit,
+            "source_tree_hash": source_tree_hash,
+            "source_tree_dirty": source_tree_dirty,
             "strategy_id": self.strategy_id,
             "strategy_version": self.strategy_version,
             "risk_profile": risk_profile,
@@ -129,6 +133,47 @@ def _hash_map(
                 code="STRATEGY_RELEASE_MANIFEST_INVALID",
             )
         result[relative] = digest
+    return result
+
+
+def _materialized_hash_map(
+    release_root: Path,
+    documented: Mapping[str, str],
+    *,
+    artifact_group: str,
+) -> dict[str, str]:
+    """Hash current strategy artifacts while retaining the manifest file set."""
+
+    result: dict[str, str] = {}
+    for relative in documented:
+        relative_path = Path(relative)
+        if (
+            relative_path.is_absolute()
+            or ".." in relative_path.parts
+        ):
+            raise ConfigurationError(
+                "strategy release路径无效："
+                f"{relative}",
+                code="STRATEGY_RELEASE_PATH_INVALID",
+                details={
+                    "artifact_group": artifact_group,
+                    "relative_path": relative,
+                },
+            )
+        path = release_root / relative_path
+        if not path.is_file():
+            raise ConfigurationError(
+                "strategy release文件缺失："
+                f"{relative}",
+                code=(
+                    "STRATEGY_RELEASE_FILE_SET_MISMATCH"
+                ),
+                details={
+                    "artifact_group": artifact_group,
+                    "relative_path": relative,
+                },
+            )
+        result[relative] = sha256_file(path)
     return result
 
 
@@ -189,6 +234,18 @@ def load_strategy_release(
             "strategy release与当前app版本不兼容",
             code="STRATEGY_RELEASE_INCOMPATIBLE",
         )
+    documented_prompt_hashes = _hash_map(
+        payload,
+        "prompt_hashes",
+    )
+    documented_schema_hashes = _hash_map(
+        payload,
+        "schema_hashes",
+    )
+    documented_config_hashes = _hash_map(
+        payload,
+        "config_hashes",
+    )
     release = StrategyRelease(
         strategy_id=strategy_id,
         strategy_version=strategy_version,
@@ -196,17 +253,20 @@ def load_strategy_release(
         description=str(
             payload.get("description", "")
         ),
-        prompt_hashes=_hash_map(
-            payload,
-            "prompt_hashes",
+        prompt_hashes=_materialized_hash_map(
+            release_root,
+            documented_prompt_hashes,
+            artifact_group="prompt",
         ),
-        schema_hashes=_hash_map(
-            payload,
-            "schema_hashes",
+        schema_hashes=_materialized_hash_map(
+            release_root,
+            documented_schema_hashes,
+            artifact_group="schema",
         ),
-        config_hashes=_hash_map(
-            payload,
-            "config_hashes",
+        config_hashes=_materialized_hash_map(
+            release_root,
+            documented_config_hashes,
+            artifact_group="config",
         ),
         root=release_root,
         manifest_path=manifest_path,

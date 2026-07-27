@@ -37,6 +37,43 @@ class StageHManagerTests(unittest.TestCase):
         manager._print("progress")
         stdout.flush.assert_called_once_with()
 
+    def test_manual_trade_run_uses_source_and_forces_full(
+        self,
+    ) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary).resolve()
+            manager = DeploymentManager(
+                root,
+                home=root / "home",
+                platform_name="Darwin",
+            )
+            with (
+                patch.object(
+                    manager,
+                    "_git_commit",
+                    return_value="a" * 40,
+                ),
+                patch.object(
+                    manager,
+                    "_run_application",
+                    return_value=ExitCode.NO_ACTION,
+                ) as run_application,
+            ):
+                result = manager.run(
+                    allow_trade=True
+                )
+            self.assertEqual(
+                result,
+                ExitCode.NO_ACTION,
+            )
+            run_application.assert_called_once_with(
+                application_root=root,
+                git_commit="a" * 40,
+                allow_trade=True,
+                force_full=True,
+                command_name="manual-paper",
+            )
+
     def _healthy_project(self, root: Path) -> None:
         profile = (
             root / "config/v2/profiles/paper1.json"

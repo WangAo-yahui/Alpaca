@@ -93,6 +93,14 @@ class StageHPathTests(unittest.TestCase):
                 environment["PYTHONDONTWRITEBYTECODE"],
                 "1",
             )
+            self.assertEqual(
+                environment["WA_SOURCE_TREE_HASH"],
+                "unknown",
+            )
+            self.assertEqual(
+                environment["WA_SOURCE_TREE_DIRTY"],
+                "false",
+            )
             self.assertEqual(commit, "a" * 40)
             self.assertTrue(verified)
 

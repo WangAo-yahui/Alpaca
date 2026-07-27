@@ -21,6 +21,7 @@ from v2.data.assets import AssetCache
 from v2.data.intraday import (
     determine_market_phase,
     fetch_market_holiday_status,
+    market_data_feed,
 )
 from v2.data.orders import (
     fetch_open_orders,
@@ -314,12 +315,14 @@ def create_pretrade_snapshot(
         if holiday is not None
         else "unknown"
     )
+    feed = market_data_feed(market_phase)
     quotes = _safe_fetch(
         "quotes",
         lambda: fetch_latest_quotes(
             clients,
             list(symbols),
             now=retrieved,
+            feed=feed,
         ),
         errors=errors,
     )

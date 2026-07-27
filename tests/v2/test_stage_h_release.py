@@ -13,7 +13,10 @@ import unittest
 from pathlib import Path
 
 from v2.deployment.paths import DeploymentPaths
-from v2.deployment.release import ReleaseBuilder
+from v2.deployment.release import (
+    ReleaseBuilder,
+    source_tree_fingerprint,
+)
 
 
 class StageHReleaseTests(unittest.TestCase):
@@ -85,6 +88,29 @@ class StageHReleaseTests(unittest.TestCase):
             )
             with self.assertRaises(ValueError):
                 builder.validate(installed.root)
+
+    def test_source_fingerprint_tracks_uncommitted_code(
+        self,
+    ) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            self._repository(root)
+            initial = source_tree_fingerprint(root)
+            added = root / "src/v2/new_rule.py"
+            added.write_text(
+                '"""new rule"""\n',
+                encoding="utf-8",
+            )
+            with_added = source_tree_fingerprint(root)
+            self.assertNotEqual(initial, with_added)
+            added.write_text(
+                '"""changed rule"""\n',
+                encoding="utf-8",
+            )
+            self.assertNotEqual(
+                with_added,
+                source_tree_fingerprint(root),
+            )
 
 
 if __name__ == "__main__":

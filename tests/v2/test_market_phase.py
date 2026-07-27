@@ -1,3 +1,9 @@
+"""验证纽约市场时段、隔夜交易日映射和分钟线摘要。
+
+作用：覆盖 regular、extended、overnight、周末与假日的边界。
+重要性：错误时段会误阻止有效 paper 决策或在闭市时错误放行订单。
+"""
+
 from __future__ import annotations
 
 import unittest
@@ -7,6 +13,7 @@ from zoneinfo import ZoneInfo
 
 from v2.data.intraday import (
     determine_market_phase,
+    market_session_date,
     summarize_intraday,
 )
 
@@ -41,18 +48,47 @@ class MarketPhaseTests(unittest.TestCase):
                 )
 
     def test_weekend_and_holiday(self) -> None:
-        self.assertEqual(
-            determine_market_phase(
+        cases = (
+            (
                 datetime(
-                    2026,
-                    7,
-                    25,
-                    10,
-                    tzinfo=NY,
-                )
+                    2026, 7, 25, 10, tzinfo=NY
+                ),
+                "market_closed_weekend",
             ),
-            "market_closed_weekend",
+            (
+                datetime(
+                    2026, 7, 26, 19, 59, tzinfo=NY
+                ),
+                "market_closed_weekend",
+            ),
+            (
+                datetime(
+                    2026, 7, 26, 20, 0, tzinfo=NY
+                ),
+                "overnight_session",
+            ),
+            (
+                datetime(
+                    2026, 7, 31, 3, 59, tzinfo=NY
+                ),
+                "overnight_session",
+            ),
+            (
+                datetime(
+                    2026, 7, 31, 20, 0, tzinfo=NY
+                ),
+                "market_closed_weekend",
+            ),
         )
+        for value, expected in cases:
+            with self.subTest(
+                value=value,
+                expected=expected,
+            ):
+                self.assertEqual(
+                    determine_market_phase(value),
+                    expected,
+                )
         self.assertEqual(
             determine_market_phase(
                 datetime(
@@ -65,6 +101,31 @@ class MarketPhaseTests(unittest.TestCase):
                 is_market_holiday=True,
             ),
             "market_closed_holiday",
+        )
+        self.assertEqual(
+            determine_market_phase(
+                datetime(
+                    2026,
+                    7,
+                    26,
+                    22,
+                    tzinfo=NY,
+                ),
+                is_market_holiday=True,
+            ),
+            "market_closed_holiday",
+        )
+        self.assertEqual(
+            market_session_date(
+                datetime(
+                    2026,
+                    7,
+                    26,
+                    22,
+                    tzinfo=NY,
+                )
+            ).isoformat(),
+            "2026-07-27",
         )
 
     def test_intraday_summary(self) -> None:

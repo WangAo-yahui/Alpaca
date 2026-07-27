@@ -46,6 +46,11 @@ def build_parser() -> argparse.ArgumentParser:
         action="store_true",
         help="人工运行一次允许Stage G paper提交的cycle",
     )
+    run.add_argument(
+        "--force-full",
+        action="store_true",
+        help="人工强制生成新的完整决策，但不单独授予提交权限",
+    )
     commands.add_parser("start")
     commands.add_parser("stop")
     commands.add_parser("restart")
@@ -134,7 +139,10 @@ def main(
                 manager.run(
                     allow_trade=bool(
                         options.allow_trade
-                    )
+                    ),
+                    force_full=bool(
+                        options.force_full
+                    ),
                 )
             )
         if options.command == "_service-run":

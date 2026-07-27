@@ -42,6 +42,7 @@ from v2.deployment.release import (
     atomic_write_json,
     load_json,
     manifests_contain_forbidden_text,
+    source_tree_fingerprint,
 )
 
 
@@ -827,6 +828,7 @@ class DeploymentManager:
         git_commit: str,
         allow_trade: bool,
         command_name: str,
+        force_full: bool = False,
     ) -> ExitCode:
         before = self._latest_cycle_state()
         before_path = before[0] if before else None
@@ -848,8 +850,21 @@ class DeploymentManager:
             self.paths.logs
             / f"{timestamp}-{command_name}.log"
         )
+        source_run = (
+            application_root.resolve()
+            == self.paths.project_root.resolve()
+        )
         environment = self.paths.application_environment(
-            git_commit=git_commit
+            git_commit=git_commit,
+            source_tree_hash=(
+                source_tree_fingerprint(
+                    application_root
+                )
+            ),
+            source_tree_dirty=(
+                source_run
+                and not self._git_clean()
+            ),
         )
         command = [
             str(self.paths.venv_python),
@@ -861,6 +876,8 @@ class DeploymentManager:
         ]
         if allow_trade:
             command.append("--allow-trade")
+        if force_full:
+            command.append("--force-full")
         secrets = dotenv_secret_values(
             self.paths.dotenv
         )
@@ -993,21 +1010,25 @@ class DeploymentManager:
             },
         )
 
-    def run(self, *, allow_trade: bool) -> ExitCode:
-        current = self._current_document()
-        if current is None:
-            root = self.paths.project_root
-            commit = self._git_commit()
-        else:
-            artifact = self._release_from_document(
-                current
-            )
-            root = artifact.root
-            commit = artifact.git_commit
+    def run(
+        self,
+        *,
+        allow_trade: bool,
+        force_full: bool = False,
+    ) -> ExitCode:
+        root = self.paths.project_root
+        commit = self._git_commit()
+        self._print(
+            "手工运行使用当前工作区源码；"
+            "launchd仍使用已部署release"
+        )
         return self._run_application(
             application_root=root,
             git_commit=commit,
             allow_trade=allow_trade,
+            force_full=(
+                allow_trade or force_full
+            ),
             command_name=(
                 "manual-paper"
                 if allow_trade

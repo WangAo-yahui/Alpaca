@@ -121,6 +121,47 @@ def _tracked_files(project_root: Path) -> tuple[str, ...]:
     )
 
 
+def source_tree_fingerprint(
+    project_root: Path,
+) -> str:
+    """Hash every runnable source file, including uncommitted additions."""
+
+    root = project_root.expanduser().resolve()
+    paths: set[Path] = set()
+    for relative in INCLUDED_FILES:
+        candidate = root / relative
+        if candidate.is_file():
+            paths.add(candidate)
+    for prefix in INCLUDED_PREFIXES:
+        directory = root / prefix.rstrip("/")
+        if not directory.is_dir():
+            continue
+        for candidate in directory.rglob("*"):
+            if (
+                candidate.is_file()
+                and "__pycache__"
+                not in candidate.parts
+                and candidate.suffix != ".pyc"
+                and candidate.name != ".DS_Store"
+            ):
+                paths.add(candidate)
+    digest = hashlib.sha256()
+    for path in sorted(
+        paths,
+        key=lambda item: (
+            item.relative_to(root).as_posix()
+        ),
+    ):
+        relative = path.relative_to(root).as_posix()
+        digest.update(relative.encode("utf-8"))
+        digest.update(b"\0")
+        digest.update(
+            sha256_file(path).encode("ascii")
+        )
+        digest.update(b"\0")
+    return digest.hexdigest()
+
+
 @dataclass(frozen=True)
 class ReleaseArtifact:
     release_id: str

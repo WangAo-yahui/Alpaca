@@ -8,10 +8,11 @@ from __future__ import annotations
 
 import math
 import statistics
-from datetime import datetime, time
+from datetime import date, datetime, time, timedelta
 from typing import Any
 from zoneinfo import ZoneInfo
 
+from alpaca.data.enums import DataFeed
 from alpaca.data.requests import StockBarsRequest
 from alpaca.data.timeframe import TimeFrame
 from alpaca.trading.requests import GetCalendarRequest
@@ -33,6 +34,55 @@ from v2.exceptions import TemporaryDataError
 NEW_YORK_TZ = ZoneInfo("America/New_York")
 
 
+def _is_overnight_window(value: datetime) -> bool:
+    """Return whether New York time is inside Alpaca's 24/5 overnight window."""
+
+    clock = value.timetz().replace(tzinfo=None)
+    weekday = value.weekday()
+    if clock < time(4, 0):
+        return weekday in {0, 1, 2, 3, 4}
+    if clock >= time(20, 0):
+        return weekday in {6, 0, 1, 2, 3}
+    return False
+
+
+def market_session_date(
+    value: datetime,
+) -> date:
+    """Return the NYSE trade date governing the current session window."""
+
+    current = value
+    if current.tzinfo is None:
+        current = current.replace(
+            tzinfo=NEW_YORK_TZ
+        )
+    current = current.astimezone(NEW_YORK_TZ)
+    if (
+        current.timetz().replace(tzinfo=None)
+        >= time(20, 0)
+        and current.weekday()
+        in {6, 0, 1, 2, 3}
+    ):
+        return (
+            current
+            + timedelta(days=1)
+        ).date()
+    return current.date()
+
+
+def market_data_feed(
+    market_phase: str,
+) -> DataFeed | None:
+    """Select Alpaca's overnight feed only for the overnight session."""
+
+    if market_phase in {
+        "overnight",
+        "overnight_session",
+    }:
+        return DataFeed.OVERNIGHT
+    return None
+
+
 def determine_market_phase(
     value: datetime | None = None,
     *,
@@ -45,6 +95,12 @@ def determine_market_phase(
         )
     current = current.astimezone(NEW_YORK_TZ)
 
+    if _is_overnight_window(current):
+        return (
+            "market_closed_holiday"
+            if is_market_holiday
+            else "overnight_session"
+        )
     if current.weekday() >= 5:
         return "market_closed_weekend"
     if is_market_holiday:
@@ -53,14 +109,17 @@ def determine_market_phase(
     clock = current.timetz().replace(
         tzinfo=None
     )
+    if (
+        current.weekday() == 4
+        and clock >= time(20, 0)
+    ):
+        return "market_closed_weekend"
     if time(4, 0) <= clock < time(9, 30):
         return "before_market_open"
     if time(9, 30) <= clock < time(16, 0):
         return "regular_session"
     if time(16, 0) <= clock < time(20, 0):
         return "after_market_close"
-    if clock >= time(20, 0) or clock < time(4, 0):
-        return "overnight_session"
     return "unknown"
 
 
@@ -73,9 +132,7 @@ def fetch_market_holiday_status(
         current = current.replace(
             tzinfo=NEW_YORK_TZ
         )
-    market_date = current.astimezone(
-        NEW_YORK_TZ
-    ).date()
+    market_date = market_session_date(current)
     if market_date.weekday() >= 5:
         return False
     calendar = call_api(
@@ -303,6 +360,7 @@ def fetch_intraday_summaries(
     end: datetime | None = None,
     window: int = 60,
     market_phase: str | None = None,
+    feed: DataFeed | None = None,
 ) -> dict[str, dict[str, Any]]:
     unique = sorted(
         {
@@ -322,6 +380,7 @@ def fetch_intraday_summaries(
             start=start,
             end=end or utc_now(),
             limit=max(window * len(unique), window),
+            feed=feed,
         ),
     )
     mapping = _bar_mapping(response)

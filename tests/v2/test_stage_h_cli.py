@@ -37,13 +37,17 @@ class StageHCLITests(unittest.TestCase):
                         project_root=Path(temporary),
                     )
                 run_code = main(
-                    ["run"],
+                    ["run", "--force-full"],
                     project_root=Path(temporary),
                 )
             self.assertEqual(status_code, 0)
             self.assertIn('"paper1"', output.getvalue())
             self.assertEqual(
                 run_code, int(ExitCode.NO_ACTION)
+            )
+            manager.run.assert_called_once_with(
+                allow_trade=False,
+                force_full=True,
             )
 
     def test_service_run_uses_current_mode(self) -> None:
