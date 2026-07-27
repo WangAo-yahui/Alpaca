@@ -566,6 +566,8 @@ Alpaca/
 manifest 继续严格限制文件集合：文件缺失、多出或路径越界都会阻止运行。允许集合内的
 小内容修改不再因为 manifest 中的旧 hash 被拒绝；程序会按实际内容重新计算
 `release_hash`、各文件 hash 和 `source_tree_hash`，因此修改会立即生效且仍可审计。
+资产能力、筛选资格和日线摘要等 Coarse 决策事实也参与 revision 签名；事实改变会
+创建新的 input/output revision，旧 revision 保留且不会与新输出混用。
 账户绑定 hash、订单幂等 ID、部署 release manifest hash 和 Python 风控不受此放宽
 影响，不能删除或绕过。
 
@@ -806,8 +808,9 @@ release 白名单：
 
 ### 21.4 Codex 长时间运行或网络不可达
 
-每次 Codex 调用前会先用最多 5 秒完成 `chatgpt.com:443` 的 TCP 与 TLS
-握手。DNS、VPN、TCP 或 TLS 不可达时立即返回
+每次 Codex 调用前会对 `chatgpt.com:443` 执行最多 3 次、单次最多 5 秒的
+TCP 与 TLS 握手，尝试之间等待 1 秒。短暂 VPN/TUN 抖动可以自行恢复；
+连续 DNS、VPN、TCP 或 TLS 不可达时返回
 `CODEX_NETWORK_UNAVAILABLE`，不会进入第二次应用层重试。
 
 正常模型运行期间每 30 秒输出一次心跳；单阶段最长 600 秒。可以按 `Ctrl-C`
@@ -889,7 +892,7 @@ find var/deployment/history -type f -maxdepth 1 -print
 
 本手册建立时的已验证基线：
 
-- 258 项 v2 测试通过；
+- 262 项 v2 测试通过；
 - macOS bootstrap、dry-run deploy、status、health、logs 和 rollback 已验证；
 - release 文件只读、manifest hash 有效；
 - LaunchAgent 不包含凭据；

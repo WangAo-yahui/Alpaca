@@ -1366,6 +1366,43 @@ def build_coarse_input(
         "symbols": universe["symbols"],
         "must_include": sorted(must_include),
         "exclusions": sorted(exclusions),
+        "candidate_facts": [
+            {
+                "symbol": candidate["symbol"],
+                "name": candidate["name"],
+                "asset_type": (
+                    candidate["asset_type"]
+                ),
+                "sector": candidate["sector"],
+                "industry": candidate["industry"],
+                "source": candidate["source"],
+                "must_include": (
+                    candidate["must_include"]
+                ),
+                "research_eligible": (
+                    candidate[
+                        "research_eligible"
+                    ]
+                ),
+                "screen_new_position_eligible": (
+                    candidate[
+                        "screen_new_position_eligible"
+                    ]
+                ),
+                "asset_status": (
+                    candidate["asset_status"]
+                ),
+                "daily_summary": (
+                    candidate["daily_summary"]
+                ),
+                "data_quality": (
+                    candidate["data_quality"]
+                ),
+            }
+            for candidate in candidates
+            if candidate["symbol"]
+            in configured_symbols
+        ],
         "latest_daily_date": latest_daily_date,
         "screening_config_version": (
             config.stages[

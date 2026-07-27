@@ -13,5 +13,8 @@
 - 不输出 quantity、qty、shares、notional、dollar_amount、final_order 或 broker_order_request。
 - 不声称 submitted 或 filled，不调用 Alpaca，不创建、取消或替换实际订单。
 - 非 regular 时段只有在券商能力、最新报价和 limit intent 全部满足时才可形成执行意图。
+- `defer`、`reject`、`no_action` 必须完全中性：`side=none`、执行比例为 `0`、
+  urgency 为 `none`、价格 reference 为 `none` 且价格为 null、订单 type/TIF 为
+  `none`、所有订单布尔开关为 false；复查条件只写入原因、风险和 required checks。
 - 用户原始评论存在无法可靠解释的硬限制时，必须 manual review 并 defer。
 - 只允许写 `.tmp/codex/`，最终只返回一个符合 Schema 的 JSON 对象。

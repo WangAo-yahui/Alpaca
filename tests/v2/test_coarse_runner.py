@@ -297,7 +297,10 @@ class CoarseRunnerTests(unittest.TestCase):
             with self.assertRaises(
                 TemporaryDataError
             ) as context:
-                _probe_codex_network(timeout=1)
+                _probe_codex_network(
+                    timeout=1,
+                    attempts=1,
+                )
         self.assertEqual(
             context.exception.code,
             "CODEX_NETWORK_UNAVAILABLE",
@@ -327,10 +330,52 @@ class CoarseRunnerTests(unittest.TestCase):
             with self.assertRaises(
                 TemporaryDataError
             ) as raised:
-                _probe_codex_network(timeout=1)
+                _probe_codex_network(
+                    timeout=1,
+                    attempts=1,
+                )
         self.assertEqual(
             raised.exception.code,
             "CODEX_NETWORK_UNAVAILABLE",
+        )
+
+    def test_socket_preflight_recovers_from_transient_failure(
+        self,
+    ) -> None:
+        connection = MagicMock()
+        connection.__enter__.return_value = (
+            connection
+        )
+        context = MagicMock()
+        wrapped = MagicMock()
+        context.wrap_socket.return_value = wrapped
+        with (
+            patch(
+                "v2.codex.runner.socket.create_connection",
+                side_effect=[
+                    socket.gaierror("temporary dns"),
+                    connection,
+                ],
+            ) as create_connection,
+            patch(
+                "v2.codex.runner.ssl.create_default_context",
+                return_value=context,
+            ),
+            patch(
+                "v2.codex.runner.time.sleep"
+            ) as sleep,
+        ):
+            _probe_codex_network(
+                timeout=1,
+                attempts=2,
+            )
+        self.assertEqual(
+            create_connection.call_count,
+            2,
+        )
+        sleep.assert_called_once_with(
+            runner_module
+            .CODEX_CONNECTIVITY_RETRY_DELAY_SECONDS
         )
 
     def test_default_executor_emits_heartbeat(

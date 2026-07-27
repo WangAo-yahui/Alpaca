@@ -16,6 +16,9 @@ from v2.models.execution import (
 )
 from v2.releases import load_strategy_release
 from v2.runtime import load_json_object
+from v2.stages.execution import (
+    _neutralize_non_executable_intents,
+)
 from tests.v2.support import (
     stage_e_fixture,
     valid_execution_output,
@@ -23,6 +26,80 @@ from tests.v2.support import (
 
 
 class ExecutionValidationTests(unittest.TestCase):
+    def test_non_executable_intent_is_safely_neutralized(
+        self,
+    ) -> None:
+        with tempfile.TemporaryDirectory() as temp:
+            root = Path(temp)
+            result = stage_e_fixture(root)
+            assert result.execution is not None
+            source = copy.deepcopy(
+                result.execution
+                .input_result.payload
+            )
+            source["execution_snapshot"][
+                "market_phase"
+            ] = "overnight_session"
+            payload = valid_execution_output(
+                source
+            )
+            for decision in payload["decisions"]:
+                decision.update(
+                    {
+                        "execution_decision": "defer",
+                        "side": "buy",
+                        "execution_fraction": "0",
+                        "urgency": "normal",
+                    }
+                )
+                decision["price_condition"][
+                    "reference"
+                ] = "ask"
+                decision["price_condition"][
+                    "limit_price"
+                ] = "100"
+                decision["order_intent"].update(
+                    {
+                        "preferred_type": "limit",
+                        "time_in_force_preference": (
+                            "day"
+                        ),
+                    }
+                )
+            normalized, symbols = (
+                _neutralize_non_executable_intents(
+                    payload
+                )
+            )
+            release = load_strategy_release(
+                "core_long",
+                "1.2.0",
+                project_root=root,
+            )
+            schema = load_json_object(
+                release.root
+                / "schemas/execution_output.schema.json"
+            )
+        self.assertTrue(symbols)
+        self.assertTrue(
+            validate_execution_output(
+                normalized,
+                input_payload=source,
+                schema=schema,
+            ).valid
+        )
+        for decision in normalized["decisions"]:
+            self.assertEqual(
+                decision["side"],
+                "none",
+            )
+            self.assertEqual(
+                decision["order_intent"][
+                    "preferred_type"
+                ],
+                "none",
+            )
+
     def test_core_business_rejections(
         self,
     ) -> None:

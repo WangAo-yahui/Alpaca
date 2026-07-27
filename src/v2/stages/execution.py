@@ -57,6 +57,11 @@ class ExecutionRunner(Protocol):
     ) -> CodexRunResult: ...
 
 
+NON_EXECUTABLE_DECISIONS = frozenset(
+    {"defer", "reject", "no_action"}
+)
+
+
 @dataclass(frozen=True)
 class ExecutionStageResult:
     action: str
@@ -74,6 +79,116 @@ class ExecutionStageResult:
     output: dict[str, Any]
     validation: ExecutionValidationResult
     input_result: ExecutionInputBuildResult
+
+
+def _neutralize_non_executable_intents(
+    payload: dict[str, Any],
+) -> tuple[dict[str, Any], tuple[str, ...]]:
+    """Remove residual order intent only from non-executable decisions."""
+
+    result = dict(payload)
+    raw_decisions = payload.get("decisions")
+    if not isinstance(raw_decisions, list):
+        return result, ()
+    decisions: list[object] = []
+    normalized_symbols: list[str] = []
+    for raw in raw_decisions:
+        if not isinstance(raw, dict):
+            decisions.append(raw)
+            continue
+        decision = dict(raw)
+        if (
+            decision.get("execution_decision")
+            not in NON_EXECUTABLE_DECISIONS
+        ):
+            decisions.append(decision)
+            continue
+        before = {
+            "side": decision.get("side"),
+            "execution_fraction": decision.get(
+                "execution_fraction"
+            ),
+            "urgency": decision.get("urgency"),
+            "price_condition": decision.get(
+                "price_condition"
+            ),
+            "order_intent": decision.get(
+                "order_intent"
+            ),
+        }
+        for key, value in (
+            ("side", "none"),
+            ("execution_fraction", "0"),
+            ("urgency", "none"),
+        ):
+            if key in decision:
+                decision[key] = value
+        raw_price = decision.get(
+            "price_condition"
+        )
+        if isinstance(raw_price, dict):
+            price = dict(raw_price)
+            for key, value in (
+                ("reference", "none"),
+                ("limit_price", None),
+                ("do_not_execute_above", None),
+                ("review_below", None),
+            ):
+                if key in price:
+                    price[key] = value
+            decision["price_condition"] = price
+        raw_intent = decision.get("order_intent")
+        if isinstance(raw_intent, dict):
+            intent = dict(raw_intent)
+            for key, value in (
+                ("preferred_type", "none"),
+                (
+                    "time_in_force_preference",
+                    "none",
+                ),
+                (
+                    "extended_hours_requested",
+                    False,
+                ),
+                ("allow_queue", False),
+                ("allow_partial_fill", False),
+            ):
+                if key in intent:
+                    intent[key] = value
+            decision["order_intent"] = intent
+        after = {
+            "side": decision.get("side"),
+            "execution_fraction": decision.get(
+                "execution_fraction"
+            ),
+            "urgency": decision.get("urgency"),
+            "price_condition": decision.get(
+                "price_condition"
+            ),
+            "order_intent": decision.get(
+                "order_intent"
+            ),
+        }
+        if after != before:
+            normalized_symbols.append(
+                str(
+                    decision.get(
+                        "symbol",
+                        "<unknown>",
+                    )
+                )
+            )
+        decisions.append(decision)
+    result["decisions"] = decisions
+    if normalized_symbols:
+        raw_warnings = result.get("warnings")
+        if isinstance(raw_warnings, list):
+            result["warnings"] = [
+                *raw_warnings,
+                "Python安全归零了非执行决定中的残留订单意图："
+                + ",".join(normalized_symbols),
+            ]
+    return result, tuple(normalized_symbols)
 
 
 def _capability_paths(
@@ -375,6 +490,11 @@ def execute_execution_decision(
         run_result = active_runner.run(
             workspace
         )
+        normalized_output, neutralized = (
+            _neutralize_non_executable_intents(
+                run_result.payload
+            )
+        )
         atomic_write_json(
             paths.execution_codex_call,
             {
@@ -382,10 +502,19 @@ def execute_execution_decision(
                 "input_signature": (
                     input_result.input_signature
                 ),
+                "safe_normalizations": [
+                    {
+                        "type": (
+                            "neutralize_non_executable_intent"
+                        ),
+                        "symbol": symbol,
+                    }
+                    for symbol in neutralized
+                ],
             },
         )
         validation = validate_execution_output(
-            run_result.payload,
+            normalized_output,
             input_payload=input_result.payload,
             schema=schema,
         )
@@ -413,11 +542,11 @@ def execute_execution_decision(
             )
         atomic_write_json(
             paths.execution_output,
-            run_result.payload,
+            normalized_output,
         )
         return _stage_result(
             paths=paths,
-            output=run_result.payload,
+            output=normalized_output,
             validation=validation,
             input_result=input_result,
         )

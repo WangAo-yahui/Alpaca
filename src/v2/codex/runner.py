@@ -39,6 +39,8 @@ Executor = Callable[
 CODEX_CONNECTIVITY_HOST = "chatgpt.com"
 CODEX_CONNECTIVITY_PORT = 443
 CODEX_CONNECTIVITY_TIMEOUT_SECONDS = 5.0
+CODEX_CONNECTIVITY_ATTEMPTS = 3
+CODEX_CONNECTIVITY_RETRY_DELAY_SECONDS = 1.0
 CODEX_HEARTBEAT_SECONDS = 30.0
 CODEX_TERMINATE_GRACE_SECONDS = 5.0
 CODEX_MAX_TIMEOUT_SECONDS = 600.0
@@ -64,38 +66,60 @@ def _stage_label(command: list[str]) -> str:
 
 def _probe_codex_network(
     timeout: float = CODEX_CONNECTIVITY_TIMEOUT_SECONDS,
+    *,
+    attempts: int = CODEX_CONNECTIVITY_ATTEMPTS,
 ) -> None:
-    """Fail quickly when Codex's HTTPS endpoint cannot be reached."""
+    """Retry brief VPN jitter, then fail before starting Codex."""
 
-    try:
-        with socket.create_connection(
-            (
-                CODEX_CONNECTIVITY_HOST,
-                CODEX_CONNECTIVITY_PORT,
+    attempt_limit = max(1, int(attempts))
+    last_error: OSError | None = None
+    for attempt in range(1, attempt_limit + 1):
+        try:
+            with socket.create_connection(
+                (
+                    CODEX_CONNECTIVITY_HOST,
+                    CODEX_CONNECTIVITY_PORT,
+                ),
+                timeout=max(1.0, timeout),
+            ) as connection:
+                connection.settimeout(
+                    max(1.0, timeout)
+                )
+                context = ssl.create_default_context()
+                with context.wrap_socket(
+                    connection,
+                    server_hostname=(
+                        CODEX_CONNECTIVITY_HOST
+                    ),
+                ):
+                    return
+        except OSError as error:
+            last_error = error
+            if attempt >= attempt_limit:
+                break
+            print(
+                "Codex网络预检暂时失败；"
+                f"{CODEX_CONNECTIVITY_RETRY_DELAY_SECONDS:g}"
+                "秒后重试"
+                f"（{attempt + 1}/{attempt_limit}）",
+                flush=True,
+            )
+            time.sleep(
+                CODEX_CONNECTIVITY_RETRY_DELAY_SECONDS
+            )
+    assert last_error is not None
+    raise TemporaryDataError(
+        "Codex网络预检失败；请检查DNS、VPN或网络连接后重试",
+        code="CODEX_NETWORK_UNAVAILABLE",
+        details={
+            "host": CODEX_CONNECTIVITY_HOST,
+            "port": CODEX_CONNECTIVITY_PORT,
+            "attempt_count": attempt_limit,
+            "exception_type": (
+                last_error.__class__.__name__
             ),
-            timeout=max(1.0, timeout),
-        ) as connection:
-            connection.settimeout(max(1.0, timeout))
-            context = ssl.create_default_context()
-            with context.wrap_socket(
-                connection,
-                server_hostname=(
-                    CODEX_CONNECTIVITY_HOST
-                ),
-            ):
-                pass
-    except OSError as error:
-        raise TemporaryDataError(
-            "Codex网络预检失败；请检查DNS、VPN或网络连接后重试",
-            code="CODEX_NETWORK_UNAVAILABLE",
-            details={
-                "host": CODEX_CONNECTIVITY_HOST,
-                "port": CODEX_CONNECTIVITY_PORT,
-                "exception_type": (
-                    error.__class__.__name__
-                ),
-            },
-        ) from error
+        },
+    ) from last_error
 
 
 def _stream_snapshot(

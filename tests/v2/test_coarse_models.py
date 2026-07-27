@@ -277,6 +277,57 @@ class CoarseModelTests(unittest.TestCase):
             item["screen_new_position_eligible"]
         )
 
+    def test_asset_eligibility_changes_revision_signature(
+        self,
+    ) -> None:
+        with tempfile.TemporaryDirectory() as temp:
+            root = Path(temp)
+            prepare_stage_c_project(root)
+            config = load_config(project_root=root)
+            base_snapshot = {
+                "market_phase": "regular_session",
+                "positions": [],
+                "open_orders": [],
+                "assets": [],
+            }
+            first = build_coarse_input(
+                config=config,
+                run_date="2026-07-23",
+                base_snapshot=base_snapshot,
+            )
+            assets_path = (
+                root / "data/snapshots/assets.json"
+            )
+            assets = json.loads(
+                assets_path.read_text(
+                    encoding="utf-8"
+                )
+            )
+            for asset in assets["assets"]:
+                if asset["symbol"] == "S000":
+                    asset["tradable"] = False
+            assets_path.write_text(
+                json.dumps(assets),
+                encoding="utf-8",
+            )
+            second = build_coarse_input(
+                config=config,
+                run_date="2026-07-23",
+                base_snapshot=base_snapshot,
+            )
+        self.assertNotEqual(
+            first.input_signature,
+            second.input_signature,
+        )
+        self.assertIn(
+            "S000",
+            first.candidate_symbols,
+        )
+        self.assertNotIn(
+            "S000",
+            second.candidate_symbols,
+        )
+
 
 if __name__ == "__main__":
     unittest.main()

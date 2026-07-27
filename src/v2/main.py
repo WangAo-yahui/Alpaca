@@ -188,7 +188,7 @@ from v2.reports.daily_report import (  # noqa: E402
 )
 
 
-SCRIPT_VERSION = "2026-07-27-v2-overnight-hot-source-v1"
+SCRIPT_VERSION = "2026-07-27-v2-overnight-hot-source-v3"
 
 
 @dataclass(frozen=True)

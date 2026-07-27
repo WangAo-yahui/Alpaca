@@ -16,5 +16,11 @@
 7. 挂单只给出 keep、review、cancel 或 replace 意图，不执行动作。
 8. 网络不可用时使用 `success_local_only` 并写 warning。
 9. 不计算最终股数或 notional，不生成 Alpaca OrderRequest，不声称已提交或成交。
+10. `defer`、`reject`、`no_action` 是完全非执行决定，必须同时使用：
+    `side="none"`、`execution_fraction="0"`、`urgency="none"`；
+    `price_condition.reference="none"` 且三个价格字段为 `null`；
+    `order_intent.preferred_type="none"`、
+    `time_in_force_preference="none"`，三个布尔字段全部为 `false`。
+    可在 `decision_reason`、`execution_risks` 和 `required_checks` 中保留未来复查条件。
 
 最终只返回严格 JSON。
