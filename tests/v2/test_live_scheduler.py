@@ -296,8 +296,13 @@ class LiveSchedulerTests(unittest.TestCase):
                     patch.object(
                         manager,
                         "_close_check_can_sleep",
-                        return_value=False,
+                        return_value=maintenance,
                     ),
+                    patch.object(
+                        manager,
+                        "_screen_off",
+                        return_value=True,
+                    ) as screen_off,
                 ):
                     result = (
                         manager._scheduled_live_service_run(
@@ -318,8 +323,11 @@ class LiveSchedulerTests(unittest.TestCase):
                     ],
                     maintenance,
                 )
+                if maintenance:
+                    screen_off.assert_called_once_with()
+                else:
+                    screen_off.assert_not_called()
 
 
 if __name__ == "__main__":
     unittest.main()
-
