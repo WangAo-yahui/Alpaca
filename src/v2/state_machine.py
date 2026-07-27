@@ -7,6 +7,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
+from datetime import datetime, timezone
 from typing import Iterable
 
 from v2.exceptions import (
@@ -110,6 +111,43 @@ class CycleKindInputs:
     force_rebalance: bool = False
     execution_only: bool = False
     maintenance_only: bool = False
+    now: datetime | None = None
+
+
+def _portfolio_reusable(
+    daily_state: DailyState,
+    *,
+    now: datetime,
+) -> bool:
+    """Return true only for a complete, unexpired same-day portfolio pointer."""
+
+    valid_until_text = (
+        daily_state.latest_portfolio_valid_until
+    )
+    if (
+        daily_state.latest_valid_portfolio_cycle_id
+        is None
+        or daily_state.latest_valid_portfolio_output_path
+        is None
+        or not valid_until_text
+    ):
+        return False
+    normalized = valid_until_text.strip()
+    if normalized.endswith("Z"):
+        normalized = normalized[:-1] + "+00:00"
+    try:
+        valid_until = datetime.fromisoformat(
+            normalized
+        )
+    except ValueError:
+        return False
+    if valid_until.tzinfo is None:
+        valid_until = valid_until.replace(
+            tzinfo=timezone.utc
+        )
+    return valid_until.astimezone(
+        timezone.utc
+    ) > now.astimezone(timezone.utc)
 
 
 def decide_cycle_kind(
@@ -154,6 +192,15 @@ def decide_cycle_kind(
     )
     if first_daily_run:
         return CycleKind.DAILY_FULL
+
+    if not _portfolio_reusable(
+        daily_state,
+        now=(
+            inputs.now
+            or datetime.now(timezone.utc)
+        ),
+    ):
+        return CycleKind.INTRADAY_REBALANCE
 
     return CycleKind.EXECUTION_REFRESH
 

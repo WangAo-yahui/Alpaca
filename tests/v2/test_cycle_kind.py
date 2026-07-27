@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import tempfile
 import unittest
+from datetime import datetime, timezone
 from pathlib import Path
 
 from v2.exceptions import StateValidationError
@@ -38,12 +39,77 @@ class CycleKindTests(unittest.TestCase):
     def test_reusable_same_day_state_defaults_to_execution(
         self,
     ) -> None:
-        self.state.cycle_ids.append(
-            "20260723T090000"
+        cycle_id = "20260723T090000"
+        self.state.cycle_ids.append(cycle_id)
+        self.state.first_successful_cycle_id = cycle_id
+        self.state.detailed_report_created = True
+        self.state.coarse_status = CoarseStatus.VALID
+        self.state.latest_valid_portfolio_cycle_id = (
+            cycle_id
         )
-        self.state.first_successful_cycle_id = (
-            "20260723T090000"
+        self.state.latest_valid_portfolio_output_path = (
+            "/tmp/portfolio/output.json"
         )
+        self.state.latest_portfolio_valid_until = (
+            "2026-07-23T16:00:00+00:00"
+        )
+        self.assertEqual(
+            decide_cycle_kind(
+                self.state,
+                CycleKindInputs(
+                    now=datetime(
+                        2026,
+                        7,
+                        23,
+                        15,
+                        45,
+                        tzinfo=timezone.utc,
+                    )
+                ),
+            ),
+            CycleKind.EXECUTION_REFRESH,
+        )
+
+    def test_expired_portfolio_upgrades_default_to_rebalance(
+        self,
+    ) -> None:
+        cycle_id = "20260723T090000"
+        self.state.cycle_ids.append(cycle_id)
+        self.state.first_successful_cycle_id = cycle_id
+        self.state.detailed_report_created = True
+        self.state.coarse_status = CoarseStatus.VALID
+        self.state.latest_valid_portfolio_cycle_id = (
+            cycle_id
+        )
+        self.state.latest_valid_portfolio_output_path = (
+            "/tmp/portfolio/output.json"
+        )
+        self.state.latest_portfolio_valid_until = (
+            "2026-07-23T15:30:00+00:00"
+        )
+        self.assertEqual(
+            decide_cycle_kind(
+                self.state,
+                CycleKindInputs(
+                    now=datetime(
+                        2026,
+                        7,
+                        23,
+                        15,
+                        45,
+                        tzinfo=timezone.utc,
+                    )
+                ),
+            ),
+            CycleKind.INTRADAY_REBALANCE,
+        )
+
+    def test_missing_portfolio_upgrades_default_to_rebalance(
+        self,
+    ) -> None:
+        cycle_id = "20260723T090000"
+        self.state.cycle_ids.append(cycle_id)
+        self.state.first_successful_cycle_id = cycle_id
         self.state.detailed_report_created = True
         self.state.coarse_status = CoarseStatus.VALID
         self.assertEqual(
@@ -51,7 +117,7 @@ class CycleKindTests(unittest.TestCase):
                 self.state,
                 CycleKindInputs(),
             ),
-            CycleKind.EXECUTION_REFRESH,
+            CycleKind.INTRADAY_REBALANCE,
         )
 
     def test_explicit_modes(self) -> None:
