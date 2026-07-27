@@ -1067,19 +1067,60 @@ def apply_protection_plans(
                 )
             )
         ]
+        incremental_buys = [
+            item
+            for item in attached
+            if (
+                item.symbol == symbol
+                and item.side == "buy"
+                and item.status == OrderStatus.PROPOSED
+                and item.protection_role == "none"
+            )
+        ]
+        if incremental_buys and not existing:
+            buy_plan_ids = {
+                item.plan_id
+                for item in incremental_buys
+            }
+            attached = [
+                (
+                    replace(
+                        item,
+                        status=OrderStatus.DEPENDENT,
+                        reason_codes=tuple(
+                            dict.fromkeys(
+                                (
+                                    *item.reason_codes,
+                                    "existing_position_protection_precedes_incremental_buy",
+                                )
+                            )
+                        ),
+                    )
+                    if item.plan_id in buy_plan_ids
+                    else item
+                )
+                for item in attached
+            ]
+            warnings.append(
+                f"{symbol}:incremental_buy_deferred_until_existing_position_protected"
+            )
         if sorted(
             _desired_signature(item)
             for item in desired
         ) == sorted(
             _existing_signature(item)
             for item in existing
-        ):
+        ) and not incremental_buys:
             warnings.append(
                 f"{symbol}:existing_protection_unchanged"
             )
             continue
         dependencies: tuple[str, ...] = ()
         if existing:
+            if incremental_buys:
+                warnings.append(
+                    f"{symbol}:existing_protection_cancel_required_before_incremental_buy"
+                )
             replacements = _replacement_actions(
                 paths=paths,
                 order_policy=order_policy,

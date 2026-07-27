@@ -323,6 +323,140 @@ class ProtectiveOrderTests(unittest.TestCase):
             StopLimitOrderRequest,
         )
 
+    def test_existing_position_protection_precedes_fractional_increment(
+        self,
+    ) -> None:
+        proposed, validated = self._build(
+            _plan(
+                "stop_limit",
+                apply_to="both",
+            ),
+            current_snapshot=snapshot(
+                positions=[_position()]
+            ),
+            decision=execution_decision(),
+            allow_trade=True,
+        )
+        buy = next(
+            item
+            for item in validated.orders
+            if item.order.side == "buy"
+        )
+        protective = next(
+            item
+            for item in validated.orders
+            if item.order.protection_role
+            != "none"
+        )
+        self.assertEqual(
+            buy.status,
+            OrderStatus.DEPENDENT,
+        )
+        self.assertIn(
+            "existing_position_protection_precedes_incremental_buy",
+            buy.order.reason_codes,
+        )
+        self.assertEqual(
+            protective.status,
+            OrderStatus.APPROVED,
+        )
+        requests = create_request_specs(validated)
+        self.assertEqual(len(requests), 1)
+        self.assertEqual(
+            requests[0].protection_role,
+            "pt-stpl",
+        )
+        self.assertIn(
+            "MU:incremental_buy_deferred_until_existing_position_protected",
+            proposed.warnings,
+        )
+
+    def test_incremental_buy_cancels_matching_protection_before_submit(
+        self,
+    ) -> None:
+        plan = _plan("stop_limit")
+        seeded, _ = self._build(plan)
+        seeded_protection = next(
+            item
+            for item in seeded.orders
+            if item.protection_role != "none"
+        )
+        open_protection = {
+            "broker_order_id": "protect-matching",
+            "client_order_id": (
+                seeded_protection.client_order_id
+            ),
+            "symbol": seeded_protection.symbol,
+            "side": seeded_protection.side,
+            "type": seeded_protection.order_type,
+            "order_class": (
+                seeded_protection.order_class
+            ),
+            "time_in_force": (
+                seeded_protection.time_in_force
+            ),
+            "quantity": str(
+                seeded_protection.quantity
+            ),
+            "filled_quantity": "0",
+            "remaining_quantity": str(
+                seeded_protection.quantity
+            ),
+            "limit_price": str(
+                seeded_protection.limit_price
+            ),
+            "stop_price": str(
+                seeded_protection.stop_price
+            ),
+            "trail_price": None,
+            "trail_percent": None,
+            "status": "new",
+            "legs": [],
+        }
+        proposed, validated = self._build(
+            plan,
+            current_snapshot=snapshot(
+                positions=[_position()],
+                open_orders=[open_protection],
+            ),
+            decision=execution_decision(),
+            allow_trade=True,
+        )
+        self.assertEqual(len(proposed.actions), 1)
+        self.assertIn(
+            proposed.actions[0].action.value,
+            {"cancel", "replace"},
+        )
+        buy = next(
+            item
+            for item in validated.orders
+            if item.order.side == "buy"
+        )
+        protective = next(
+            item
+            for item in validated.orders
+            if item.order.protection_role
+            != "none"
+        )
+        self.assertEqual(
+            buy.status,
+            OrderStatus.APPROVED,
+        )
+        self.assertEqual(
+            protective.status,
+            OrderStatus.DEPENDENT,
+        )
+        requests = create_request_specs(validated)
+        self.assertEqual(len(requests), 1)
+        self.assertEqual(
+            requests[0].side,
+            "buy",
+        )
+        self.assertIn(
+            "MU:existing_protection_cancel_required_before_incremental_buy",
+            proposed.warnings,
+        )
+
     def test_whole_share_new_entry_attaches_bracket(
         self,
     ) -> None:
