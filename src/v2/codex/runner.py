@@ -9,7 +9,10 @@ from __future__ import annotations
 import json
 import os
 import re
+import signal
+import socket
 import subprocess
+import tempfile
 import time
 from dataclasses import dataclass, field
 from pathlib import Path
@@ -32,6 +35,75 @@ Executor = Callable[
     subprocess.CompletedProcess[str],
 ]
 
+CODEX_CONNECTIVITY_HOST = "chatgpt.com"
+CODEX_CONNECTIVITY_PORT = 443
+CODEX_CONNECTIVITY_TIMEOUT_SECONDS = 5.0
+CODEX_HEARTBEAT_SECONDS = 30.0
+CODEX_TERMINATE_GRACE_SECONDS = 5.0
+CODEX_MAX_TIMEOUT_SECONDS = 600.0
+
+
+def _stage_label(command: list[str]) -> str:
+    joined = " ".join(command).lower()
+    if "portfolio" in joined:
+        return "组合"
+    if "execution" in joined:
+        return "执行"
+    return "粗选"
+
+
+def _probe_codex_network(
+    timeout: float = CODEX_CONNECTIVITY_TIMEOUT_SECONDS,
+) -> None:
+    """Fail quickly when Codex's HTTPS endpoint cannot be reached."""
+
+    try:
+        connection = socket.create_connection(
+            (
+                CODEX_CONNECTIVITY_HOST,
+                CODEX_CONNECTIVITY_PORT,
+            ),
+            timeout=max(1.0, timeout),
+        )
+    except OSError as error:
+        raise TemporaryDataError(
+            "Codex网络预检失败；请检查DNS、VPN或网络连接后重试",
+            code="CODEX_NETWORK_UNAVAILABLE",
+            details={
+                "host": CODEX_CONNECTIVITY_HOST,
+                "port": CODEX_CONNECTIVITY_PORT,
+                "exception_type": (
+                    error.__class__.__name__
+                ),
+            },
+        ) from error
+    connection.close()
+
+
+def _terminate_process_group(
+    process: subprocess.Popen[str],
+) -> None:
+    """Terminate Codex and every child it spawned."""
+
+    if process.poll() is not None:
+        return
+    try:
+        os.killpg(process.pid, signal.SIGTERM)
+    except (ProcessLookupError, PermissionError):
+        process.terminate()
+    try:
+        process.wait(
+            timeout=CODEX_TERMINATE_GRACE_SECONDS
+        )
+        return
+    except subprocess.TimeoutExpired:
+        pass
+    try:
+        os.killpg(process.pid, signal.SIGKILL)
+    except (ProcessLookupError, PermissionError):
+        process.kill()
+    process.wait()
+
 
 @dataclass(frozen=True)
 class CodexRunResult:
@@ -46,15 +118,93 @@ def _execute(
     env: dict[str, str],
     timeout: float,
 ) -> subprocess.CompletedProcess[str]:
-    return subprocess.run(
-        command,
-        cwd=cwd,
-        env=env,
-        timeout=timeout,
-        text=True,
-        capture_output=True,
-        check=False,
+    _probe_codex_network()
+    label = _stage_label(command)
+    print(
+        f"Codex{label}已启动；单次最长等待"
+        f"{timeout:g}秒",
+        flush=True,
     )
+    started = time.monotonic()
+    next_heartbeat = (
+        started + CODEX_HEARTBEAT_SECONDS
+    )
+    with (
+        tempfile.TemporaryFile(
+            mode="w+", encoding="utf-8"
+        ) as stdout_file,
+        tempfile.TemporaryFile(
+            mode="w+", encoding="utf-8"
+        ) as stderr_file,
+    ):
+        process = subprocess.Popen(
+            command,
+            cwd=cwd,
+            env=env,
+            text=True,
+            stdout=stdout_file,
+            stderr=stderr_file,
+            start_new_session=True,
+        )
+        try:
+            while process.poll() is None:
+                now = time.monotonic()
+                elapsed = now - started
+                if elapsed >= timeout:
+                    _terminate_process_group(process)
+                    stdout_file.flush()
+                    stderr_file.flush()
+                    stdout_file.seek(0)
+                    stderr_file.seek(0)
+                    raise subprocess.TimeoutExpired(
+                        command,
+                        timeout,
+                        output=stdout_file.read(),
+                        stderr=stderr_file.read(),
+                    )
+                if now >= next_heartbeat:
+                    print(
+                        f"Codex{label}仍在运行："
+                        f"{int(elapsed)}秒；"
+                        "可按 Ctrl-C 安全中断",
+                        flush=True,
+                    )
+                    next_heartbeat = (
+                        now + CODEX_HEARTBEAT_SECONDS
+                    )
+                time.sleep(
+                    min(
+                        1.0,
+                        max(
+                            0.01,
+                            timeout - elapsed,
+                        ),
+                        max(
+                            0.01,
+                            next_heartbeat - now,
+                        ),
+                    )
+                )
+        except BaseException:
+            _terminate_process_group(process)
+            raise
+        stdout_file.flush()
+        stderr_file.flush()
+        stdout_file.seek(0)
+        stderr_file.seek(0)
+        elapsed = time.monotonic() - started
+        print(
+            f"Codex{label}进程结束："
+            f"{int(elapsed)}秒，"
+            f"退出码{process.returncode}",
+            flush=True,
+        )
+        return subprocess.CompletedProcess(
+            command,
+            int(process.returncode or 0),
+            stdout_file.read(),
+            stderr_file.read(),
+        )
 
 
 def sanitized_codex_environment() -> dict[str, str]:
@@ -160,6 +310,17 @@ class CodexRunner:
         default=None,
         init=False,
     )
+
+    def __post_init__(self) -> None:
+        if self.executor is _execute:
+            self.timeout_seconds = min(
+                float(self.timeout_seconds),
+                CODEX_MAX_TIMEOUT_SECONDS,
+            )
+            # Codex already performs transport retries internally.
+            # A second application-level attempt previously doubled a
+            # network outage from 15 to almost 30 minutes.
+            self.retry_count = 0
 
     def _command(
         self,
@@ -290,7 +451,7 @@ class CodexRunner:
                     payload=payload,
                     call_record=call_record,
                 )
-            except subprocess.TimeoutExpired:
+            except subprocess.TimeoutExpired as error:
                 elapsed = (
                     time.monotonic() - started
                 )
@@ -300,8 +461,22 @@ class CodexRunner:
                         "started_at": started_at,
                         "duration_seconds": elapsed,
                         "return_code": None,
-                        "stdout": "",
-                        "stderr": "",
+                        "stdout": _truncate(
+                            _redact(
+                                str(
+                                    error.output
+                                    or ""
+                                )
+                            )
+                        ),
+                        "stderr": _truncate(
+                            _redact(
+                                str(
+                                    error.stderr
+                                    or ""
+                                )
+                            )
+                        ),
                         "timed_out": True,
                     }
                 )
@@ -314,6 +489,30 @@ class CodexRunner:
                         ),
                     },
                 )
+            except TemporaryDataError as error:
+                elapsed = (
+                    time.monotonic() - started
+                )
+                attempts.append(
+                    {
+                        "attempt": attempt_number,
+                        "started_at": started_at,
+                        "duration_seconds": elapsed,
+                        "return_code": None,
+                        "stdout": "",
+                        "stderr": "",
+                        "error_code": error.code,
+                    }
+                )
+                last_error = error
+                if (
+                    error.code
+                    in {
+                        "CODEX_NETWORK_UNAVAILABLE",
+                        "RUN_INTERRUPTED",
+                    }
+                ):
+                    break
         assert self.last_call_record is not None
         self.last_call_record = {
             **self.last_call_record,

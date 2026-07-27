@@ -11,7 +11,11 @@ import unittest
 from dataclasses import replace
 from pathlib import Path
 
-from v2.main import run_stage_g
+from v2.exceptions import TemporaryDataError
+from v2.main import (
+    _raise_runtime_interrupted,
+    run_stage_g,
+)
 from v2.models.state import CycleStatus, StepName
 from tests.v2.support import (
     FakeCoarseRunner,
@@ -95,6 +99,18 @@ class MainStageGTests(unittest.TestCase):
                 ],
                 0,
             )
+
+    def test_runtime_signal_is_retryable(
+        self,
+    ) -> None:
+        with self.assertRaises(
+            TemporaryDataError
+        ) as context:
+            _raise_runtime_interrupted(15, object())
+        self.assertEqual(
+            context.exception.code,
+            "RUN_INTERRUPTED",
+        )
 
     def test_maintenance_only_skips_decision_artifacts(
         self,

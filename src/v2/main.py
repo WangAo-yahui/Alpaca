@@ -6,6 +6,7 @@
 
 from __future__ import annotations
 
+import signal
 import sys
 from dataclasses import dataclass
 from datetime import datetime, timezone
@@ -186,7 +187,7 @@ from v2.reports.daily_report import (  # noqa: E402
 )
 
 
-SCRIPT_VERSION = "2026-07-25-v2-stage-g-v1"
+SCRIPT_VERSION = "2026-07-27-v2-stall-fix-v1"
 
 
 @dataclass(frozen=True)
@@ -3777,41 +3778,69 @@ def print_stage_g_result(
     print(f"日报：{result.resolution.paths.daily_report}")
 
 
+def _raise_runtime_interrupted(
+    signum: int,
+    frame: object,
+) -> None:
+    """Turn terminal signals into a persistable retryable failure."""
+
+    del frame
+    raise TemporaryDataError(
+        "运行已被用户或服务安全中断；当前步骤可恢复",
+        code="RUN_INTERRUPTED",
+        details={"signal": signum},
+    )
+
+
 def main() -> int:
-    print(f"脚本版本：{SCRIPT_VERSION}")
+    old_term = signal.getsignal(signal.SIGTERM)
+    old_int = signal.getsignal(signal.SIGINT)
+    signal.signal(
+        signal.SIGTERM,
+        _raise_runtime_interrupted,
+    )
+    signal.signal(
+        signal.SIGINT,
+        _raise_runtime_interrupted,
+    )
+    print(f"脚本版本：{SCRIPT_VERSION}", flush=True)
 
     try:
-        options = parse_cli_args()
-        result = run_stage_g(
-            options
-        )
-        print_stage_g_result(
-            result
-        )
-        return 0
-
-    except V2Error as error:
-        disposition = error.disposition()
-        print("v2主流程拒绝或失败")
-        print(f"错误代码：{disposition.code}")
-        print(f"错误信息：{disposition.message}")
-        if (
-            disposition.code
-            == "ACCOUNT_BINDING_REQUIRED"
-            and disposition.details.get(
-                "account_id_hash"
+        try:
+            options = parse_cli_args()
+            result = run_stage_g(
+                options
             )
-        ):
-            print(
-                "待绑定账户hash："
-                f"{disposition.details['account_id_hash']}"
+            print_stage_g_result(
+                result
             )
-        return 2
+            return 0
 
-    except Exception as error:
-        print("v2主流程初始化失败")
-        print(f"错误信息：{error}")
-        return 1
+        except V2Error as error:
+            disposition = error.disposition()
+            print("v2主流程拒绝或失败")
+            print(f"错误代码：{disposition.code}")
+            print(f"错误信息：{disposition.message}")
+            if (
+                disposition.code
+                == "ACCOUNT_BINDING_REQUIRED"
+                and disposition.details.get(
+                    "account_id_hash"
+                )
+            ):
+                print(
+                    "待绑定账户hash："
+                    f"{disposition.details['account_id_hash']}"
+                )
+            return 2
+
+        except Exception as error:
+            print("v2主流程初始化失败")
+            print(f"错误信息：{error}")
+            return 1
+    finally:
+        signal.signal(signal.SIGTERM, old_term)
+        signal.signal(signal.SIGINT, old_int)
 
 
 if __name__ == "__main__":

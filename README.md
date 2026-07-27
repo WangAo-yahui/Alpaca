@@ -765,7 +765,25 @@ release 白名单：
 
 正常无订单，不需要重试或强制买入。
 
-### 21.4 退出码 50
+### 21.4 Codex 长时间运行或网络不可达
+
+每次 Codex 调用前会先用最多 5 秒检查 `chatgpt.com:443`。DNS、VPN 或 TCP
+不可达时立即返回 `CODEX_NETWORK_UNAVAILABLE`，不会进入第二次应用层重试。
+
+正常模型运行期间每 30 秒输出一次心跳；单阶段最长 600 秒。可以按 `Ctrl-C`
+安全中断，系统会终止整个 Codex 子进程组，将当前步骤保存为可恢复的
+`failed_retriable`，而不是永久停在 `running`。
+
+检查当前网络：
+
+```bash
+curl -I --max-time 8 https://chatgpt.com
+curl -I --max-time 8 https://api.openai.com/v1/models
+```
+
+HTTP 403/401 仍能证明 DNS、TLS 和服务路径可达；这里不要求匿名请求成功认证。
+
+### 21.5 退出码 50
 
 安全门禁阻止。常见原因：
 
@@ -776,12 +794,12 @@ release 白名单：
 
 不要通过修改状态文件绕过门禁。
 
-### 21.5 退出码 60
+### 21.6 退出码 60
 
 写入结果 uncertain。必须停止自动重试，并按 client order ID 在 Alpaca 查询；
 以 `submission_journal.json`、broker 查询和 reconciliation 恢复。
 
-### 21.6 health degraded/unhealthy
+### 21.7 health degraded/unhealthy
 
 ```bash
 ./wa status --json
@@ -792,7 +810,7 @@ release 白名单：
 检查 health 的 `reasons`。运行中的轮次可暂时 degraded；release hash 失败、服务未加载、
 uncertain 写入或长时间无正常终态需要人工处理。
 
-### 21.7 部署失败
+### 21.8 部署失败
 
 部署不会在验证失败时切换 current。查看：
 
@@ -836,4 +854,3 @@ find var/deployment/history -type f -maxdepth 1 -print
 - 手工 `--allow-trade` 在无自然 approved 订单时返回 `completed_no_action`；
 - 自动交易保持关闭，直到第一次自然 paper submit 和人工对账完成；
 - Live 交易始终关闭。
-

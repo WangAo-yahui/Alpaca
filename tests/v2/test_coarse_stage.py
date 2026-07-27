@@ -1,6 +1,13 @@
+"""验证 Coarse 阶段运行、复用、失败恢复和安全中断持久化。
+
+作用：覆盖 Stage C 从基础快照到结构化候选输出的状态机行为。
+重要性：Codex 失败或用户中断后必须保留旧输出并留下可恢复轮次。
+"""
+
 from __future__ import annotations
 
 import hashlib
+import signal
 import tempfile
 import unittest
 from pathlib import Path
@@ -9,8 +16,12 @@ from v2.cli import parse_cli_args
 from v2.data.alpaca_client import AlpacaClients
 from v2.exceptions import (
     CodexOutputValidationError,
+    TemporaryDataError,
 )
-from v2.main import run_stage_c
+from v2.main import (
+    _raise_runtime_interrupted,
+    run_stage_c,
+)
 from v2.models.state import (
     CoarseStatus,
     CycleStatus,
@@ -66,6 +77,56 @@ def options(*extra: str):
 
 
 class CoarseStageTests(unittest.TestCase):
+    def test_signal_interruption_persists_retryable_cycle(
+        self,
+    ) -> None:
+        class InterruptingRunner:
+            def run(self, workspace: object) -> object:
+                del workspace
+                _raise_runtime_interrupted(
+                    signal.SIGTERM,
+                    object(),
+                )
+
+        with tempfile.TemporaryDirectory() as temp:
+            root = Path(temp)
+            prepare_stage_c_project(root)
+            with self.assertRaises(
+                TemporaryDataError
+            ) as context:
+                run_stage_c(
+                    options(),
+                    project_root=root,
+                    clients=clients(),
+                    coarse_runner=InterruptingRunner(),
+                )
+            self.assertEqual(
+                context.exception.code,
+                "RUN_INTERRUPTED",
+            )
+            cycle_state_path = next(
+                root.glob(
+                    "decision_runtime_v2/accounts/"
+                    "paper1/strategies/core_long/1.2.0/"
+                    "2026-07-23/cycles/*/cycle_state.json"
+                )
+            )
+            state = load_cycle_state(
+                cycle_state_path
+            )
+            self.assertEqual(
+                state.status,
+                CycleStatus.FAILED_RETRIABLE,
+            )
+            self.assertEqual(
+                state.current_step,
+                StepName.RUN_COARSE,
+            )
+            self.assertEqual(
+                state.errors[-1].code,
+                "RUN_INTERRUPTED",
+            )
+
     def test_main_chain_stops_at_portfolio(
         self,
     ) -> None:

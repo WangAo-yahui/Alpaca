@@ -1,14 +1,30 @@
+"""验证 Codex runner 的脱敏、重试、网络预检、心跳与有界进程清理。
+
+作用：覆盖 WA 前台长时间无输出和网络失败时的快速、可观察退出。
+重要性：Codex 卡住不能让交易轮次无限等待或遗留孤儿子进程。
+"""
+
 from __future__ import annotations
 
+import io
 import json
 import os
+import socket
 import subprocess
+import sys
 import tempfile
+import time
 import unittest
+from contextlib import redirect_stdout
 from pathlib import Path
 from unittest.mock import patch
 
-from v2.codex.runner import CodexRunner
+from v2.codex import runner as runner_module
+from v2.codex.runner import (
+    CodexRunner,
+    _execute,
+    _probe_codex_network,
+)
 from v2.codex.workspace import (
     prepare_coarse_workspace,
 )
@@ -21,6 +37,19 @@ from tests.v2.support import (
 
 
 class CoarseRunnerTests(unittest.TestCase):
+    def test_default_runner_caps_wait_and_disables_outer_retry(
+        self,
+    ) -> None:
+        runner = CodexRunner(
+            timeout_seconds=900,
+            retry_count=1,
+        )
+        self.assertEqual(
+            runner.timeout_seconds,
+            600,
+        )
+        self.assertEqual(runner.retry_count, 0)
+
     def test_retry_and_secret_free_environment(
         self,
     ) -> None:
@@ -165,6 +194,139 @@ class CoarseRunnerTests(unittest.TestCase):
                 runner.last_call_record["status"],
                 "failed",
             )
+
+    def test_network_preflight_failure_is_fast_and_not_retried(
+        self,
+    ) -> None:
+        with tempfile.TemporaryDirectory() as temp:
+            root = Path(temp)
+            prepare_stage_c_project(root)
+            workspace = prepare_coarse_workspace(
+                build_daily_paths(
+                    "2026-07-23",
+                    project_root=root,
+                ),
+                config=load_config(
+                    project_root=root
+                ),
+                input_payload={"ok": True},
+            )
+            calls = 0
+
+            def execute(
+                command: list[str],
+                **kwargs: object,
+            ) -> subprocess.CompletedProcess[str]:
+                del command, kwargs
+                nonlocal calls
+                calls += 1
+                raise TemporaryDataError(
+                    "network down",
+                    code="CODEX_NETWORK_UNAVAILABLE",
+                )
+
+            runner = CodexRunner(
+                timeout_seconds=600,
+                retry_count=1,
+                executor=execute,
+            )
+            with self.assertRaises(
+                TemporaryDataError
+            ) as context:
+                runner.run(workspace)
+            self.assertEqual(
+                context.exception.code,
+                "CODEX_NETWORK_UNAVAILABLE",
+            )
+            self.assertEqual(calls, 1)
+            assert runner.last_call_record is not None
+            self.assertEqual(
+                runner.last_call_record["attempts"][0][
+                    "error_code"
+                ],
+                "CODEX_NETWORK_UNAVAILABLE",
+            )
+
+    def test_socket_preflight_maps_dns_failure(
+        self,
+    ) -> None:
+        with patch(
+            "v2.codex.runner.socket.create_connection",
+            side_effect=socket.gaierror("dns"),
+        ):
+            with self.assertRaises(
+                TemporaryDataError
+            ) as context:
+                _probe_codex_network(timeout=1)
+        self.assertEqual(
+            context.exception.code,
+            "CODEX_NETWORK_UNAVAILABLE",
+        )
+
+    def test_default_executor_emits_heartbeat(
+        self,
+    ) -> None:
+        output = io.StringIO()
+        with (
+            tempfile.TemporaryDirectory() as temp,
+            patch(
+                "v2.codex.runner._probe_codex_network"
+            ),
+            patch.object(
+                runner_module,
+                "CODEX_HEARTBEAT_SECONDS",
+                0.01,
+            ),
+            redirect_stdout(output),
+        ):
+            completed = _execute(
+                [
+                    sys.executable,
+                    "-c",
+                    (
+                        "import time; "
+                        "time.sleep(0.05)"
+                    ),
+                ],
+                cwd=Path(temp),
+                env=dict(os.environ),
+                timeout=2,
+            )
+        self.assertEqual(completed.returncode, 0)
+        self.assertIn("仍在运行", output.getvalue())
+
+    def test_default_executor_timeout_kills_promptly(
+        self,
+    ) -> None:
+        started = time.monotonic()
+        with (
+            tempfile.TemporaryDirectory() as temp,
+            patch(
+                "v2.codex.runner._probe_codex_network"
+            ),
+            patch.object(
+                runner_module,
+                "CODEX_TERMINATE_GRACE_SECONDS",
+                0.1,
+            ),
+        ):
+            with self.assertRaises(
+                subprocess.TimeoutExpired
+            ):
+                _execute(
+                    [
+                        sys.executable,
+                        "-c",
+                        "import time; time.sleep(10)",
+                    ],
+                    cwd=Path(temp),
+                    env=dict(os.environ),
+                    timeout=0.05,
+                )
+        self.assertLess(
+            time.monotonic() - started,
+            2,
+        )
 
 
 if __name__ == "__main__":

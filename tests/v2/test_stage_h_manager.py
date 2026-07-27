@@ -105,6 +105,14 @@ class StageHManagerTests(unittest.TestCase):
             ),
             ExitCode.RETRIABLE_ERROR,
         )
+        self.assertEqual(
+            classify_application_exit(
+                2,
+                None,
+                "错误代码：RUN_INTERRUPTED",
+            ),
+            ExitCode.RETRIABLE_ERROR,
+        )
 
     def test_enable_trading_requires_submit_marker(
         self,

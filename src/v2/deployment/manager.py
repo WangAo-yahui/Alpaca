@@ -116,6 +116,7 @@ def classify_application_exit(
         "BROKER_UNAVAILABLE" in normalized_output
         or "TEMPORARY_DATA" in normalized_output
         or "RETRYABLE" in normalized_output
+        or "RUN_INTERRUPTED" in normalized_output
     ):
         return ExitCode.RETRIABLE_ERROR
     return ExitCode.CONFIGURATION_ERROR
@@ -909,8 +910,6 @@ class DeploymentManager:
             signal.signal(signal.SIGTERM, old_term)
             signal.signal(signal.SIGINT, old_int)
             lock.release()
-        if terminated:
-            return ExitCode.DEPLOYMENT_ERROR
         latest = self._latest_cycle_state()
         if (
             latest is not None
@@ -924,6 +923,15 @@ class DeploymentManager:
             cycle_state,
             "".join(captured),
         )
+        if (
+            terminated
+            and result
+            not in {
+                ExitCode.RETRIABLE_ERROR,
+                ExitCode.SAFETY_BLOCK,
+            }
+        ):
+            return ExitCode.DEPLOYMENT_ERROR
         if allow_trade and latest is not None:
             self._record_submit_verification(
                 latest[0], latest[1]
