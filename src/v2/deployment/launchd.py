@@ -25,8 +25,14 @@ CommandRunner = Callable[
 def build_plist(
     paths: DeploymentPaths,
     *,
-    interval_seconds: int = SERVICE_INTERVAL_SECONDS,
+    interval_seconds: int | None = None,
 ) -> dict[str, Any]:
+    if interval_seconds is None:
+        interval_seconds = (
+            60
+            if paths.environment == "live"
+            else SERVICE_INTERVAL_SECONDS
+        )
     if interval_seconds < 60:
         raise ValueError("launchd运行间隔不得小于60秒")
     path_value = os.environ.get(

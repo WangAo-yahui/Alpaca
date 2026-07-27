@@ -20,6 +20,42 @@ class LockAlreadyHeldError(RuntimeError):
     """Raised when a verified live process owns a deployment lock."""
 
 
+def inspect_process_lock(path: Path) -> dict[str, Any]:
+    """Return credential-free owner and liveness details for one lock."""
+
+    if not path.is_file():
+        return {
+            "path": str(path),
+            "exists": False,
+            "pid": None,
+            "alive": False,
+            "age_seconds": None,
+            "command": None,
+        }
+    age = max(
+        0.0,
+        time.time() - path.stat().st_mtime,
+    )
+    try:
+        payload = json.loads(
+            path.read_text(encoding="utf-8")
+        )
+    except (OSError, json.JSONDecodeError):
+        payload = {}
+    if not isinstance(payload, dict):
+        payload = {}
+    pid = int(payload.get("pid") or 0)
+    return {
+        "path": str(path),
+        "exists": True,
+        "pid": pid or None,
+        "alive": _pid_is_alive(pid),
+        "age_seconds": round(age, 3),
+        "command": payload.get("command"),
+        "created_at": payload.get("created_at"),
+    }
+
+
 def _pid_is_alive(pid: int) -> bool:
     if pid <= 0:
         return False

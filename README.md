@@ -323,7 +323,7 @@ Paper 和 Live 美股订单：
 | `./wa run --live --maintenance-only` | 新建只读维护轮次，仅对账既有订单、持仓并更新日报 | 否 |
 | `./wa run --live --allow-trade` | 复用或刷新同日决策，并允许 approved Live 订单 | 是 |
 | `./wa run --live --force-full --allow-trade` | 强制完整 Live 研究并允许 approved Live 订单 | 是 |
-| `./wa deploy --live --enable-trading` | 部署独立的每小时 Live 服务 | 是 |
+| `./wa deploy --live --enable-trading` | 部署独立的交易日动态 Live 服务 | 是 |
 | `./wa start` | 加载并启动当前 LaunchAgent | 取决于当前 release 模式 |
 | `./wa stop` | 停止并卸载 LaunchAgent | 否 |
 | `./wa restart` | 重启 LaunchAgent | 取决于当前 release 模式 |
@@ -369,13 +369,20 @@ Live 首次运行：
   不强制留现金，也不强制满仓；
 - 不启用做空，也不主动使用超过账户权益的额外杠杆。
 
-Live 自动每小时服务：
+Live 自动交易日服务：
 
 ```bash
 ./wa deploy --live --enable-trading
 ./wa start --live
 ./wa status --live --json
 ```
+
+Live LaunchAgent 每分钟只执行一次轻量调度检查，真正的交易轮次按
+`America/New_York` 和 Alpaca 交易日历触发。普通交易日为
+`09:45、10:45、11:45、12:45、13:45、14:45、15:45`；提前收盘日自动减少
+盘中轮次。实际收盘后 15 分钟只运行 `maintenance-only` 完成对账和日报，并在
+没有不确定写入或活跃运行时关闭显示器。每个时点使用持久化槽位认领，服务重启
+不会重复执行；可重试错误最多按 profile 配置重试两次，写入不确定绝不自动重提。
 
 Paper 与 Live 使用不同的部署目录、运行锁、日志、dotenv 和 launchd label，可以
 同时存在。停止 Live 使用 `./wa stop --live`，不会停止 Paper。

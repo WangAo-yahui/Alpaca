@@ -46,6 +46,12 @@ class StageHPathTests(unittest.TestCase):
                 / "Library/LaunchAgents/"
                 "com.wa.trader.paper1.plist",
             )
+            self.assertEqual(
+                paths.scheduler_state,
+                resolved
+                / "var/shared/runtime/scheduler/"
+                "paper1.json",
+            )
 
     def test_application_environment_overrides_paths(
         self,

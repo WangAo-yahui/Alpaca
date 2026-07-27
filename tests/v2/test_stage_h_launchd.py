@@ -86,6 +86,26 @@ class StageHLaunchdTests(unittest.TestCase):
             )
             self.assertIn("gui/501", flattened)
 
+    def test_live_service_uses_minute_scheduler_tick(
+        self,
+    ) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            paths = DeploymentPaths.for_project(
+                root,
+                home=root / "home",
+                profile_id="live1",
+                environment="live",
+            )
+            payload = build_plist(paths)
+            self.assertEqual(
+                payload["StartInterval"], 60
+            )
+            self.assertEqual(
+                payload["ProgramArguments"][-1],
+                "live1",
+            )
+
 
 if __name__ == "__main__":
     unittest.main()

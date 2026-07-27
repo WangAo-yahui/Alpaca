@@ -33,9 +33,12 @@ class DeploymentPaths:
     reports: Path
     market_data: Path
     logs: Path
+    monitor_logs: Path
     locks: Path
     deploy_lock: Path
     run_lock: Path
+    scheduler_lock: Path
+    scheduler_state: Path
     launch_agents: Path
     plist: Path
     venv_python: Path
@@ -106,6 +109,14 @@ class DeploymentPaths:
                 if profile_id == "paper1"
                 else shared / "logs" / profile_id
             ),
+            monitor_logs=(
+                (
+                    shared / "logs"
+                    if profile_id == "paper1"
+                    else shared / "logs" / profile_id
+                )
+                / "monitor"
+            ),
             locks=locks,
             deploy_lock=(
                 locks / "deploy.lock"
@@ -113,6 +124,15 @@ class DeploymentPaths:
                 else locks / f"{profile_id}.deploy.lock"
             ),
             run_lock=locks / f"{profile_id}.run.lock",
+            scheduler_lock=(
+                locks / f"{profile_id}.scheduler.lock"
+            ),
+            scheduler_state=(
+                shared
+                / "runtime"
+                / "scheduler"
+                / f"{profile_id}.json"
+            ),
             launch_agents=launch_agents,
             plist=launch_agents / f"{label}.plist",
             venv_python=root / ".Alpaca" / "bin" / "python",
@@ -134,6 +154,7 @@ class DeploymentPaths:
             self.reports,
             self.market_data,
             self.logs,
+            self.monitor_logs,
             self.locks,
         ):
             directory.mkdir(parents=True, exist_ok=True)
