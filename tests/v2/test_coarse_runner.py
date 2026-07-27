@@ -10,6 +10,7 @@ import io
 import json
 import os
 import socket
+import ssl
 import subprocess
 import sys
 import tempfile
@@ -17,7 +18,7 @@ import time
 import unittest
 from contextlib import redirect_stdout
 from pathlib import Path
-from unittest.mock import patch
+from unittest.mock import MagicMock, patch
 
 from v2.codex import runner as runner_module
 from v2.codex.runner import (
@@ -263,6 +264,36 @@ class CoarseRunnerTests(unittest.TestCase):
             "CODEX_NETWORK_UNAVAILABLE",
         )
 
+    def test_socket_preflight_maps_tls_failure(
+        self,
+    ) -> None:
+        connection = MagicMock()
+        connection.__enter__.return_value = (
+            connection
+        )
+        context = MagicMock()
+        context.wrap_socket.side_effect = (
+            ssl.SSLError("handshake failed")
+        )
+        with (
+            patch(
+                "v2.codex.runner.socket.create_connection",
+                return_value=connection,
+            ),
+            patch(
+                "v2.codex.runner.ssl.create_default_context",
+                return_value=context,
+            ),
+        ):
+            with self.assertRaises(
+                TemporaryDataError
+            ) as raised:
+                _probe_codex_network(timeout=1)
+        self.assertEqual(
+            raised.exception.code,
+            "CODEX_NETWORK_UNAVAILABLE",
+        )
+
     def test_default_executor_emits_heartbeat(
         self,
     ) -> None:
@@ -323,6 +354,58 @@ class CoarseRunnerTests(unittest.TestCase):
                     env=dict(os.environ),
                     timeout=0.05,
                 )
+        self.assertLess(
+            time.monotonic() - started,
+            2,
+        )
+
+    def test_default_executor_stops_network_retry_loop(
+        self,
+    ) -> None:
+        started = time.monotonic()
+        output = io.StringIO()
+        script = (
+            "import sys,time; "
+            "sys.stderr.write("
+            "'tls handshake eof\\n' * 3"
+            "); "
+            "sys.stderr.flush(); "
+            "time.sleep(10)"
+        )
+        with (
+            tempfile.TemporaryDirectory() as temp,
+            patch(
+                "v2.codex.runner._probe_codex_network"
+            ),
+            patch.object(
+                runner_module,
+                "CODEX_NETWORK_FAILURE_GRACE_SECONDS",
+                0.05,
+            ),
+            patch.object(
+                runner_module,
+                "CODEX_TERMINATE_GRACE_SECONDS",
+                0.1,
+            ),
+            redirect_stdout(output),
+        ):
+            with self.assertRaises(
+                TemporaryDataError
+            ) as raised:
+                _execute(
+                    [
+                        sys.executable,
+                        "-c",
+                        script,
+                    ],
+                    cwd=Path(temp),
+                    env=dict(os.environ),
+                    timeout=10,
+                )
+        self.assertEqual(
+            raised.exception.code,
+            "CODEX_NETWORK_UNAVAILABLE",
+        )
         self.assertLess(
             time.monotonic() - started,
             2,

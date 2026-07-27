@@ -767,12 +767,15 @@ release 白名单：
 
 ### 21.4 Codex 长时间运行或网络不可达
 
-每次 Codex 调用前会先用最多 5 秒检查 `chatgpt.com:443`。DNS、VPN 或 TCP
-不可达时立即返回 `CODEX_NETWORK_UNAVAILABLE`，不会进入第二次应用层重试。
+每次 Codex 调用前会先用最多 5 秒完成 `chatgpt.com:443` 的 TCP 与 TLS
+握手。DNS、VPN、TCP 或 TLS 不可达时立即返回
+`CODEX_NETWORK_UNAVAILABLE`，不会进入第二次应用层重试。
 
 正常模型运行期间每 30 秒输出一次心跳；单阶段最长 600 秒。可以按 `Ctrl-C`
 安全中断，系统会终止整个 Codex 子进程组，将当前步骤保存为可恢复的
-`failed_retriable`，而不是永久停在 `running`。
+`failed_retriable`，而不是永久停在 `running`。如果 Codex 已启动但在 30 秒内
+持续报告 DNS、TLS、WebSocket 或 HTTPS 传输错误，系统也会提前终止并标记为
+可重试网络失败，不再等待 Codex 完成内部的多轮重连。
 
 检查当前网络：
 

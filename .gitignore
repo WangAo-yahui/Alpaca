@@ -1,6 +1,6 @@
 # WA Trader 仓库忽略规则：防止凭据、账户绑定、运行状态、行情缓存和
 # Python 临时文件进入版本控制；这是隔离敏感数据与保持 release 可复现性的关键边界。
-.env
+.env*
 .Alpaca/
 decision_runtime_v2/
 decision_runtime_v2_legacy/

@@ -11,6 +11,7 @@ import os
 import re
 import signal
 import socket
+import ssl
 import subprocess
 import tempfile
 import time
@@ -41,6 +42,15 @@ CODEX_CONNECTIVITY_TIMEOUT_SECONDS = 5.0
 CODEX_HEARTBEAT_SECONDS = 30.0
 CODEX_TERMINATE_GRACE_SECONDS = 5.0
 CODEX_MAX_TIMEOUT_SECONDS = 600.0
+CODEX_NETWORK_FAILURE_GRACE_SECONDS = 30.0
+CODEX_NETWORK_ERROR_MARKERS = (
+    "tls handshake eof",
+    "failed to lookup address information",
+    "dns error",
+    "failed to connect to websocket",
+    "error sending request for url",
+    "stream disconnected before completion",
+)
 
 
 def _stage_label(command: list[str]) -> str:
@@ -58,13 +68,22 @@ def _probe_codex_network(
     """Fail quickly when Codex's HTTPS endpoint cannot be reached."""
 
     try:
-        connection = socket.create_connection(
+        with socket.create_connection(
             (
                 CODEX_CONNECTIVITY_HOST,
                 CODEX_CONNECTIVITY_PORT,
             ),
             timeout=max(1.0, timeout),
-        )
+        ) as connection:
+            connection.settimeout(max(1.0, timeout))
+            context = ssl.create_default_context()
+            with context.wrap_socket(
+                connection,
+                server_hostname=(
+                    CODEX_CONNECTIVITY_HOST
+                ),
+            ):
+                pass
     except OSError as error:
         raise TemporaryDataError(
             "Codex网络预检失败；请检查DNS、VPN或网络连接后重试",
@@ -77,7 +96,47 @@ def _probe_codex_network(
                 ),
             },
         ) from error
-    connection.close()
+
+
+def _stream_snapshot(
+    stream: object,
+    *,
+    limit: int = 256_000,
+) -> str:
+    """Read recent subprocess output without moving its write offset."""
+
+    try:
+        descriptor = stream.fileno()  # type: ignore[attr-defined]
+        size = os.fstat(descriptor).st_size
+        offset = max(0, size - limit)
+        payload = os.pread(
+            descriptor,
+            min(size, limit),
+            offset,
+        )
+    except (AttributeError, OSError):
+        return ""
+    return payload.decode(
+        "utf-8",
+        errors="replace",
+    )
+
+
+def _repeated_network_failure(
+    stderr: str,
+    *,
+    elapsed: float,
+) -> bool:
+    """Detect a Codex transport retry loop after a short grace period."""
+
+    if elapsed < CODEX_NETWORK_FAILURE_GRACE_SECONDS:
+        return False
+    normalized = stderr.lower()
+    marker_count = sum(
+        normalized.count(marker)
+        for marker in CODEX_NETWORK_ERROR_MARKERS
+    )
+    return marker_count >= 3
 
 
 def _terminate_process_group(
@@ -161,6 +220,27 @@ def _execute(
                         timeout,
                         output=stdout_file.read(),
                         stderr=stderr_file.read(),
+                    )
+                stderr_snapshot = _stream_snapshot(
+                    stderr_file
+                )
+                if _repeated_network_failure(
+                    stderr_snapshot,
+                    elapsed=elapsed,
+                ):
+                    _terminate_process_group(process)
+                    raise TemporaryDataError(
+                        "Codex网络连接持续失败；"
+                        "请检查VPN或网络后重试",
+                        code=(
+                            "CODEX_NETWORK_UNAVAILABLE"
+                        ),
+                        details={
+                            "elapsed_seconds": round(
+                                elapsed,
+                                3,
+                            ),
+                        },
                     )
                 if now >= next_heartbeat:
                     print(

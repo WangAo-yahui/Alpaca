@@ -148,7 +148,11 @@ class DeploymentManager:
         )
 
     def _print(self, message: str) -> None:
-        print(message, file=self.stdout)
+        print(
+            message,
+            file=self.stdout,
+            flush=True,
+        )
 
     def _run(
         self,

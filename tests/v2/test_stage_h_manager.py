@@ -26,6 +26,17 @@ from v2.deployment.release import (
 
 
 class StageHManagerTests(unittest.TestCase):
+    def test_progress_output_is_flushed(
+        self,
+    ) -> None:
+        stdout = MagicMock()
+        manager = DeploymentManager(
+            Path("/tmp/wa-progress-test"),
+            stdout=stdout,
+        )
+        manager._print("progress")
+        stdout.flush.assert_called_once_with()
+
     def _healthy_project(self, root: Path) -> None:
         profile = (
             root / "config/v2/profiles/paper1.json"
