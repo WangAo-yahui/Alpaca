@@ -85,7 +85,7 @@ def load_json(path: Path) -> dict[str, Any]:
 def _included(relative: str) -> bool:
     path = Path(relative)
     if (
-        relative == ".env"
+        relative.startswith(".env")
         or not path.parts
         or path.parts[0] in FORBIDDEN_ROOTS
     ):
@@ -229,8 +229,8 @@ class ReleaseBuilder:
             "created_at": datetime.now(
                 timezone.utc
             ).isoformat(),
-            "profile_id": "paper1",
-            "environment": "paper",
+            "profile_id": self.paths.profile_id,
+            "environment": self.paths.environment,
             "file_hashes": file_hashes,
             "excluded_sensitive_roots": sorted(
                 FORBIDDEN_ROOTS
@@ -293,7 +293,7 @@ class ReleaseBuilder:
         for path in release_root.rglob("*"):
             relative = path.relative_to(release_root)
             if (
-                relative.as_posix() == ".env"
+                relative.name.startswith(".env")
                 or relative.parts[0] in FORBIDDEN_ROOTS
             ):
                 raise ValueError(

@@ -1,7 +1,7 @@
 {
   "schema_version": "1.0",
   "config_version": "2026-07-23-stage-b-v1",
-  "paper_only": true,
+  "paper_only": false,
   "allowed_order_types": [
     "market",
     "limit",
@@ -19,7 +19,7 @@
   "submit_approved_only": true,
   "submission": {
     "default_enabled": false,
-    "paper_only": true
+    "paper_only": false
   },
   "extended_hours": {
     "enabled_when_allow_trade": true,

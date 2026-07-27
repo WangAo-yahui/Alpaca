@@ -1,7 +1,7 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "submission_intent.schema.json",
-  "$comment": "作用：约束任何 paper 写调用前的版本化 intent，并保留取消后重校验产生的旧哈希。重要性：每一版哈希、权限、policy 与预计操作未落盘时都禁止券商写。",
+  "$comment": "作用：约束任何 Paper/Live 写调用前的版本化 intent，并保留取消后重校验产生的旧哈希。重要性：每一版哈希、权限、policy 与预计操作未落盘时都禁止券商写。",
   "type": "object",
   "additionalProperties": false,
   "required": [
@@ -27,8 +27,8 @@
   ],
   "properties": {
     "schema_version": {"const": "1.0"},
-    "profile_id": {"const": "paper1"},
-    "environment": {"const": "paper"},
+    "profile_id": {"type": "string", "pattern": "^[A-Za-z0-9][A-Za-z0-9._-]*$"},
+    "environment": {"enum": ["paper", "live"]},
     "run_date": {"type": "string", "format": "date"},
     "cycle_id": {"type": "string", "pattern": "^[0-9]{8}T[0-9]{6}$"},
     "created_at": {"type": "string"},
@@ -36,7 +36,7 @@
     "validated_orders_hash": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
     "request_specs_hash": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
     "action_plan_hash": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
-    "submission_policy": {"const": "alpaca_paper@1.0.0"},
+    "submission_policy": {"type": "string", "pattern": "^[A-Za-z0-9._-]+@[A-Za-z0-9._-]+$"},
     "submission_policy_hash": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
     "approved_plan_ids": {"type": "array", "items": {"type": "string"}, "uniqueItems": true},
     "dependent_plan_ids": {"type": "array", "items": {"type": "string"}, "uniqueItems": true},

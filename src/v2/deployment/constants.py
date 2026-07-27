@@ -26,6 +26,12 @@ STRATEGY_ID = "core_long"
 STRATEGY_VERSION = "1.2.0"
 SERVICE_INTERVAL_SECONDS = 3600
 
+
+def service_label(profile_id: str) -> str:
+    """Return the isolated launchd label for one validated profile."""
+
+    return f"com.wa.trader.{profile_id}"
+
 NORMAL_TERMINAL_STATUSES = frozenset(
     {
         "completed_dry_run",

@@ -1,4 +1,4 @@
-"""生成并控制 WA Trader v2 paper1 的 launchd 用户服务。
+"""生成并控制 WA Trader v2 按 profile 隔离的 launchd 用户服务。
 
 作用：安装无凭据 plist，以固定间隔调用带防重入锁的 ``./wa _service-run``。
 重要性：自动运行必须复用 current release 和 Stage G 门禁，plist 不得携带任何密钥或账户号。
@@ -13,10 +13,7 @@ import tempfile
 from pathlib import Path
 from typing import Any, Callable, Mapping
 
-from v2.deployment.constants import (
-    SERVICE_INTERVAL_SECONDS,
-    SERVICE_LABEL,
-)
+from v2.deployment.constants import SERVICE_INTERVAL_SECONDS
 from v2.deployment.paths import DeploymentPaths
 
 
@@ -37,10 +34,12 @@ def build_plist(
         "/usr/local/bin:/usr/bin:/bin:/usr/sbin:/sbin",
     )
     return {
-        "Label": SERVICE_LABEL,
+        "Label": paths.service_label,
         "ProgramArguments": [
             str(paths.project_root / "wa"),
             "_service-run",
+            "--profile",
+            paths.profile_id,
         ],
         "WorkingDirectory": str(paths.project_root),
         "RunAtLoad": True,
@@ -107,7 +106,7 @@ class LaunchdController:
 
     @property
     def target(self) -> str:
-        return f"{self.domain}/{SERVICE_LABEL}"
+        return f"{self.domain}/{self.paths.service_label}"
 
     def _run(
         self,
@@ -182,7 +181,7 @@ class LaunchdController:
                 except ValueError:
                     pid = None
         return {
-            "label": SERVICE_LABEL,
+            "label": self.paths.service_label,
             "loaded": result.returncode == 0,
             "running": pid is not None,
             "pid": pid,

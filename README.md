@@ -7,8 +7,8 @@
 
 ## 1. 系统定位
 
-WA Trader v2 是一个仅面向 Alpaca Paper Trading 的美股组合决策、订单规划、
-提交、对账和 macOS 自动运行系统。当前生产入口是根目录的 `./wa`，业务代码全部
+WA Trader v2 是一个同时支持 Alpaca Paper 与 Live 的美股组合决策、订单规划、
+提交、对账、自然语言日报和 macOS 自动运行系统。当前生产入口是根目录的 `./wa`，业务代码全部
 位于 `src/v2`，旧版 `src/v1` 已删除。
 
 当前默认运行身份：
@@ -23,7 +23,12 @@ WA Trader v2 是一个仅面向 Alpaca Paper Trading 的美股组合决策、订
 | 提交配置 | `alpaca_paper@1.0.0` |
 | macOS 服务 | `com.wa.trader.paper1` |
 | 自动运行间隔 | 3600 秒 |
-| Live 交易 | 禁止 |
+| Live Profile | `live1` |
+| Live 风险配置 | `live_full@1.0.0` |
+| Live 订单配置 | `live_equity@1.0.0` |
+| Live 提交配置 | `alpaca_live@1.0.0` |
+| Live macOS 服务 | `com.wa.trader.live1` |
+| Live 凭据文件 | `.env_live` |
 
 系统的核心原则是 fail closed：数据、市场阶段、账户绑定、配置、模型输出、
 订单能力或券商写入结果只要不确定，就停止交易，而不是猜测或重试。
@@ -35,8 +40,11 @@ WA Trader v2 是一个仅面向 Alpaca Paper Trading 的美股组合决策、订
 - macOS；
 - 项目虚拟环境 `.Alpaca/`；
 - 可用的 `codex` CLI；
-- 根目录 `.env` 中存在 `paper1` 的 Alpaca paper 凭据；
+- 根目录 `.env` 中存在 `paper1` 的 Alpaca Paper 凭据；
+- 根目录 `.env_live` 中存在 `live1` 的 Alpaca Live 凭据；
 - `account_bindings/paper1.json` 已绑定正确 paper 账户；
+- `account_bindings/live1.json` 已绑定正确 Live 账户，或首次运行显式使用
+  `--bind-account`；
 - 当前工作树在部署前必须干净。
 
 `.env` 至少使用以下变量名：
@@ -46,7 +54,15 @@ ALPACA_API_KEY=...
 ALPACA_SECRET_KEY=...
 ```
 
-不要把真实值写入 README、Git、LaunchAgent plist、日志或 release。
+`.env_live` 使用：
+
+```dotenv
+ALPACA_LIVE_API_KEY=...
+ALPACA_LIVE_SECRET_KEY=...
+```
+
+不要把真实值写入 README、Git、LaunchAgent plist、日志或 release。Paper 与
+Live 凭据不得放在同一文件中。
 
 ### 2.2 首次检查
 
@@ -110,7 +126,10 @@ LaunchAgent 与 `./wa start/restart` 始终使用最后一次部署的不可变 
 `overnight_tradable` 能力。订单仍必须是限价单、带
 `extended_hours=true`，且满足订单、风险、报价时效和价差门禁。
 周五 `20:00 ET` 到周日 `20:00 ET` 仍是周末闭市；节假日前一晚按下一交易日
-日历保守判断。
+日历判断。Live 在真正闭市时可提交下一交易日排队的保守限价单：
+`limit + day + extended_hours=false + allow_queue=true`。开仓或加仓每次最多
+执行目标差额的 25%，减仓或平仓可到 100%；最后报价不得超过 96 小时。
+排队订单不会在闭市时成交，开盘跳空仍可能导致不成交。
 
 ### 2.6 自动 Paper 交易
 
@@ -141,7 +160,7 @@ Alpaca Dashboard 一致后，才允许：
            ├─ Portfolio：形成分散目标组合
            ├─ Execution：根据当前市场阶段调整执行意图
            ├─ Python 硬风控和订单规格构建
-           ├─ 可选的 Paper submit / cancel
+           ├─ 可选的 Paper/Live submit / cancel
            ├─ 券商状态查询与 reconciliation
            └─ cycle summary 和 daily report
 ```
@@ -204,25 +223,59 @@ Alpaca Dashboard 一致后，才允许：
 
 策略层与风险层同时存在上限时，执行更严格的限制。
 
+当前 `live_full@1.0.0`：
+
+| 风控项 | 限制 |
+| --- | --- |
+| 最大总敞口 | 100% |
+| 最大单一仓位 | 100% |
+| 最大行业权重 | 100% |
+| 最低现金 | 0% |
+| 每轮最大新增资金 | 100% |
+| 每轮最大订单数 | 20 |
+| 最小订单价值 | 1 美元 |
+| 做空 | 禁止 |
+| 报价最大年龄 | 15 秒 |
+| 闭市排队报价最大年龄 | 96 小时 |
+| 常规/扩展时段最大点差 | 50 bps |
+
+当前 profile 的版本化风险会覆盖执行输入，所以 Live 不再受到旧兼容
+`config/v2/risk.json` 中 15% 单标的、10% 现金或 25 美元最小订单限制。
+
 ### 4.5 订单规则
 
-当前 `paper_equity@1.0.0`：
+Paper 和 Live 美股订单：
 
-- 仅支持 Alpaca paper 美股；
 - 常规时段允许 market 或 limit；
 - 扩展时段只允许 limit；
 - 默认 TIF 为 `day`，支持 `day` 和 `gtc`；
-- 数量最多 6 位小数，价格最多 2 位小数；
-- 周末、节假日和未知市场状态禁止排队订单；
+- 美股数量最多 6 位小数、价格最多 2 位小数；Crypto 使用 Alpaca
+  资产记录中的 `min_order_size`、`min_trade_increment` 和
+  `price_increment`；
+- Paper 的周末/节假日排队保持禁止；Live 按上述保守闭市规则允许排队；
+- `unknown` 市场状态始终禁止订单；
 - client order ID 最大 48 个字符；
 - fractional、extended-hours 和资产能力均在提交前检查。
 
+`live_equity@1.0.0` 还允许处置账户中已经存在的 Alpaca Crypto 持仓：
+
+- 数据请求自动把历史符号 `USDTUSD` 转为 Alpaca 要求的 `USDT/USD`，
+  内部状态与幂等 ID 继续使用原符号；
+- Crypto 是 7×24 资产，不套用美股周末、节假日或 overnight 门禁；
+- Live 运行发现可用 Crypto 后，不再交给 Codex 判断：Python 自动生成
+  全量 `close + sell + market + gtc`，并且 `extended_hours=false`；
+- 该轮跳过耗时的 Codex execution 调用，直接进入订单刷新、硬校验和提交；
+- 自动清仓不要求 15 秒新鲜报价，数量仍按资产的
+  `min_order_size`/`min_trade_increment` 向下量化；
+- 已有同方向挂单时不重复提交；未确认成交前不把预计卖出款用于股票；
+- 不允许策略持有、新开或增加 Crypto。
+
 ### 4.6 提交和对账规则
 
-当前 `alpaca_paper@1.0.0`：
+`alpaca_paper@1.0.0` 和 `alpaca_live@1.0.0` 使用同一安全提交链，但环境、
+凭据、绑定、journal 与运行目录完全隔离：
 
-- 只允许 paper submit 和按订单 ID cancel；
-- 禁止 live；
+- 只允许当前 profile 环境的 submit 和按订单 ID cancel；
 - 禁止券商 direct replace；
 - 多个订单必须顺序提交，不能并发；
 - 每次写入前后都持久化 journal；
@@ -246,7 +299,7 @@ Alpaca Dashboard 一致后，才允许：
 正常终态：
 
 - `completed_dry_run`：完整运行但不允许券商写入；
-- `completed_no_action`：允许 paper 写入，但自然没有订单；
+- `completed_no_action`：允许券商写入，但自然没有订单；
 - `completed_with_submissions`：存在已提交订单；
 - `completed_with_open_orders`：存在仍未终结的订单；
 - `completed_with_partial_fills`：存在部分成交；
@@ -257,7 +310,7 @@ Alpaca Dashboard 一致后，才允许：
 
 ## 6. 运维命令
 
-| 命令 | 作用 | 是否可能写 Paper 订单 |
+| 命令 | 作用 | 是否可能写券商订单 |
 | --- | --- | --- |
 | `./wa doctor` | 检查 macOS、Python、Codex、凭据、绑定和 policy | 否 |
 | `./wa bootstrap` | 准备依赖和共享目录、测试并执行 dry-run | 否 |
@@ -266,6 +319,11 @@ Alpaca Dashboard 一致后，才允许：
 | `./wa run` | 前台执行一次 dry-run | 否 |
 | `./wa run --force-full` | 用当前源码强制完整决策，保持 dry-run | 否 |
 | `./wa run --allow-trade` | 用当前源码强制完整决策，并允许 approved paper 订单 | 是 |
+| `./wa doctor --live` | 检查 `.env_live`、live1 绑定和 Live policy | 否 |
+| `./wa run --live --maintenance-only` | 新建只读维护轮次，仅对账既有订单、持仓并更新日报 | 否 |
+| `./wa run --live --allow-trade` | 复用或刷新同日决策，并允许 approved Live 订单 | 是 |
+| `./wa run --live --force-full --allow-trade` | 强制完整 Live 研究并允许 approved Live 订单 | 是 |
+| `./wa deploy --live --enable-trading` | 部署独立的每小时 Live 服务 | 是 |
 | `./wa start` | 加载并启动当前 LaunchAgent | 取决于当前 release 模式 |
 | `./wa stop` | 停止并卸载 LaunchAgent | 否 |
 | `./wa restart` | 重启 LaunchAgent | 取决于当前 release 模式 |
@@ -279,7 +337,113 @@ Alpaca Dashboard 一致后，才允许：
 
 `./wa _service-run` 是 LaunchAgent 内部入口，不应手工调用。
 
-### 6.1 稳定退出码
+### 6.1 Live 实盘运行
+
+Live 首次运行：
+
+```bash
+./wa doctor --live
+./wa run --live --bind-account --allow-trade --force-full
+```
+
+账户 hash 已绑定后的同日每小时运行：
+
+```bash
+./wa run --live --allow-trade
+```
+
+行为：
+
+- 当天没有有效完整决策时自动运行 Coarse、Portfolio 和 Execution；
+- 同日已有有效候选池/组合时优先复用，只刷新账户、持仓、挂单、行情和执行；
+- `--allow-trade` 允许通过全部检查的 Live 订单，不要求每次必须产生订单；
+- `--maintenance-only` 总是新建纯维护轮次，跳过 Coarse/Portfolio/Execution，
+  不提交新订单；用于立即确认成交、挂单变化和修复/刷新日报；
+- 没有账户、持仓、订单、新闻或策略实质变化时，可以维持原策略；
+- overnight、盘前和盘后允许调仓或建仓，必须使用新鲜报价和扩展时段限价单；
+- 周末/节假日允许保守排队：开仓/加仓最多 25% 执行差额，减仓/平仓最多
+  100%，只使用 `limit + day`，等待下一交易日；
+- Live 的 `live_full@1.0.0` 允许使用 100% 账户权益、最低现金 0、单轮新增资金
+  100%；策略自身的分散持仓和 Python 订单检查仍然有效；
+- regular session 内策略可在 0–100% 权益之间自由决定现金和资金使用，
+  不强制留现金，也不强制满仓；
+- 不启用做空，也不主动使用超过账户权益的额外杠杆。
+
+Live 自动每小时服务：
+
+```bash
+./wa deploy --live --enable-trading
+./wa start --live
+./wa status --live --json
+```
+
+Paper 与 Live 使用不同的部署目录、运行锁、日志、dotenv 和 launchd label，可以
+同时存在。停止 Live 使用 `./wa stop --live`，不会停止 Paper。
+
+每个 Live cycle 仍生成确定性日报，同时额外调用一次 Codex 维护：
+
+```text
+var/shared/reports/accounts/live1/strategies/core_long/1.2.0/daily/
+  YYYY-MM-DD.md
+  YYYY-MM-DD.natural.md
+```
+
+当天第一次是完整自然语言日报，包含前序日报/账户变化、持仓分析、订单解读、联网
+新闻、资金风险和未来策略指导。后续每小时调用只追加有意义的变化；若没有实质变化，
+Codex 返回 `NO_MATERIAL_UPDATE`，文件不会被重复追加，也不会强行建议交易。
+如果第四次 Codex/新闻调用临时断网，交易主流程不会被回滚：程序立即写入完整的
+事实降级版，明确标注“没有联网新闻”，后续每小时轮次自动重试；恢复后只追加
+可核验新闻和实质变化。
+
+#### 6.1.1 自动止盈止损与 Codex 执行权限
+
+每次完整 Execution 都要求 Codex 为每个现有美股多头和每个批准的新入场输出
+`protection_plans`。Codex 可以根据持仓成本、当前报价、波动和组合风险选择下列模式；
+Python 再决定合法的 Alpaca 请求形态：
+
+| Codex 模式 | 现有持仓 | 新入场 |
+| --- | --- | --- |
+| `stop` | 独立止损单 | OTO 止损 |
+| `stop_limit` | 独立止损限价单 | OTO 止损限价 |
+| `take_profit` | 独立止盈限价单 | OTO 止盈 |
+| `trailing_stop` | 独立移动止损 | 入场后转固定 OTO 止损，或成交后下一轮保护 |
+| `oco` | 止盈和止损互斥退出 | 转成 bracket |
+| `bracket` | 转成 OCO 退出 | 原生 bracket |
+| `oto_stop` / `oto_take_profit` | 转成对应独立退出单 | 原生 OTO |
+| `staged_oco` | 最多五组分级 OCO | 压缩为覆盖整笔入场的保守 bracket |
+
+运行授权不需要新增危险开关：
+
+```bash
+./wa run --live --allow-trade --force-full
+./wa run --live --allow-trade
+```
+
+第一条用于当天需要重做完整策略时；后续每小时通常只需第二条。`--allow-trade`
+同时授权经过硬校验的普通订单和保护单，最终写前仍要求 Live submission policy 的
+`protective_order_submission_enabled=true`。不带 `--allow-trade` 时只生成和校验计划，
+不会提交。
+
+保护规则：
+
+- 多头止盈必须高于参考价，止损必须低于参考价；卖出 stop-limit 必须满足
+  `limit <= stop`，所有距离和 trailing 百分比还受 strategy policy 上下限约束。
+- bracket、OCO、OTO 和 trailing 均不以 `extended_hours=true` 执行。盘前、盘后或闭市
+  可以向 Alpaca 提交合法的常规时段保护/排队请求，但止损触发和高级 legs 仍按券商
+  支持的交易时段工作；不要把“已提交”误认为“已触发”。
+- Alpaca 碎股按当前公开能力只使用 `day` 的 simple limit/stop/stop-limit。碎股 OCO、
+  bracket、分级 OCO 或 trailing 会自动降级为单一固定 stop 或 stop-limit；这比发送
+  可能被券商拒绝的高级组合更可靠。
+- stop 或 trailing 触发后通常成为 market order，成交价可能滑点；stop-limit 可以控制
+  最差限价，但快速跳空时可能不成交。两类风险都会写入日报。
+- 每小时策略和价格未变化时保留既有保护单，不撤单重挂；只有策略、价格或覆盖数量
+  变化时，才先取消旧保护、刷新持仓和可用数量，再提交替代保护。
+- Codex 只输出保护策略，不能直接调用 Alpaca。数量、覆盖上限、价格精度、账户身份、
+  幂等 ID、取消确认和真正提交全部由 Python 唯一写路径控制。
+- 日报会分别显示 Codex 计划、validated 保护单和 broker open/tracked 保护单。只有
+  Alpaca 对账中可核验的 open/held/new 保护订单才应视为已经生效。
+
+### 6.2 稳定退出码
 
 | 退出码 | 含义 |
 | --- | --- |
@@ -377,7 +541,8 @@ Alpaca/
 ├── data/                     # 可用于 bootstrap 的历史行情和资产种子
 ├── var/                      # 部署、共享 runtime、报告、日志和锁
 ├── .Alpaca/                  # Python 虚拟环境，不进入 Git
-├── .env                      # 凭据，不进入 Git
+├── .env                      # Paper 凭据，不进入 Git
+├── .env_live                 # Live 凭据，不进入 Git
 └── account_bindings/         # 账户绑定，不进入 Git
 ```
 
@@ -390,7 +555,9 @@ Alpaca/
 | `requirements.txt` | 开发环境允许的依赖版本范围 |
 | `requirements.lock` | bootstrap/deploy 使用的精确依赖版本 |
 | `.gitignore` | 阻止凭据、绑定、runtime、日志、缓存进入 Git |
-| `.env` | Alpaca 凭据；必须保留但永远不能提交 |
+| `.env` | Alpaca Paper 凭据；必须保留但永远不能提交 |
+| `.env_live` | Alpaca Live 独立凭据；必须保留但永远不能提交 |
+| `WA_Trader_v2_live_migration_spec.md` | Live 迁移前的历史设计与审计清单；当前操作以本 README 为准 |
 
 `.git/`、`.Alpaca/` 和 `account_bindings/` 是必要的本地基础设施，不属于 release。
 
@@ -461,16 +628,17 @@ Alpaca/
 | `src/v2/stages/portfolio.py` | 准备、运行、校验和复用组合决策 |
 | `src/v2/stages/execution.py` | 准备、运行并约束执行意图 |
 
-### 10.6 订单与 Paper 写入
+### 10.6 订单与 Paper/Live 写入
 
 | 文件 | 作用 |
 | --- | --- |
 | `src/v2/trading/__init__.py` | 交易包入口和写入边界说明 |
 | `src/v2/trading/order_builder.py` | 根据目标组合和事实生成本地 proposed orders |
+| `src/v2/trading/protection.py` | 将 Codex 止盈止损计划映射为 Alpaca 合法组合、碎股降级与安全替换 |
 | `src/v2/trading/order_validator.py` | 执行现金、敞口、集中度、报价和市场阶段硬校验 |
 | `src/v2/trading/order_request_factory.py` | 将 validated order 转换为 alpaca-py OrderRequest |
 | `src/v2/trading/idempotency.py` | 生成稳定且长度受限的 client order ID |
-| `src/v2/trading/submission_guard.py` | 校验 paper/profile/policy/双开关和执行授权 |
+| `src/v2/trading/submission_guard.py` | 校验环境/profile/policy/双开关和执行授权 |
 | `src/v2/trading/submission_journal.py` | 在每次券商写入前后原子记录意图与结果 |
 | `src/v2/trading/order_submitter.py` | 唯一订单提交调用点，处理超时和幂等查询 |
 | `src/v2/trading/order_action_executor.py` | 唯一按订单 ID 取消调用点，处理 cancel race |
@@ -482,6 +650,7 @@ Alpaca/
 | --- | --- |
 | `src/v2/reports/__init__.py` | 报告包入口 |
 | `src/v2/reports/daily_report.py` | 增量生成同日 Markdown 决策、订单和对账报告 |
+| `src/v2/reports/natural_language_report.py` | 额外调用 Codex，联网生成并按变化维护自然语言日报 |
 
 ### 10.8 macOS 部署
 
@@ -526,7 +695,8 @@ Alpaca/
 | `config/v2/profiles/paper1.json` | 当前正式 paper1 身份和版本绑定 |
 | `config/v2/profiles/paper2.json` | 隔离的第二 paper 账户配置 |
 | `config/v2/profiles/paper3.json` | 隔离的第三 paper 账户配置 |
-| `config/v2/profiles/live.json` | Live 身份定义；提交开关保持禁止 |
+| `config/v2/profiles/live.json` | 历史 Live 占位；保持 disabled |
+| `config/v2/profiles/live1.json` | 当前正式 Alpaca Live 实盘身份 |
 
 ### 11.4 版本化 Policies
 
@@ -534,9 +704,12 @@ Alpaca/
 | --- | --- |
 | `config/v2/risk_profiles/paper_standard-1.0.0.json` | 旧 paper 风险版本，用于历史 release 验证 |
 | `config/v2/risk_profiles/paper_standard-1.1.0.json` | 当前 paper1 硬风控 |
-| `config/v2/risk_profiles/live_conservative-1.0.0.json` | Live 风险定义；不代表允许 live 写入 |
+| `config/v2/risk_profiles/live_conservative-1.0.0.json` | 历史 Live 占位风险 |
+| `config/v2/risk_profiles/live_full-1.0.0.json` | Live 可使用100%账户权益的硬风控 |
 | `config/v2/order_policies/paper_equity-1.0.0.json` | Alpaca paper 美股订单能力合同 |
+| `config/v2/order_policies/live_equity-1.0.0.json` | Alpaca Live 美股订单能力合同 |
 | `config/v2/submission_policies/alpaca_paper-1.0.0.json` | Paper 提交、取消、幂等和对账合同 |
+| `config/v2/submission_policies/alpaca_live-1.0.0.json` | Live 提交、取消、幂等和对账合同 |
 
 手工测试时，版本化 policy 的小改动会直接生效，并以新的内容 hash 进入轮次记录。
 若改变策略语义、风险上限或订单能力，仍应新增版本并更新 Profile，避免同一版本名
@@ -755,6 +928,7 @@ release 白名单：
 明确排除：
 
 - `.env`
+- `.env_live`
 - `.Alpaca`
 - `account_bindings`
 - `var`
@@ -871,9 +1045,10 @@ find var/deployment/history -type f -maxdepth 1 -print
 1. 只修改 `src/v2`，不要重新引入 v1；
 2. 新文件开头必须说明作用和重要性；
 3. 保持 broker 写调用只位于提交器和取消执行器；
-4. 不得加入强制买入、live 写入、盲重试或绕过风控的后门；
+4. Live 写入只能通过 `live1`、`alpaca_live`、账户绑定、写前 journal 和提交门禁；
+   不得加入强制买入、盲重试或绕过风控的后门；
 5. 不要原地修改已发布策略和版本化 policy；
-6. 修改后运行 242 项测试、compile 和静态写扫描；
+6. 修改后运行完整测试、compile 和静态写扫描；
 7. 部署前提交代码并确保工作树干净；
 8. 不得提交 `.env`、账户绑定或 runtime；
 9. 所有交易事实、计划和已执行操作必须分开记录；
@@ -885,14 +1060,14 @@ find var/deployment/history -type f -maxdepth 1 -print
 - 当前和上一 release 位于 `var/deployment/releases`；
 - `./wa rollback` 用于应用版本回退；
 - Stage H 前的历史审计记录保存在 `var/archive/pre-stage-h`；
-- `.env` 和账户绑定应另行安全备份，不能提交 Git；
+- `.env`、`.env_live` 和账户绑定应另行安全备份，不能提交 Git；
 - 不要使用 `git reset --hard` 或直接删除 `var/shared/runtime` 处理一般故障。
 
 ## 24. 当前验收基线
 
 本手册建立时的已验证基线：
 
-- 262 项 v2 测试通过；
+- 完整 v2 离线测试通过；
 - macOS bootstrap、dry-run deploy、status、health、logs 和 rollback 已验证；
 - release 文件只读、manifest hash 有效；
 - LaunchAgent 不包含凭据；
@@ -900,4 +1075,6 @@ find var/deployment/history -type f -maxdepth 1 -print
   `completed_no_action`；
 - Sunday overnight 市场阶段、下一交易日日历和 overnight feed 已覆盖；
 - 自动交易保持关闭，直到第一次自然 paper submit 和人工对账完成；
-- Live 交易始终关闭。
+- `live1` 凭据、账户绑定、policy、运行锁和服务与 `paper1` 隔离；
+- Live 手工运行支持首轮完整决策和同日每小时 execution refresh；
+- Live 自然语言日报支持联网新闻、持仓/订单解释及无变化时不追加。

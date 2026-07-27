@@ -109,12 +109,26 @@
           "type": "boolean"
         },
         "paper": {
-          "const": true
+          "type": "boolean"
         },
         "live": {
-          "const": false
+          "type": "boolean"
         }
-      }
+      },
+      "oneOf": [
+        {
+          "properties": {
+            "paper": {"const": true},
+            "live": {"const": false}
+          }
+        },
+        {
+          "properties": {
+            "paper": {"const": false},
+            "live": {"const": true}
+          }
+        }
+      ]
     },
     "trade_permission": {
       "type": "object",

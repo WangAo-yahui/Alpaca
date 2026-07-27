@@ -1,4 +1,4 @@
-"""原子持久化 Stage G 的每一个 paper 写操作状态。
+"""原子持久化 Stage G 的每一个 Paper/Live 写操作状态。
 
 作用：在券商写前、响应后、查询确认后逐次保存 intent 对应的操作日志。
 重要性：网络超时或进程中断后只能依据此日志恢复；request_started 绝不能被当作可安全重试。
@@ -26,11 +26,15 @@ class SubmissionJournal:
         path: Path,
         *,
         profile_id: str,
+        environment: str = "paper",
         run_date: str,
         cycle_id: str,
     ) -> None:
         self.path = path
         self.profile_id = profile_id
+        if environment not in {"paper", "live"}:
+            raise ValueError("submission journal环境无效")
+        self.environment = environment
         self.run_date = run_date
         self.cycle_id = cycle_id
         self.operations: list[SubmissionOperation] = []
@@ -42,6 +46,7 @@ class SubmissionJournal:
         path: Path,
         *,
         profile_id: str,
+        environment: str = "paper",
         run_date: str,
         cycle_id: str,
         operations: list[SubmissionOperation] | None = None,
@@ -49,6 +54,7 @@ class SubmissionJournal:
         journal = cls(
             path,
             profile_id=profile_id,
+            environment=environment,
             run_date=run_date,
             cycle_id=cycle_id,
         )
@@ -56,6 +62,10 @@ class SubmissionJournal:
             payload = load_json_object(path)
             if (
                 payload.get("profile_id") != profile_id
+                or payload.get(
+                    "environment", "paper"
+                )
+                != environment
                 or payload.get("run_date") != run_date
                 or payload.get("cycle_id") != cycle_id
             ):
@@ -77,7 +87,7 @@ class SubmissionJournal:
         return {
             "schema_version": "1.0",
             "profile_id": self.profile_id,
-            "environment": "paper",
+            "environment": self.environment,
             "run_date": self.run_date,
             "cycle_id": self.cycle_id,
             "created_at": self.created_at,

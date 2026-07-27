@@ -17,15 +17,360 @@ from v2.models.execution import (
 from v2.releases import load_strategy_release
 from v2.runtime import load_json_object
 from v2.stages.execution import (
+    _automatic_crypto_liquidation_output,
+    _defer_without_trade_permission,
     _neutralize_non_executable_intents,
 )
 from tests.v2.support import (
     stage_e_fixture,
     valid_execution_output,
+    valid_protection_plan,
 )
 
 
 class ExecutionValidationTests(unittest.TestCase):
+    def test_dry_run_model_approval_is_safely_deferred(
+        self,
+    ) -> None:
+        with tempfile.TemporaryDirectory() as temp:
+            root = Path(temp)
+            result = stage_e_fixture(root)
+            assert result.execution is not None
+            source = copy.deepcopy(
+                result.execution.input_result.payload
+            )
+            source["trade_permission"][
+                "submission_enabled"
+            ] = False
+            payload = valid_execution_output(
+                result.execution.input_result.payload
+            )
+            self.assertTrue(
+                any(
+                    item["execution_decision"]
+                    == "approve"
+                    for item in payload["decisions"]
+                )
+            )
+            deferred, symbols = (
+                _defer_without_trade_permission(
+                    payload,
+                    input_payload=source,
+                )
+            )
+            normalized, _ = (
+                _neutralize_non_executable_intents(
+                    deferred
+                )
+            )
+            self.assertTrue(symbols)
+            self.assertTrue(
+                all(
+                    item["execution_decision"]
+                    == "defer"
+                    for item in normalized[
+                        "decisions"
+                    ]
+                )
+            )
+            release = load_strategy_release(
+                "core_long",
+                "1.2.0",
+                project_root=root,
+            )
+            schema = load_json_object(
+                release.root
+                / "schemas/execution_output.schema.json"
+            )
+            self.assertTrue(
+                validate_execution_output(
+                    normalized,
+                    input_payload=source,
+                    schema=schema,
+                ).valid
+            )
+
+    def test_live_crypto_is_forced_to_market_close(
+        self,
+    ) -> None:
+        with tempfile.TemporaryDirectory() as temp:
+            root = Path(temp)
+            result = stage_e_fixture(root)
+            assert result.execution is not None
+            source = copy.deepcopy(
+                result.execution.input_result.payload
+            )
+            source["profile"]["environment"] = "live"
+            symbol = source["portfolio"][
+                "decisions"
+            ][0]["symbol"]
+            source["portfolio"]["decisions"][0][
+                "current_position"
+            ] = True
+            source["execution_snapshot"][
+                "assets"
+            ][symbol]["asset_class"] = "crypto"
+            source["execution_snapshot"][
+                "quotes"
+            ][symbol]["quote_age_seconds"] = "7200"
+            source["execution_snapshot"][
+                "positions"
+            ].append(
+                {
+                    "symbol": symbol,
+                    "side": "long",
+                    "quantity": "2",
+                    "available_quantity": "2",
+                    "average_entry_price": "100",
+                    "current_price": "99",
+                    "market_value": "198",
+                }
+            )
+            automatic = (
+                _automatic_crypto_liquidation_output(
+                    source
+                )
+            )
+            self.assertIsNotNone(automatic)
+            assert automatic is not None
+            forced, symbols = automatic
+            self.assertEqual(
+                forced["network_research"][
+                    "status"
+                ],
+                "not_requested",
+            )
+            self.assertEqual(symbols, (symbol,))
+            decision = forced["decisions"][0]
+            self.assertEqual(
+                decision["execution_decision"],
+                "approve",
+            )
+            self.assertEqual(
+                decision["portfolio_action"],
+                "close",
+            )
+            self.assertEqual(
+                decision["side"],
+                "sell",
+            )
+            self.assertEqual(
+                decision["execution_fraction"],
+                "1",
+            )
+            self.assertEqual(
+                decision["order_intent"][
+                    "preferred_type"
+                ],
+                "market",
+            )
+            self.assertEqual(
+                decision["order_intent"][
+                    "time_in_force_preference"
+                ],
+                "gtc",
+            )
+            for equity_decision in forced[
+                "decisions"
+            ][1:]:
+                self.assertEqual(
+                    equity_decision[
+                        "execution_decision"
+                    ],
+                    "defer",
+                )
+                self.assertEqual(
+                    equity_decision["side"],
+                    "none",
+                )
+            release = load_strategy_release(
+                "core_long",
+                "1.2.0",
+                project_root=root,
+            )
+            schema = load_json_object(
+                release.root
+                / "schemas/execution_output.schema.json"
+            )
+            validation = validate_execution_output(
+                forced,
+                input_payload=source,
+                schema=schema,
+            )
+            self.assertTrue(
+                validation.valid,
+                validation.errors,
+            )
+
+    def test_existing_crypto_position_cannot_increase(
+        self,
+    ) -> None:
+        with tempfile.TemporaryDirectory() as temp:
+            root = Path(temp)
+            result = stage_e_fixture(root)
+            assert result.execution is not None
+            source = copy.deepcopy(
+                result.execution.input_result.payload
+            )
+            symbol = source["portfolio"][
+                "decisions"
+            ][0]["symbol"]
+            source["portfolio"]["decisions"][0].update(
+                {
+                    "current_position": True,
+                    "action": "increase",
+                }
+            )
+            source["execution_snapshot"][
+                "assets"
+            ][symbol]["asset_class"] = "crypto"
+            source["execution_snapshot"][
+                "positions"
+            ].append(
+                {
+                    "symbol": symbol,
+                    "side": "long",
+                    "quantity": "1",
+                    "available_quantity": "1",
+                    "market_value": "100",
+                }
+            )
+            payload = valid_execution_output(source)
+            decision = payload["decisions"][0]
+            decision.update(
+                {
+                    "portfolio_action": "increase",
+                    "side": "buy",
+                }
+            )
+            decision["order_intent"].update(
+                {
+                    "time_in_force_preference": "gtc",
+                    "extended_hours_requested": False,
+                }
+            )
+            release = load_strategy_release(
+                "core_long",
+                "1.2.0",
+                project_root=root,
+            )
+            schema = load_json_object(
+                release.root
+                / "schemas/execution_output.schema.json"
+            )
+            codes = {
+                item["code"]
+                for item in validate_execution_output(
+                    payload,
+                    input_payload=source,
+                    schema=schema,
+                ).errors
+            }
+            self.assertIn(
+                "CRYPTO_POSITION_EXPANSION_FORBIDDEN",
+                codes,
+            )
+
+    def test_live_closed_session_conservative_queue(
+        self,
+    ) -> None:
+        with tempfile.TemporaryDirectory() as temp:
+            root = Path(temp)
+            result = stage_e_fixture(root)
+            assert result.execution is not None
+            source = copy.deepcopy(
+                result.execution.input_result.payload
+            )
+            source["profile"]["environment"] = "live"
+            source["execution_snapshot"][
+                "market_phase"
+            ] = "market_closed_weekend"
+            source["risk_profile"][
+                "execution_limits"
+            ][
+                "max_closed_session_quote_age_seconds"
+            ] = "345600"
+            for quote in source[
+                "execution_snapshot"
+            ]["quotes"].values():
+                quote[
+                    "quote_age_seconds"
+                ] = "172800"
+            payload = valid_execution_output(source)
+            payload["market_assessment"][
+                "market_phase"
+            ] = "market_closed_weekend"
+            for decision in payload["decisions"]:
+                decision[
+                    "execution_decision"
+                ] = "approve"
+                decision["side"] = "buy"
+                decision[
+                    "execution_fraction"
+                ] = "0.25"
+                decision["order_intent"] = {
+                    "preferred_type": "limit",
+                    "time_in_force_preference": "day",
+                    "extended_hours_requested": False,
+                    "allow_queue": True,
+                    "allow_partial_fill": True,
+                }
+                symbol = decision["symbol"]
+                decision["price_condition"] = {
+                    "reference": "ask",
+                    "limit_price": str(
+                        source[
+                            "execution_snapshot"
+                        ]["quotes"][symbol][
+                            "ask_price"
+                        ]
+                    ),
+                    "do_not_execute_above": None,
+                    "review_below": None,
+                }
+            planned = {
+                item["symbol"]
+                for item in payload[
+                    "protection_plans"
+                ]
+            }
+            for decision in payload["decisions"]:
+                symbol = decision["symbol"]
+                if symbol in planned:
+                    continue
+                reference = float(
+                    source[
+                        "execution_snapshot"
+                    ]["quotes"][symbol][
+                        "ask_price"
+                    ]
+                )
+                payload["protection_plans"].append(
+                    valid_protection_plan(
+                        symbol,
+                        reference=reference,
+                        apply_to="new_entry",
+                    )
+                )
+            release = load_strategy_release(
+                "core_long",
+                "1.2.0",
+                project_root=root,
+            )
+            schema = load_json_object(
+                release.root
+                / "schemas/execution_output.schema.json"
+            )
+            validation = validate_execution_output(
+                payload,
+                input_payload=source,
+                schema=schema,
+            )
+            self.assertTrue(
+                validation.valid,
+                validation.errors,
+            )
+
     def test_non_executable_intent_is_safely_neutralized(
         self,
     ) -> None:
@@ -259,6 +604,27 @@ class ExecutionValidationTests(unittest.TestCase):
                     "allow_queue": False,
                     "allow_partial_fill": False,
                 }
+            existing_symbols = {
+                item["symbol"]
+                for item in source[
+                    "execution_snapshot"
+                ]["positions"]
+                if source[
+                    "execution_snapshot"
+                ]["assets"].get(
+                    item["symbol"],
+                    {},
+                ).get("asset_class")
+                != "crypto"
+            }
+            rejected["protection_plans"] = [
+                item
+                for item in rejected[
+                    "protection_plans"
+                ]
+                if item["symbol"]
+                in existing_symbols
+            ]
             self.assertTrue(
                 validate_execution_output(
                     rejected,

@@ -1,12 +1,13 @@
 {
-  "_comment": "作用：集中定义 Alpaca paper 美股订单规划、精度、TIF、扩展时段和排队能力。重要性：Stage F 只能据此生成本地请求规格，规则不得散落硬编码，更不得触发券商写调用。",
+  "_comment": "作用：集中定义 Alpaca Live 美股订单、精度、TIF、扩展时段和幂等能力。重要性：Live 下单完整复用 Paper 请求构建，但环境身份与凭据严格独立。",
   "schema_version": "1.0",
-  "order_policy_id": "paper_equity",
+  "order_policy_id": "live_equity",
   "order_policy_version": "1.0.0",
   "broker": "alpaca",
-  "environment": "paper",
+  "environment": "live",
   "supported_asset_classes": [
-    "us_equity"
+    "us_equity",
+    "crypto"
   ],
   "supported_order_types": {
     "regular_session": [
@@ -17,6 +18,10 @@
       "trailing_stop"
     ],
     "extended_hours": [
+      "limit"
+    ],
+    "crypto": [
+      "market",
       "limit"
     ]
   },
@@ -69,16 +74,41 @@
       "after_market_close"
     ]
   },
+  "crypto": {
+    "existing_positions_only": true,
+    "allow_new_positions": false,
+    "liquidate_existing_positions_on_detection": true,
+    "liquidation_order_type": "market",
+    "liquidation_time_in_force": "gtc",
+    "require_fresh_quote_for_liquidation": false,
+    "supported_time_in_force": [
+      "gtc",
+      "ioc"
+    ],
+    "extended_hours": false
+  },
   "queue_policy": {
-    "market_closed_weekend": false,
-    "market_closed_holiday": false,
+    "market_closed_weekend": true,
+    "market_closed_holiday": true,
     "unknown": false
+  },
+  "closed_session_queue": {
+    "supported_order_types": [
+      "limit"
+    ],
+    "supported_time_in_force": [
+      "day"
+    ],
+    "extended_hours": false,
+    "maximum_open_execution_fraction": "0.25",
+    "maximum_reduce_execution_fraction": "1.00"
   },
   "broker_capabilities": {
     "supports_fractional_market_day": true,
     "supports_fractional_limit_day": true,
     "supports_extended_hours": true,
-    "supports_closed_session_queue": false,
+    "supports_closed_session_queue": true,
+    "supports_crypto_24_7": true,
     "supports_stop": true,
     "supports_stop_limit": true,
     "supports_trailing_stop": true,

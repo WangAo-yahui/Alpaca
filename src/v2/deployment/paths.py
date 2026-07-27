@@ -10,11 +10,14 @@ import os
 from dataclasses import dataclass
 from pathlib import Path
 
-from v2.deployment.constants import SERVICE_LABEL
+from v2.deployment.constants import service_label
 
 
 @dataclass(frozen=True)
 class DeploymentPaths:
+    profile_id: str
+    environment: str
+    service_label: str
     project_root: Path
     home: Path
     var_root: Path
@@ -44,6 +47,8 @@ class DeploymentPaths:
         project_root: Path,
         *,
         home: Path | None = None,
+        profile_id: str = "paper1",
+        environment: str = "paper",
     ) -> "DeploymentPaths":
         root = project_root.expanduser().resolve()
         resolved_home = (
@@ -52,13 +57,33 @@ class DeploymentPaths:
             else Path.home().resolve()
         )
         var_root = root / "var"
-        deployment = var_root / "deployment"
+        if environment not in {"paper", "live"}:
+            raise ValueError("部署环境必须为paper或live")
+        if not profile_id or any(
+            character
+            not in (
+                "abcdefghijklmnopqrstuvwxyz"
+                "ABCDEFGHIJKLMNOPQRSTUVWXYZ"
+                "0123456789._-"
+            )
+            for character in profile_id
+        ):
+            raise ValueError("部署profile格式无效")
+        deployment = (
+            var_root / "deployment"
+            if profile_id == "paper1"
+            else var_root / "deployment" / profile_id
+        )
         shared = var_root / "shared"
         locks = var_root / "locks"
+        label = service_label(profile_id)
         launch_agents = (
             resolved_home / "Library" / "LaunchAgents"
         )
         return cls(
+            profile_id=profile_id,
+            environment=environment,
+            service_label=label,
             project_root=root,
             home=resolved_home,
             var_root=var_root,
@@ -70,20 +95,32 @@ class DeploymentPaths:
             previous=deployment / "previous.json",
             verification_marker=(
                 deployment
-                / "paper_submit_verified.json"
+                / f"{environment}_submit_verified.json"
             ),
             shared=shared,
             runtime=shared / "runtime",
             reports=shared / "reports",
             market_data=shared / "market_data",
-            logs=shared / "logs",
+            logs=(
+                shared / "logs"
+                if profile_id == "paper1"
+                else shared / "logs" / profile_id
+            ),
             locks=locks,
-            deploy_lock=locks / "deploy.lock",
-            run_lock=locks / "paper1.run.lock",
+            deploy_lock=(
+                locks / "deploy.lock"
+                if profile_id == "paper1"
+                else locks / f"{profile_id}.deploy.lock"
+            ),
+            run_lock=locks / f"{profile_id}.run.lock",
             launch_agents=launch_agents,
-            plist=launch_agents / f"{SERVICE_LABEL}.plist",
+            plist=launch_agents / f"{label}.plist",
             venv_python=root / ".Alpaca" / "bin" / "python",
-            dotenv=root / ".env",
+            dotenv=(
+                root / ".env_live"
+                if environment == "live"
+                else root / ".env"
+            ),
         )
 
     def ensure_local_directories(self) -> None:

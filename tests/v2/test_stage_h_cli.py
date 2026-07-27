@@ -67,6 +67,30 @@ class StageHCLITests(unittest.TestCase):
             self.assertEqual(code, 0)
             manager.service_run.assert_called_once_with()
 
+    def test_run_routes_maintenance_only(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            manager = MagicMock()
+            manager.profile_environment = "live"
+            manager.run.return_value = ExitCode.SUCCESS
+            with patch(
+                "v2.deployment.cli.DeploymentManager",
+                return_value=manager,
+            ):
+                code = main(
+                    [
+                        "run",
+                        "--live",
+                        "--maintenance-only",
+                    ],
+                    project_root=Path(temporary),
+                )
+            self.assertEqual(code, 0)
+            manager.run.assert_called_once_with(
+                allow_trade=False,
+                force_full=False,
+                maintenance_only=True,
+            )
+
 
 if __name__ == "__main__":
     unittest.main()

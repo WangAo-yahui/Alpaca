@@ -31,14 +31,15 @@ class CLITests(unittest.TestCase):
                     ).no_review
                 )
 
-    def test_live_is_parsed_for_main_to_reject(
+    def test_live_flag_selects_live1(
         self,
     ) -> None:
         options = parse_cli_args(
-            ["--profile", "default", "--live"]
+            ["--live"]
         )
         self.assertTrue(options.live)
         self.assertFalse(options.paper)
+        self.assertEqual(options.profile, "live1")
 
     def test_conflicting_cycle_modes_rejected(
         self,

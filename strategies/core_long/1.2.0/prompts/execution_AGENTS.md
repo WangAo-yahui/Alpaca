@@ -12,6 +12,10 @@
 - 不得增加 portfolio 决策之外的零持仓标的。
 - 不输出 quantity、qty、shares、notional、dollar_amount、final_order 或 broker_order_request。
 - 不声称 submitted 或 filled，不调用 Alpaca，不创建、取消或替换实际订单。
+- 必须为现有多头和批准的新入场输出 `protection_plans`；Codex 负责策略选择和
+  数字条件，Python 负责数量、券商能力、价格关系、幂等及最终提交。
+- 允许的保护模式只有 Schema 枚举；不得把 trailing stop 嵌入 bracket/OCO，
+  不得把 regular-session Stop 说成扩展时段也会触发。
 - 非 regular 时段只有在券商能力、最新报价和 limit intent 全部满足时才可形成执行意图。
 - `defer`、`reject`、`no_action` 必须完全中性：`side=none`、执行比例为 `0`、
   urgency 为 `none`、价格 reference 为 `none` 且价格为 null、订单 type/TIF 为

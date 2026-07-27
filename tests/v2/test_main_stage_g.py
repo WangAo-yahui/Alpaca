@@ -28,6 +28,40 @@ from tests.v2.support import (
 
 
 class MainStageGTests(unittest.TestCase):
+    @staticmethod
+    def _defer_all(output) -> None:
+        """Keep the natural-no-order test independent of wall-clock phase."""
+
+        for item in output["decisions"]:
+            item["execution_decision"] = "defer"
+            item["side"] = "none"
+            item["execution_fraction"] = "0"
+            item["urgency"] = "none"
+            item["price_condition"] = {
+                "reference": "none",
+                "limit_price": None,
+                "do_not_execute_above": None,
+                "review_below": None,
+            }
+            item["order_intent"] = {
+                "preferred_type": "none",
+                "time_in_force_preference": "none",
+                "extended_hours_requested": False,
+                "allow_queue": False,
+                "allow_partial_fill": False,
+            }
+        output["protection_plans"] = [
+            item
+            for item in output[
+                "protection_plans"
+            ]
+            if item.get("apply_to")
+            in {
+                "existing_position",
+                "both",
+            }
+        ]
+
     def _run_stage_g(
         self,
         root: Path,
@@ -44,7 +78,13 @@ class MainStageGTests(unittest.TestCase):
             clients=stage_d_clients(),
             coarse_runner=FakeCoarseRunner(),
             portfolio_runner=FakePortfolioRunner(),
-            execution_runner=FakeExecutionRunner(),
+            execution_runner=FakeExecutionRunner(
+                mutate=(
+                    self._defer_all
+                    if allow_trade
+                    else None
+                )
+            ),
         )
 
     def test_dry_run_completes_with_all_artifacts(

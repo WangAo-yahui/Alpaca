@@ -20,10 +20,7 @@ from typing import Any, Callable, Mapping, TextIO
 
 from v2.deployment.constants import (
     NORMAL_TERMINAL_STATUSES,
-    PROFILE_ID,
     SERVICE_INTERVAL_SECONDS,
-    STRATEGY_ID,
-    STRATEGY_VERSION,
     ExitCode,
 )
 from v2.deployment.launchd import LaunchdController
@@ -128,14 +125,86 @@ class DeploymentManager:
         self,
         project_root: Path,
         *,
+        profile_id: str = "paper1",
         home: Path | None = None,
         runner: CommandRunner = subprocess.run,
         platform_name: str | None = None,
         stdout: TextIO | None = None,
     ) -> None:
+        root = project_root.expanduser().resolve()
+        profile_path = (
+            root
+            / "config"
+            / "v2"
+            / "profiles"
+            / f"{profile_id}.json"
+        )
+        try:
+            source_profile = load_json(profile_path)
+        except Exception as error:
+            if profile_id != "paper1":
+                raise DeploymentError(
+                    f"无法加载部署profile：{profile_id}"
+                ) from error
+            source_profile = {
+                "profile_id": "paper1",
+                "environment": "paper",
+                "enabled": True,
+                "credential_key_env": "ALPACA_API_KEY",
+                "credential_secret_env": "ALPACA_SECRET_KEY",
+                "strategy": {
+                    "strategy_id": "core_long",
+                    "strategy_version": "1.2.0",
+                },
+                "submission_policy": (
+                    "alpaca_paper@1.0.0"
+                ),
+            }
+        source_profile.setdefault(
+            "credential_key_env",
+            (
+                "ALPACA_API_KEY"
+                if profile_id == "paper1"
+                else ""
+            ),
+        )
+        source_profile.setdefault(
+            "credential_secret_env",
+            (
+                "ALPACA_SECRET_KEY"
+                if profile_id == "paper1"
+                else ""
+            ),
+        )
+        source_profile.setdefault(
+            "strategy",
+            {
+                "strategy_id": "core_long",
+                "strategy_version": "1.2.0",
+            },
+        )
+        environment = str(
+            source_profile.get("environment", "")
+        )
+        if environment not in {"paper", "live"}:
+            raise DeploymentError("部署profile环境无效")
+        strategy = source_profile.get("strategy", {})
+        if not isinstance(strategy, Mapping):
+            raise DeploymentError("部署profile策略无效")
+        self.profile_id = profile_id
+        self.profile_environment = environment
+        self.profile = source_profile
+        self.strategy_id = str(
+            strategy.get("strategy_id", "")
+        )
+        self.strategy_version = str(
+            strategy.get("strategy_version", "")
+        )
         self.paths = DeploymentPaths.for_project(
-            project_root,
+            root,
             home=home,
+            profile_id=profile_id,
+            environment=environment,
         )
         self.runner = runner
         self.platform_name = (
@@ -200,19 +269,22 @@ class DeploymentManager:
 
     def _credential_names_present(self) -> bool:
         names = _dotenv_names(self.paths.dotenv)
-        key_present = bool(
-            {
-                "ALPACA_API_KEY",
-                "APCA_API_KEY_ID",
-            }
-            & (names | set(os.environ))
+        available = names | set(os.environ)
+        key_present = (
+            str(
+                self.profile.get(
+                    "credential_key_env", ""
+                )
+            )
+            in available
         )
-        secret_present = bool(
-            {
-                "ALPACA_SECRET_KEY",
-                "APCA_API_SECRET_KEY",
-            }
-            & (names | set(os.environ))
+        secret_present = (
+            str(
+                self.profile.get(
+                    "credential_secret_env", ""
+                )
+            )
+            in available
         )
         return key_present and secret_present
 
@@ -220,12 +292,12 @@ class DeploymentManager:
         shared = (
             self.paths.runtime
             / "account_bindings"
-            / f"{PROFILE_ID}.json"
+            / f"{self.profile_id}.json"
         )
         source = (
             self.paths.project_root
             / "account_bindings"
-            / f"{PROFILE_ID}.json"
+            / f"{self.profile_id}.json"
         )
         return shared if shared.is_file() else source
 
@@ -235,14 +307,26 @@ class DeploymentManager:
             / "config"
             / "v2"
             / "profiles"
-            / "paper1.json"
+            / f"{self.profile_id}.json"
+        )
+        submission_reference = str(
+            self.profile.get(
+                "submission_policy", ""
+            )
+        )
+        policy_id, separator, policy_version = (
+            submission_reference.partition("@")
         )
         submission_path = (
             self.paths.project_root
             / "config"
             / "v2"
             / "submission_policies"
-            / "alpaca_paper-1.0.0.json"
+            / (
+                f"{policy_id}-{policy_version}.json"
+                if separator
+                else "__invalid__.json"
+            )
         )
         profile: dict[str, Any] = {}
         submission: dict[str, Any] = {}
@@ -263,7 +347,8 @@ class DeploymentManager:
                     payload.get("account_id_hash", "")
                 )
                 binding_valid = (
-                    payload.get("profile_id") == PROFILE_ID
+                    payload.get("profile_id")
+                    == self.profile_id
                     and len(digest) == 64
                 )
             except Exception:
@@ -288,15 +373,17 @@ class DeploymentManager:
                 "detail": "available" if codex_available else "missing",
             },
             {
-                "name": "paper1_profile",
+                "name": f"{self.profile_id}_profile",
                 "ok": (
-                    profile.get("profile_id") == PROFILE_ID
-                    and profile.get("environment") == "paper"
+                    profile.get("profile_id")
+                    == self.profile_id
+                    and profile.get("environment")
+                    == self.profile_environment
                     and profile.get("enabled") is True
                     and profile.get("submission_policy")
-                    == "alpaca_paper@1.0.0"
+                    == submission_reference
                 ),
-                "detail": "paper only",
+                "detail": self.profile_environment,
             },
             {
                 "name": "credentials",
@@ -311,32 +398,53 @@ class DeploymentManager:
             {
                 "name": "submission_policy",
                 "ok": (
-                    submission.get("environment") == "paper"
+                    submission.get("environment")
+                    == self.profile_environment
                     and submission.get("allow_submit") is True
                     and submission.get("allow_direct_replace") is False
                     and isinstance(
                         submission.get("deployment_switches"),
                         dict,
                     )
-                    and submission["deployment_switches"].get(
-                        "live_submission_enabled"
+                    and (
+                        submission["deployment_switches"].get(
+                            f"{self.profile_environment}_submission_enabled"
+                        )
+                        is True
+                        or (
+                            self.profile_environment
+                            == "paper"
+                            and "paper_submission_enabled"
+                            not in submission[
+                                "deployment_switches"
+                            ]
+                            and submission[
+                                "deployment_switches"
+                            ].get(
+                                "live_submission_enabled"
+                            )
+                            is False
+                        )
                     )
-                    is False
                 ),
-                "detail": "paper write gate",
+                "detail": (
+                    f"{self.profile_environment} write gate"
+                ),
             },
             {
-                "name": "live_disabled",
+                "name": "environment_isolated",
                 "ok": (
-                    profile.get("environment") == "paper"
-                    and submission.get("environment") == "paper"
+                    profile.get("environment")
+                    == submission.get("environment")
+                    == self.profile_environment
                 ),
-                "detail": "live rejected",
+                "detail": self.paths.dotenv.name,
             },
         ]
         return {
             "schema_version": "1.0",
-            "profile_id": PROFILE_ID,
+            "profile_id": self.profile_id,
+            "environment": self.profile_environment,
             "healthy": all(
                 bool(item["ok"]) for item in checks
             ),
@@ -375,16 +483,16 @@ class DeploymentManager:
         source = (
             self.paths.project_root
             / "account_bindings"
-            / "paper1.json"
+            / f"{self.profile_id}.json"
         )
         target = (
             self.paths.runtime
             / "account_bindings"
-            / "paper1.json"
+            / f"{self.profile_id}.json"
         )
         if not source.is_file() and not target.is_file():
             raise DeploymentError(
-                "paper1账户绑定不存在"
+                f"{self.profile_id}账户绑定不存在"
             )
         if target.is_file():
             if source.is_file():
@@ -397,7 +505,7 @@ class DeploymentManager:
                     )
                 ):
                     raise DeploymentSafetyBlocked(
-                        "共享账户绑定与现有paper1不一致"
+                        "共享账户绑定与当前profile不一致"
                     )
             return
         target.parent.mkdir(
@@ -617,8 +725,8 @@ class DeploymentManager:
     ) -> dict[str, Any]:
         return {
             "schema_version": "1.0",
-            "profile_id": PROFILE_ID,
-            "environment": "paper",
+            "profile_id": self.profile_id,
+            "environment": self.profile_environment,
             "release_id": artifact.release_id,
             "release_path": str(artifact.root),
             "manifest_hash": artifact.manifest_hash,
@@ -689,7 +797,7 @@ class DeploymentManager:
         except Exception:
             return False
         return (
-            payload.get("profile_id") == PROFILE_ID
+            payload.get("profile_id") == self.profile_id
             and int(payload.get("submitted_count", 0)) > 0
             and int(payload.get("uncertain_count", 1)) == 0
             and payload.get("reconciled") is True
@@ -712,7 +820,11 @@ class DeploymentManager:
         old_previous = self._previous_document()
         switched = False
         try:
-            if enable_trading and not self._trading_deploy_verified():
+            if (
+                enable_trading
+                and self.profile_environment == "paper"
+                and not self._trading_deploy_verified()
+            ):
                 raise DeploymentSafetyBlocked(
                     "尚无自然真实submit并成功对账的验证记录；"
                     "禁止自动交易部署"
@@ -807,8 +919,8 @@ class DeploymentManager:
         self,
     ) -> tuple[Path, dict[str, Any]] | None:
         pattern = (
-            "accounts/paper1/strategies/"
-            f"{STRATEGY_ID}/{STRATEGY_VERSION}/"
+            f"accounts/{self.profile_id}/strategies/"
+            f"{self.strategy_id}/{self.strategy_version}/"
             "*/cycles/*/cycle_state.json"
         )
         candidates = sorted(
@@ -829,6 +941,8 @@ class DeploymentManager:
         allow_trade: bool,
         command_name: str,
         force_full: bool = False,
+        bind_account: bool = False,
+        maintenance_only: bool = False,
     ) -> ExitCode:
         before = self._latest_cycle_state()
         before_path = before[0] if before else None
@@ -871,13 +985,22 @@ class DeploymentManager:
             "-u",
             str(application_root / "src" / "v2" / "main.py"),
             "--profile",
-            PROFILE_ID,
+            self.profile_id,
             "--unattended",
         ]
+        if bind_account:
+            command.append("--bind-account")
         if allow_trade:
             command.append("--allow-trade")
         if force_full:
             command.append("--force-full")
+        if maintenance_only:
+            command.extend(
+                [
+                    "--new-cycle",
+                    "--maintenance-only",
+                ]
+            )
         secrets = dotenv_secret_values(
             self.paths.dotenv
         )
@@ -1001,7 +1124,8 @@ class DeploymentManager:
             self.paths.verification_marker,
             {
                 "schema_version": "1.0",
-                "profile_id": PROFILE_ID,
+                "profile_id": self.profile_id,
+                "environment": self.profile_environment,
                 "cycle_id": state.get("cycle_id"),
                 "submitted_count": submitted,
                 "uncertain_count": uncertain,
@@ -1015,6 +1139,8 @@ class DeploymentManager:
         *,
         allow_trade: bool,
         force_full: bool = False,
+        bind_account: bool = False,
+        maintenance_only: bool = False,
     ) -> ExitCode:
         root = self.paths.project_root
         commit = self._git_commit()
@@ -1028,11 +1154,28 @@ class DeploymentManager:
             allow_trade=allow_trade,
             force_full=(
                 allow_trade or force_full
+                if self.profile_environment == "paper"
+                else force_full
+            ),
+            **(
+                {"bind_account": True}
+                if bind_account
+                else {}
+            ),
+            **(
+                {"maintenance_only": True}
+                if maintenance_only
+                else {}
             ),
             command_name=(
                 "manual-paper"
+                if (
+                    allow_trade
+                    and self.profile_environment == "paper"
+                )
+                else f"manual-{self.profile_environment}-trade"
                 if allow_trade
-                else "manual-dry-run"
+                else f"manual-{self.profile_environment}-dry-run"
             ),
         )
 
@@ -1047,7 +1190,7 @@ class DeploymentManager:
             allow_trade=bool(
                 current.get("trading_enabled")
             ),
-            command_name="launchd-paper1",
+            command_name=f"launchd-{self.profile_id}",
         )
 
     def start(self) -> None:
@@ -1123,12 +1266,25 @@ class DeploymentManager:
         try:
             profile = load_json(
                 config_root
-                / "config/v2/profiles/paper1.json"
+                / "config/v2/profiles"
+                / f"{self.profile_id}.json"
+            )
+            policy_reference = str(
+                profile.get(
+                    "submission_policy", ""
+                )
+            )
+            policy_id, separator, policy_version = (
+                policy_reference.partition("@")
             )
             submission_policy = load_json(
                 config_root
                 / "config/v2/submission_policies/"
-                "alpaca_paper-1.0.0.json"
+                / (
+                    f"{policy_id}-{policy_version}.json"
+                    if separator
+                    else "__invalid__.json"
+                )
             )
         except Exception:
             pass
@@ -1138,7 +1294,8 @@ class DeploymentManager:
         summary = reconciliation.get("summary", {})
         return {
             "schema_version": "1.0",
-            "profile_id": PROFILE_ID,
+            "profile_id": self.profile_id,
+            "environment": self.profile_environment,
             "account_hash_prefix": binding_hash,
             "current_release": (
                 current.get("release_id")

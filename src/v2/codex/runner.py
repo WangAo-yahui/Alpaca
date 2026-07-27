@@ -57,6 +57,8 @@ CODEX_NETWORK_ERROR_MARKERS = (
 
 def _stage_label(command: list[str]) -> str:
     joined = " ".join(command).lower()
+    if "natural_language_report" in joined:
+        return "自然语言日报"
     if "portfolio" in joined:
         return "组合"
     if "execution" in joined:
@@ -201,7 +203,10 @@ def _execute(
     env: dict[str, str],
     timeout: float,
 ) -> subprocess.CompletedProcess[str]:
-    _probe_codex_network()
+    if env.get(
+        "WA_SKIP_CODEX_NETWORK_PROBE"
+    ) != "1":
+        _probe_codex_network()
     label = _stage_label(command)
     print(
         f"Codex{label}已启动；单次最长等待"
@@ -248,9 +253,15 @@ def _execute(
                 stderr_snapshot = _stream_snapshot(
                     stderr_file
                 )
-                if _repeated_network_failure(
-                    stderr_snapshot,
-                    elapsed=elapsed,
+                if (
+                    env.get(
+                        "WA_ALLOW_CODEX_NETWORK_RETRIES"
+                    )
+                    != "1"
+                    and _repeated_network_failure(
+                        stderr_snapshot,
+                        elapsed=elapsed,
+                    )
                 ):
                     _terminate_process_group(process)
                     raise TemporaryDataError(

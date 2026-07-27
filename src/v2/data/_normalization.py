@@ -43,6 +43,33 @@ def normalized_symbol(value: object) -> str:
     return enum_text(value).upper()
 
 
+def crypto_request_symbol(value: object) -> str:
+    """Convert legacy Alpaca crypto symbols to pair notation."""
+
+    normalized = normalized_symbol(value)
+    if "/" in normalized:
+        return normalized
+    for quote_currency in (
+        "USDT",
+        "USDC",
+        "USD",
+        "BTC",
+    ):
+        if (
+            normalized.endswith(quote_currency)
+            and len(normalized)
+            > len(quote_currency)
+        ):
+            return (
+                normalized[
+                    : -len(quote_currency)
+                ]
+                + "/"
+                + quote_currency
+            )
+    return normalized
+
+
 def finite_float(
     value: object,
 ) -> float | None:

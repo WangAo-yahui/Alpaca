@@ -1,7 +1,7 @@
-"""安全创建和调用 WA Trader v2 的 Alpaca paper 客户端。
+"""安全创建和调用 WA Trader v2 的 Alpaca Paper/Live 客户端。
 
 作用：按 profile 指定的环境变量名读取凭据，并统一包装 broker API 异常。
-重要性：该模块不得泄露密钥，且必须拒绝 live 客户端，是 broker 访问的核心安全边界。
+重要性：该模块不得泄露密钥，且必须确保 profile、凭据文件与 SDK 环境一致，是 broker 访问的核心安全边界。
 """
 
 from __future__ import annotations
@@ -14,6 +14,7 @@ from typing import Any, TypeVar
 from typing import TYPE_CHECKING
 
 from alpaca.data.historical import (
+    CryptoHistoricalDataClient,
     StockHistoricalDataClient,
 )
 from alpaca.trading.client import TradingClient
@@ -48,10 +49,17 @@ class AlpacaClients:
     trading: Any
     stock_data: Any
     paper: bool = True
+    crypto_data: Any | None = None
+
+    @property
+    def environment(self) -> str:
+        return "paper" if self.paper else "live"
+
+    @property
+    def live(self) -> bool:
+        return not self.paper
 
     def validate(self) -> None:
-        if not self.paper:
-            raise LiveTradingRejected()
         if self.trading is None:
             raise ConfigurationError(
                 "Alpaca trading client不能为空"
@@ -100,6 +108,9 @@ def create_alpaca_clients(
     stock_data_factory: Callable[
         ..., Any
     ] = StockHistoricalDataClient,
+    crypto_data_factory: Callable[
+        ..., Any
+    ] = CryptoHistoricalDataClient,
     profile: "Profile | None" = None,
 ) -> AlpacaClients:
     """Create the only Alpaca client pair used by v2.
@@ -108,7 +119,12 @@ def create_alpaca_clients(
     Neither credential value is ever included in an error message or details.
     """
 
-    if live or not paper:
+    if paper == live:
+        raise ConfigurationError(
+            "Alpaca客户端必须且只能选择一个环境",
+            code="ALPACA_ENVIRONMENT_INVALID",
+        )
+    if live and profile is None:
         raise LiveTradingRejected()
 
     if environ is None:
@@ -136,7 +152,15 @@ def create_alpaca_clients(
         dotenv_path = (
             override_path.resolve()
             if override_path is not None
-            else root / ".env"
+            else root
+            / (
+                ".env_live"
+                if (
+                    profile is not None
+                    and profile.environment == "live"
+                )
+                else ".env"
+            )
         )
         load_dotenv(
             dotenv_path=dotenv_path,
@@ -148,14 +172,15 @@ def create_alpaca_clients(
     else:
         source_environment = environ
 
-    if not _paper_environment_enabled(
-        source_environment
-    ):
-        raise LiveTradingRejected()
-
     if profile is not None:
-        if profile.environment != "paper":
-            raise LiveTradingRejected()
+        expected_paper = (
+            profile.environment == "paper"
+        )
+        if paper != expected_paper:
+            raise ConfigurationError(
+                "CLI环境与profile环境不一致",
+                code="ALPACA_ENVIRONMENT_MISMATCH",
+            )
         api_names = (
             profile.credential_key_env,
         )
@@ -163,6 +188,13 @@ def create_alpaca_clients(
             profile.credential_secret_env,
         )
     else:
+        if paper and not _paper_environment_enabled(
+            source_environment
+        ):
+            raise ConfigurationError(
+                "ALPACA_PAPER与请求环境不一致",
+                code="ALPACA_ENVIRONMENT_MISMATCH",
+            )
         api_names = API_KEY_NAMES
         secret_names = SECRET_KEY_NAMES
 
@@ -182,7 +214,7 @@ def create_alpaca_clients(
         missing.append("/".join(secret_names))
     if missing:
         raise ConfigurationError(
-            "缺少Alpaca paper凭据",
+            "缺少当前profile的Alpaca凭据",
             code="ALPACA_CREDENTIALS_MISSING",
             details={"missing_variables": missing},
         )
@@ -191,15 +223,19 @@ def create_alpaca_clients(
         trading = trading_factory(
             api_key=api_key,
             secret_key=secret_key,
-            paper=True,
+            paper=paper,
         )
         stock_data = stock_data_factory(
             api_key=api_key,
             secret_key=secret_key,
         )
+        crypto_data = crypto_data_factory(
+            api_key=api_key,
+            secret_key=secret_key,
+        )
     except Exception as error:
         raise BrokerUnavailableError(
-            "无法创建Alpaca paper客户端",
+            "无法创建Alpaca客户端",
             code="ALPACA_CLIENT_CREATION_FAILED",
             details={
                 "exception_type": (
@@ -211,7 +247,8 @@ def create_alpaca_clients(
     clients = AlpacaClients(
         trading=trading,
         stock_data=stock_data,
-        paper=True,
+        paper=paper,
+        crypto_data=crypto_data,
     )
     clients.validate()
     return clients

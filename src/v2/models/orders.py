@@ -206,6 +206,14 @@ class ProposedOrder:
     conviction: str = "none"
     depends_on: tuple[str, ...] = ()
     price_condition: Mapping[str, Any] = field(default_factory=dict)
+    order_class: str = "simple"
+    stop_price: Decimal | None = None
+    trail_price: Decimal | None = None
+    trail_percent: Decimal | None = None
+    take_profit_limit_price: Decimal | None = None
+    stop_loss_stop_price: Decimal | None = None
+    stop_loss_limit_price: Decimal | None = None
+    protection_role: str = "none"
 
     @classmethod
     def from_dict(
@@ -337,6 +345,67 @@ class ProposedOrder:
                 )
                 else {}
             ),
+            order_class=str(
+                payload.get("order_class", "simple")
+            ),
+            stop_price=(
+                decimal_value(payload["stop_price"])
+                if payload.get("stop_price")
+                is not None
+                else None
+            ),
+            trail_price=(
+                decimal_value(payload["trail_price"])
+                if payload.get("trail_price")
+                is not None
+                else None
+            ),
+            trail_percent=(
+                decimal_value(
+                    payload["trail_percent"]
+                )
+                if payload.get("trail_percent")
+                is not None
+                else None
+            ),
+            take_profit_limit_price=(
+                decimal_value(
+                    payload[
+                        "take_profit_limit_price"
+                    ]
+                )
+                if payload.get(
+                    "take_profit_limit_price"
+                )
+                is not None
+                else None
+            ),
+            stop_loss_stop_price=(
+                decimal_value(
+                    payload["stop_loss_stop_price"]
+                )
+                if payload.get(
+                    "stop_loss_stop_price"
+                )
+                is not None
+                else None
+            ),
+            stop_loss_limit_price=(
+                decimal_value(
+                    payload["stop_loss_limit_price"]
+                )
+                if payload.get(
+                    "stop_loss_limit_price"
+                )
+                is not None
+                else None
+            ),
+            protection_role=str(
+                payload.get(
+                    "protection_role",
+                    "none",
+                )
+            ),
         )
 
     def with_status(
@@ -404,6 +473,47 @@ class ProposedOrder:
             "conviction": self.conviction,
             "depends_on": list(self.depends_on),
             "price_condition": dict(self.price_condition),
+            "order_class": self.order_class,
+            "stop_price": (
+                decimal_text(self.stop_price)
+                if self.stop_price is not None
+                else None
+            ),
+            "trail_price": (
+                decimal_text(self.trail_price)
+                if self.trail_price is not None
+                else None
+            ),
+            "trail_percent": (
+                decimal_text(self.trail_percent)
+                if self.trail_percent is not None
+                else None
+            ),
+            "take_profit_limit_price": (
+                decimal_text(
+                    self.take_profit_limit_price
+                )
+                if self.take_profit_limit_price
+                is not None
+                else None
+            ),
+            "stop_loss_stop_price": (
+                decimal_text(
+                    self.stop_loss_stop_price
+                )
+                if self.stop_loss_stop_price
+                is not None
+                else None
+            ),
+            "stop_loss_limit_price": (
+                decimal_text(
+                    self.stop_loss_limit_price
+                )
+                if self.stop_loss_limit_price
+                is not None
+                else None
+            ),
+            "protection_role": self.protection_role,
         }
 
 
@@ -707,6 +817,14 @@ class BrokerRequestSpec:
     limit_price: Decimal | None = None
     extended_hours: bool = False
     local_sdk_validated: bool = False
+    order_class: str = "simple"
+    stop_price: Decimal | None = None
+    trail_price: Decimal | None = None
+    trail_percent: Decimal | None = None
+    take_profit_limit_price: Decimal | None = None
+    stop_loss_stop_price: Decimal | None = None
+    stop_loss_limit_price: Decimal | None = None
+    protection_role: str = "none"
 
     def to_dict(self) -> dict[str, Any]:
         return {
@@ -721,6 +839,47 @@ class BrokerRequestSpec:
                 if self.limit_price is not None
                 else None
             ),
+            "order_class": self.order_class,
+            "stop_price": (
+                decimal_text(self.stop_price)
+                if self.stop_price is not None
+                else None
+            ),
+            "trail_price": (
+                decimal_text(self.trail_price)
+                if self.trail_price is not None
+                else None
+            ),
+            "trail_percent": (
+                decimal_text(self.trail_percent)
+                if self.trail_percent is not None
+                else None
+            ),
+            "take_profit_limit_price": (
+                decimal_text(
+                    self.take_profit_limit_price
+                )
+                if self.take_profit_limit_price
+                is not None
+                else None
+            ),
+            "stop_loss_stop_price": (
+                decimal_text(
+                    self.stop_loss_stop_price
+                )
+                if self.stop_loss_stop_price
+                is not None
+                else None
+            ),
+            "stop_loss_limit_price": (
+                decimal_text(
+                    self.stop_loss_limit_price
+                )
+                if self.stop_loss_limit_price
+                is not None
+                else None
+            ),
+            "protection_role": self.protection_role,
             "extended_hours": self.extended_hours,
             "client_order_id": self.client_order_id,
             "local_sdk_validated": (

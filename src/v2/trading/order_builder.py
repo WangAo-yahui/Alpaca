@@ -6,9 +6,20 @@
 
 from __future__ import annotations
 
-from decimal import Decimal, ROUND_DOWN
+from decimal import (
+    Decimal,
+    ROUND_CEILING,
+    ROUND_DOWN,
+    ROUND_FLOOR,
+)
 from typing import Any, Mapping
 
+from v2.crypto_liquidation import (
+    is_automatic_crypto_liquidation_decision,
+)
+from v2.data.orders import (
+    is_system_protective_order,
+)
 from v2.models.orders import (
     ZERO,
     OrderAction,
@@ -29,6 +40,9 @@ from v2.runtime import CyclePaths, utc_now_iso
 from v2.trading.idempotency import (
     build_client_order_id,
     build_plan_id,
+)
+from v2.trading.protection import (
+    apply_protection_plans,
 )
 
 
@@ -91,6 +105,30 @@ def _floor(
         _quantum(precision),
         rounding=ROUND_DOWN,
     )
+
+
+def _floor_to_increment(
+    value: Decimal,
+    increment: Decimal,
+) -> Decimal:
+    if increment <= ZERO:
+        return value
+    units = (value / increment).to_integral_value(
+        rounding=ROUND_FLOOR,
+    )
+    return units * increment
+
+
+def _ceil_to_increment(
+    value: Decimal,
+    increment: Decimal,
+) -> Decimal:
+    if increment <= ZERO:
+        return value
+    units = (value / increment).to_integral_value(
+        rounding=ROUND_CEILING,
+    )
+    return units * increment
 
 
 def _active_orders(
@@ -387,6 +425,8 @@ def _exposure(
             != symbol
         ):
             continue
+        if is_system_protective_order(order):
+            continue
         remaining = _remaining_quantity(order)
         if remaining is None or remaining <= ZERO:
             continue
@@ -613,6 +653,15 @@ def build_order_plan(
             portfolio,
         )
     )
+    protection_by_symbol = {
+        str(item.get("symbol", "")).upper(): item
+        for item in _records(
+            execution_output.get(
+                "protection_plans"
+            )
+        )
+        if item.get("symbol")
+    }
 
     sector_potential: dict[str, Decimal] = {}
     exposure_cache: dict[
@@ -682,7 +731,49 @@ def build_order_plan(
 
         quote = _mapping(quotes.get(symbol))
         asset = _mapping(assets.get(symbol))
+        asset_class = str(
+            asset.get("asset_class", "")
+        )
+        is_crypto = asset_class == "crypto"
+        protection_plan = _mapping(
+            protection_by_symbol.get(symbol)
+        )
+        queued_protected_entry = (
+            not is_crypto
+            and market_phase in EXTENDED_PHASES
+            and str(
+                protection_plan.get(
+                    "apply_to",
+                    "",
+                )
+            )
+            in {"new_entry", "both"}
+            and str(
+                protection_plan.get(
+                    "mode",
+                    "none",
+                )
+            )
+            != "none"
+            and str(
+                decision.get(
+                    "side",
+                    "none",
+                )
+            )
+            == "buy"
+        )
         position = _mapping(positions.get(symbol))
+        crypto_policy = _mapping(
+            order_policy.settings.get("crypto")
+        )
+        automatic_crypto_liquidation = (
+            is_automatic_crypto_liquidation_decision(
+                decision,
+                asset,
+                crypto_policy,
+            )
+        )
         metadata = _mapping(portfolio.get(symbol))
         sector = str(
             metadata.get("sector", "unknown")
@@ -727,6 +818,21 @@ def build_order_plan(
             quote,
             reference_kind,
         )
+        if (
+            reference_price is None
+            and automatic_crypto_liquidation
+        ):
+            reference_price = decimal_or_zero(
+                position.get("current_price")
+            )
+            if reference_price <= ZERO:
+                reference_price = decimal_or_zero(
+                    position.get(
+                        "average_entry_price"
+                    )
+                )
+            if reference_price <= ZERO:
+                reference_price = None
         order_intent = _mapping(
             decision.get("order_intent")
         )
@@ -775,6 +881,8 @@ def build_order_plan(
         if (
             market_phase
             in {"overnight", "overnight_session"}
+            and not is_crypto
+            and not queued_protected_entry
             and (
                 asset.get("overnight_tradable")
                 is not True
@@ -797,13 +905,37 @@ def build_order_plan(
         ):
             status = OrderStatus.BLOCKED
             reasons.append("asset_class_unsupported")
-        if market_phase == "unknown":
+        if (
+            market_phase == "unknown"
+            and not is_crypto
+        ):
             status = OrderStatus.BLOCKED
             reasons.append("market_phase_unknown")
-        elif market_phase in CLOSED_PHASES:
+        elif (
+            market_phase in CLOSED_PHASES
+            and not is_crypto
+        ):
             queue = _mapping(
                 order_policy.settings.get(
                     "queue_policy"
+                )
+            )
+            closed_policy = _mapping(
+                order_policy.settings.get(
+                    "closed_session_queue"
+                )
+            )
+            closed_fraction_limit = decimal_or_zero(
+                closed_policy.get(
+                    "maximum_open_execution_fraction"
+                    if str(
+                        decision.get(
+                            "portfolio_action",
+                            "",
+                        )
+                    )
+                    in {"open", "increase"}
+                    else "maximum_reduce_execution_fraction"
                 )
             )
             capabilities = _mapping(
@@ -819,12 +951,100 @@ def build_order_plan(
                 is True
                 and order_intent.get("allow_queue")
                 is True
+                and order_type
+                in set(
+                    closed_policy.get(
+                        "supported_order_types",
+                        [],
+                    )
+                )
+                and time_in_force
+                in set(
+                    closed_policy.get(
+                        "supported_time_in_force",
+                        [],
+                    )
+                )
+                and requested_extended is False
+                and fraction
+                <= closed_fraction_limit
             ):
                 status = OrderStatus.BLOCKED
                 reasons.append(
                     "closed_session_queue_unsupported"
                 )
-        if extended:
+        if is_crypto:
+            supported_crypto = set(
+                _mapping(
+                    order_policy.settings.get(
+                        "supported_order_types"
+                    )
+                ).get("crypto", [])
+            )
+            if (
+                order_type
+                not in supported_crypto
+                or time_in_force
+                not in set(
+                    crypto_policy.get(
+                        "supported_time_in_force",
+                        [],
+                    )
+                )
+                or requested_extended
+            ):
+                status = OrderStatus.BLOCKED
+                reasons.append(
+                    "crypto_order_intent_unsupported"
+                )
+            if (
+                side == "buy"
+                and not position
+                and crypto_policy.get(
+                    "allow_new_positions"
+                )
+                is not True
+            ):
+                status = OrderStatus.BLOCKED
+                reasons.append(
+                    "crypto_new_position_forbidden"
+                )
+            if (
+                side != "sell"
+                or str(
+                    decision.get(
+                        "portfolio_action",
+                        "",
+                    )
+                )
+                not in {"reduce", "close"}
+            ):
+                status = OrderStatus.BLOCKED
+                reasons.append(
+                    "crypto_position_expansion_forbidden"
+                )
+            if (
+                decimal_or_zero(
+                    asset.get("min_order_size")
+                )
+                <= ZERO
+                or decimal_or_zero(
+                    asset.get("min_trade_increment")
+                )
+                <= ZERO
+                or (
+                    order_type == "limit"
+                    and decimal_or_zero(
+                        asset.get("price_increment")
+                    )
+                    <= ZERO
+                )
+            ):
+                status = OrderStatus.BLOCKED
+                reasons.append(
+                    "crypto_asset_increment_missing"
+                )
+        elif extended:
             supported_extended = set(
                 _mapping(
                     order_policy.settings.get(
@@ -832,7 +1052,13 @@ def build_order_plan(
                     )
                 ).get("extended_hours", [])
             )
-            if (
+            if queued_protected_entry:
+                if order_type != "limit":
+                    status = OrderStatus.BLOCKED
+                    reasons.append(
+                        "protected_entry_queue_requires_limit"
+                    )
+            elif (
                 not requested_extended
                 or order_type
                 not in supported_extended
@@ -851,8 +1077,17 @@ def build_order_plan(
             )
             if (
                 market_phase == "regular_session"
-                and order_type
-                not in supported_regular
+                and (
+                    order_type
+                    not in supported_regular
+                    or time_in_force
+                    not in set(
+                        order_policy.settings.get(
+                            "supported_time_in_force",
+                            [],
+                        )
+                    )
+                )
             ):
                 status = OrderStatus.BLOCKED
                 reasons.append(
@@ -873,6 +1108,21 @@ def build_order_plan(
                 status = OrderStatus.BLOCKED
                 reasons.append("limit_price_invalid")
                 limit_price = None
+            elif is_crypto:
+                price_increment = decimal_or_zero(
+                    asset.get("price_increment")
+                )
+                limit_price = (
+                    _floor_to_increment(
+                        limit_price,
+                        price_increment,
+                    )
+                    if side == "buy"
+                    else _ceil_to_increment(
+                        limit_price,
+                        price_increment,
+                    )
+                )
             else:
                 limit_price = _floor(
                     limit_price,
@@ -918,14 +1168,28 @@ def build_order_plan(
                 symbol_capacity,
                 sector_capacity,
             )
-            quantity = _floor(
-                allowed_value / reference_price,
-                (
-                    fractional_precision
-                    if asset.get("fractionable")
-                    is True
-                    else 0
-                ),
+            raw_quantity = (
+                allowed_value / reference_price
+            )
+            quantity = (
+                _floor_to_increment(
+                    raw_quantity,
+                    decimal_or_zero(
+                        asset.get(
+                            "min_trade_increment"
+                        )
+                    ),
+                )
+                if is_crypto
+                else _floor(
+                    raw_quantity,
+                    (
+                        fractional_precision
+                        if asset.get("fractionable")
+                        is True
+                        else 0
+                    ),
+                )
             )
             planned_value = (
                 quantity * reference_price
@@ -958,14 +1222,25 @@ def build_order_plan(
                     available,
                 )
             )
-            quantity = _floor(
-                desired,
-                (
-                    fractional_precision
-                    if asset.get("fractionable")
-                    is True
-                    else 0
-                ),
+            quantity = (
+                _floor_to_increment(
+                    desired,
+                    decimal_or_zero(
+                        asset.get(
+                            "min_trade_increment"
+                        )
+                    ),
+                )
+                if is_crypto
+                else _floor(
+                    desired,
+                    (
+                        fractional_precision
+                        if asset.get("fractionable")
+                        is True
+                        else 0
+                    ),
+                )
             )
             planned_value = (
                 quantity * reference_price
@@ -973,6 +1248,30 @@ def build_order_plan(
         else:
             status = OrderStatus.SKIPPED
             reasons.append("target_already_covered")
+
+        if is_crypto:
+            trade_increment = decimal_or_zero(
+                asset.get("min_trade_increment")
+            )
+            quantity = _floor_to_increment(
+                quantity,
+                trade_increment,
+            )
+            planned_value = (
+                quantity * reference_price
+            )
+            minimum_quantity = decimal_or_zero(
+                asset.get("min_order_size")
+            )
+            if (
+                status == OrderStatus.PROPOSED
+                and minimum_quantity > ZERO
+                and quantity < minimum_quantity
+            ):
+                status = OrderStatus.SKIPPED
+                reasons.append(
+                    "below_asset_min_order_size"
+                )
 
         if (
             status == OrderStatus.PROPOSED
@@ -992,6 +1291,9 @@ def build_order_plan(
             for item in open_orders
             if str(item.get("symbol", "")).upper()
             == symbol
+            and not is_system_protective_order(
+                item
+            )
             and str(item.get("side", "")).lower()
             == side
             and (
@@ -1004,6 +1306,9 @@ def build_order_plan(
             for item in open_orders
             if str(item.get("symbol", "")).upper()
             == symbol
+            and not is_system_protective_order(
+                item
+            )
             and str(item.get("side", "")).lower()
             not in {side, ""}
             and (
@@ -1090,7 +1395,11 @@ def build_order_plan(
             reference_price=reference_price,
             limit_price=limit_price,
             time_in_force=time_in_force,
-            extended_hours=extended,
+            extended_hours=(
+                extended
+                and not is_crypto
+                and not queued_protected_entry
+            ),
             client_order_id=client_id,
             status=status,
             reason_codes=tuple(
@@ -1156,6 +1465,22 @@ def build_order_plan(
                     + planned_value
                 )
 
+    (
+        protected_orders,
+        protection_actions,
+        protection_warnings,
+    ) = apply_protection_plans(
+        paths=paths,
+        execution_output=execution_output,
+        snapshot=snapshot,
+        order_policy=order_policy,
+        permission=permission,
+        primary_orders=orders,
+        market_phase=market_phase,
+        fractional_precision=fractional_precision,
+        price_precision=price_precision,
+    )
+
     return ProposedOrderPlan(
         profile_id=paths.profile_id,
         strategy_id=paths.strategy_id,
@@ -1172,7 +1497,10 @@ def build_order_plan(
             snapshot_model.snapshot_hash
         ),
         permission=permission,
-        orders=tuple(orders),
-        actions=actions,
+        orders=protected_orders,
+        actions=tuple(
+            (*actions, *protection_actions)
+        ),
+        warnings=protection_warnings,
         global_issues=tuple(global_issues),
     )

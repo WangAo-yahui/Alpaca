@@ -10,6 +10,12 @@ from datetime import datetime, timezone
 from decimal import Decimal
 from typing import Any, Mapping
 
+from v2.crypto_liquidation import (
+    is_automatic_crypto_liquidation_order,
+)
+from v2.data.orders import (
+    is_system_protective_order,
+)
 from v2.models.orders import (
     ZERO,
     OrderStatus,
@@ -118,29 +124,23 @@ def _global_checks(
     payload = snapshot.payload
     account = _mapping(payload.get("account"))
     issues: list[OrderValidationIssue] = []
-    if plan.profile_id != "paper1":
-        issues.append(
-            _issue(
-                "PROFILE_NOT_PAPER1",
-                "Stage F仅允许paper1",
-                path="$.profile_id",
-            )
-        )
     if (
-        risk_profile.environment != "paper"
-        or order_policy.environment != "paper"
+        risk_profile.environment
+        != order_policy.environment
+        or risk_profile.environment
+        not in {"paper", "live"}
     ):
         issues.append(
             _issue(
-                "NON_PAPER_ENVIRONMENT",
-                "Stage F拒绝live或非paper配置",
+                "POLICY_ENVIRONMENT_MISMATCH",
+                "Stage F风险与订单policy环境不一致",
             )
         )
     if expected_account_id_hash is None:
         issues.append(
             _issue(
                 "ACCOUNT_BINDING_MISSING",
-                "缺少paper1账户绑定hash",
+                "缺少当前profile账户绑定hash",
                 path="$.account.account_id_hash",
             )
         )
@@ -268,6 +268,84 @@ def _global_checks(
                 "execution要求人工复核",
             )
         )
+    phase = str(payload.get("market_phase", ""))
+    if (
+        phase in CLOSED_PHASES
+        and order_policy.environment == "live"
+    ):
+        assets = _mapping(payload.get("assets"))
+        closed_policy = _mapping(
+            order_policy.settings.get(
+                "closed_session_queue"
+            )
+        )
+        for decision in _records(
+            execution_output.get("decisions")
+        ):
+            if decision.get(
+                "execution_decision"
+            ) not in {"approve", "modify"}:
+                continue
+            symbol = str(
+                decision.get("symbol", "")
+            ).upper()
+            if _mapping(
+                assets.get(symbol)
+            ).get("asset_class") == "crypto":
+                continue
+            action = str(
+                decision.get(
+                    "portfolio_action",
+                    "",
+                )
+            )
+            fraction_limit = decimal_or_zero(
+                closed_policy.get(
+                    "maximum_open_execution_fraction"
+                    if action
+                    in {"open", "increase"}
+                    else "maximum_reduce_execution_fraction"
+                )
+            )
+            fraction = decimal_or_zero(
+                decision.get(
+                    "execution_fraction"
+                )
+            )
+            intent = _mapping(
+                decision.get("order_intent")
+            )
+            if (
+                fraction > fraction_limit
+                or intent.get("preferred_type")
+                not in set(
+                    closed_policy.get(
+                        "supported_order_types",
+                        [],
+                    )
+                )
+                or intent.get(
+                    "time_in_force_preference"
+                )
+                not in set(
+                    closed_policy.get(
+                        "supported_time_in_force",
+                        [],
+                    )
+                )
+                or intent.get(
+                    "extended_hours_requested"
+                )
+                is not False
+                or intent.get("allow_queue")
+                is not True
+            ):
+                issues.append(
+                    _issue(
+                        "CLOSED_SESSION_EXECUTION_INVALID",
+                        "闭市排队意图超过保守比例或订单组合无效",
+                    )
+                )
     return issues
 
 
@@ -327,6 +405,14 @@ def _order_checks(
                 plan_id=plan_id,
             )
         )
+    assets = _mapping(snapshot.get("assets"))
+    asset = _mapping(assets.get(order.symbol))
+    is_crypto = (
+        asset.get("asset_class") == "crypto"
+    )
+    is_protective = (
+        order.protection_role != "none"
+    )
     precision = int(
         order_policy.settings.get(
             "fractional_quantity_precision",
@@ -339,6 +425,7 @@ def _order_checks(
         != order.quantity.to_integral_value()
     ) or (
         order.fractionable
+        and not is_crypto
         and not _precision_valid(
             order.quantity,
             precision,
@@ -392,6 +479,20 @@ def _order_checks(
     position = _mapping(
         positions.get(order.symbol)
     )
+    crypto_policy = _mapping(
+        order_policy.settings.get("crypto")
+    )
+    automatic_crypto_liquidation = (
+        is_automatic_crypto_liquidation_order(
+            side=order.side,
+            order_type=order.order_type,
+            time_in_force=order.time_in_force,
+            extended_hours=order.extended_hours,
+            asset=asset,
+            policy=crypto_policy,
+            position_exists=bool(position),
+        )
+    )
     if order.side == "sell":
         available = decimal_or_zero(
             position.get("available_quantity")
@@ -417,8 +518,6 @@ def _order_checks(
                 )
             )
 
-    assets = _mapping(snapshot.get("assets"))
-    asset = _mapping(assets.get(order.symbol))
     if asset.get("status") != "active":
         issues.append(
             _issue(
@@ -459,6 +558,8 @@ def _order_checks(
     )
     if (
         phase in {"overnight", "overnight_session"}
+        and not is_crypto
+        and not is_protective
         and (
             asset.get("overnight_tradable") is not True
             or asset.get("overnight_halted") is True
@@ -471,7 +572,10 @@ def _order_checks(
                 plan_id=plan_id,
             )
         )
-    if phase not in VALID_MARKET_PHASES:
+    if (
+        phase not in VALID_MARKET_PHASES
+        and not is_crypto
+    ):
         issues.append(
             _issue(
                 "MARKET_PHASE_INVALID",
@@ -479,7 +583,7 @@ def _order_checks(
                 plan_id=plan_id,
             )
         )
-    if phase == "unknown":
+    if phase == "unknown" and not is_crypto:
         issues.append(
             _issue(
                 "UNKNOWN_MARKET_NOT_APPROVABLE",
@@ -491,12 +595,23 @@ def _order_checks(
         quote.get("quote_age_seconds")
     )
     max_age = decimal_or_zero(
-        settings.get("quote_max_age_seconds")
+        settings.get(
+            "closed_session_quote_max_age_seconds"
+            if (
+                phase in CLOSED_PHASES
+                and not is_crypto
+            )
+            else "quote_max_age_seconds"
+        )
     )
     if (
-        quote.get("status") != "success"
-        or quote.get("quote_age_seconds") is None
-        or age > max_age
+        not automatic_crypto_liquidation
+        and (
+            quote.get("status") != "success"
+            or quote.get("quote_age_seconds")
+            is None
+            or age > max_age
+        )
     ):
         issues.append(
             _issue(
@@ -511,13 +626,19 @@ def _order_checks(
     spread_limit = decimal_or_zero(
         settings.get(
             "extended_spread_limit_bps"
-            if phase in EXTENDED_PHASES
+            if (
+                phase in EXTENDED_PHASES
+                and not is_crypto
+            )
             else "regular_spread_limit_bps"
         )
     )
     if (
-        quote.get("spread_bps") is None
-        or spread > spread_limit
+        not automatic_crypto_liquidation
+        and (
+            quote.get("spread_bps") is None
+            or spread > spread_limit
+        )
     ):
         issues.append(
             _issue(
@@ -532,7 +653,348 @@ def _order_checks(
             "supported_order_types"
         )
     )
-    if phase == "regular_session":
+    if is_protective:
+        protection = _mapping(
+            order_policy.settings.get(
+                "protective_orders"
+            )
+        )
+        allowed_classes = set(
+            protection.get(
+                "supported_order_classes",
+                [],
+            )
+        )
+        simple_types = set(
+            protection.get(
+                "supported_simple_types",
+                [],
+            )
+        )
+        fractional_types = set(
+            protection.get(
+                "fractional_supported_types",
+                [],
+            )
+        )
+        fractional = (
+            order.quantity
+            != order.quantity.to_integral_value()
+        )
+        if (
+            protection.get("enabled") is not True
+            or is_crypto
+        ):
+            issues.append(
+                _issue(
+                    "PROTECTIVE_ORDER_NOT_AUTHORIZED",
+                    "当前order policy未授权该保护单",
+                    plan_id=plan_id,
+                )
+            )
+        if order.extended_hours:
+            issues.append(
+                _issue(
+                    "PROTECTIVE_EXTENDED_HOURS_FORBIDDEN",
+                    "Alpaca高级和保护单不得启用extended_hours",
+                    plan_id=plan_id,
+                )
+            )
+        if order.order_class not in allowed_classes:
+            issues.append(
+                _issue(
+                    "PROTECTIVE_ORDER_CLASS_UNSUPPORTED",
+                    "保护单order_class不受policy支持",
+                    plan_id=plan_id,
+                )
+            )
+        if (
+            order.time_in_force
+            not in set(
+                order_policy.settings.get(
+                    "supported_time_in_force",
+                    [],
+                )
+            )
+        ):
+            issues.append(
+                _issue(
+                    "PROTECTIVE_TIME_IN_FORCE_UNSUPPORTED",
+                    "保护单TIF不受policy支持",
+                    plan_id=plan_id,
+                )
+            )
+        if fractional and (
+            order.order_class != "simple"
+            or order.order_type
+            not in fractional_types
+            or order.time_in_force
+            not in set(
+                protection.get(
+                    "fractional_time_in_force",
+                    [],
+                )
+            )
+        ):
+            issues.append(
+                _issue(
+                    "FRACTIONAL_PROTECTION_COMBINATION_INVALID",
+                    "碎股保护必须降级为券商允许的simple/day组合",
+                    plan_id=plan_id,
+                )
+            )
+        nested_take_profit = (
+            order.take_profit_limit_price
+        )
+        nested_stop = order.stop_loss_stop_price
+        if order.order_class == "simple":
+            if order.order_type not in simple_types:
+                issues.append(
+                    _issue(
+                        "PROTECTIVE_SIMPLE_TYPE_UNSUPPORTED",
+                        "simple保护单类型不受policy支持",
+                        plan_id=plan_id,
+                    )
+                )
+            if (
+                nested_take_profit is not None
+                or nested_stop is not None
+                or order.stop_loss_limit_price
+                is not None
+            ):
+                issues.append(
+                    _issue(
+                        "SIMPLE_ORDER_HAS_NESTED_LEGS",
+                        "simple保护单不得携带高级订单legs",
+                        plan_id=plan_id,
+                    )
+                )
+        elif order.order_class == "bracket":
+            if (
+                order.side != "buy"
+                or order.order_type
+                not in {"market", "limit"}
+                or nested_take_profit is None
+                or nested_stop is None
+            ):
+                issues.append(
+                    _issue(
+                        "BRACKET_COMBINATION_INVALID",
+                        "bracket必须是带止盈和止损的新入场买单",
+                        plan_id=plan_id,
+                    )
+                )
+        elif order.order_class == "oco":
+            if (
+                order.side != "sell"
+                or order.order_type != "limit"
+                or order.limit_price is None
+                or nested_take_profit is None
+                or nested_stop is None
+            ):
+                issues.append(
+                    _issue(
+                        "OCO_COMBINATION_INVALID",
+                        "OCO必须是现有持仓的止盈加止损卖出组合",
+                        plan_id=plan_id,
+                    )
+                )
+        elif order.order_class == "oto":
+            if (
+                order.side != "buy"
+                or order.order_type
+                not in {"market", "limit"}
+                or (
+                    (nested_take_profit is None)
+                    == (nested_stop is None)
+                )
+            ):
+                issues.append(
+                    _issue(
+                        "OTO_COMBINATION_INVALID",
+                        "OTO新入场必须且只能携带一个止盈或止损leg",
+                        plan_id=plan_id,
+                    )
+                )
+        if order.order_type == "stop" and (
+            order.stop_price is None
+            or order.stop_price <= ZERO
+        ):
+            issues.append(
+                _issue(
+                    "STOP_PRICE_INVALID",
+                    "stop订单必须有正stop_price",
+                    plan_id=plan_id,
+                )
+            )
+        if order.order_type == "stop_limit" and (
+            order.stop_price is None
+            or order.stop_price <= ZERO
+            or order.limit_price is None
+            or order.limit_price <= ZERO
+            or order.limit_price > order.stop_price
+        ):
+            issues.append(
+                _issue(
+                    "STOP_LIMIT_PRICES_INVALID",
+                    "卖出stop-limit必须满足0 < limit <= stop",
+                    plan_id=plan_id,
+                )
+            )
+        if order.order_type == "trailing_stop" and (
+            order.order_class != "simple"
+            or (
+                (order.trail_price is None)
+                == (order.trail_percent is None)
+            )
+        ):
+            issues.append(
+                _issue(
+                    "TRAILING_STOP_COMBINATION_INVALID",
+                    "移动止损必须是simple且只能设置trail_price或trail_percent之一",
+                    plan_id=plan_id,
+                )
+            )
+        if (
+            order.side == "sell"
+            and order.order_type == "limit"
+            and order.limit_price is not None
+            and order.limit_price
+            <= order.reference_price
+        ):
+            issues.append(
+                _issue(
+                    "TAKE_PROFIT_NOT_ABOVE_REFERENCE",
+                    "多头止盈卖价必须高于当前参考价",
+                    plan_id=plan_id,
+                )
+            )
+        if (
+            order.stop_price is not None
+            and order.stop_price
+            >= order.reference_price
+        ) or (
+            nested_stop is not None
+            and nested_stop
+            >= order.reference_price
+        ):
+            issues.append(
+                _issue(
+                    "STOP_NOT_BELOW_REFERENCE",
+                    "多头止损触发价必须低于当前参考价",
+                    plan_id=plan_id,
+                )
+            )
+        if (
+            order.stop_loss_limit_price
+            is not None
+            and nested_stop is not None
+            and order.stop_loss_limit_price
+            > nested_stop
+        ):
+            issues.append(
+                _issue(
+                    "NESTED_STOP_LIMIT_RELATION_INVALID",
+                    "卖出保护leg的limit不得高于stop",
+                    plan_id=plan_id,
+                )
+            )
+    elif is_crypto:
+        minimum_quantity = decimal_or_zero(
+            asset.get("min_order_size")
+        )
+        trade_increment = decimal_or_zero(
+            asset.get("min_trade_increment")
+        )
+        price_increment = decimal_or_zero(
+            asset.get("price_increment")
+        )
+        position_action_valid = (
+            order.side == "sell"
+            and bool(position)
+        )
+        if (
+            minimum_quantity <= ZERO
+            or trade_increment <= ZERO
+            or (
+                order.order_type == "limit"
+                and price_increment <= ZERO
+            )
+        ):
+            issues.append(
+                _issue(
+                    "CRYPTO_ASSET_INCREMENT_MISSING",
+                    "加密资产缺少券商数量或价格步进",
+                    plan_id=plan_id,
+                )
+            )
+        if (
+            minimum_quantity > ZERO
+            and order.quantity < minimum_quantity
+        ):
+            issues.append(
+                _issue(
+                    "CRYPTO_MINIMUM_ORDER_SIZE_INVALID",
+                    "加密订单数量低于资产最小订单数量",
+                    plan_id=plan_id,
+                )
+            )
+        if (
+            trade_increment > ZERO
+            and order.quantity % trade_increment
+            != ZERO
+        ):
+            issues.append(
+                _issue(
+                    "CRYPTO_QUANTITY_INCREMENT_INVALID",
+                    "加密订单数量不符合资产交易步进",
+                    plan_id=plan_id,
+                )
+            )
+        if (
+            order.limit_price is not None
+            and price_increment > ZERO
+            and order.limit_price % price_increment
+            != ZERO
+        ):
+            issues.append(
+                _issue(
+                    "CRYPTO_PRICE_INCREMENT_INVALID",
+                    "加密限价不符合资产价格步进",
+                    plan_id=plan_id,
+                )
+            )
+        if (
+            order.order_type
+            not in set(
+                supported_types.get("crypto", [])
+            )
+            or order.time_in_force
+            not in set(
+                crypto_policy.get(
+                    "supported_time_in_force",
+                    [],
+                )
+            )
+            or order.extended_hours
+            or not position_action_valid
+            or (
+                order.side == "buy"
+                and not position
+                and crypto_policy.get(
+                    "allow_new_positions"
+                )
+                is not True
+            )
+        ):
+            issues.append(
+                _issue(
+                    "CRYPTO_ORDER_COMBINATION_INVALID",
+                    "加密订单类型、TIF、持仓方向或extended_hours无效",
+                    plan_id=plan_id,
+                )
+            )
+    elif phase == "regular_session":
         if order.order_type not in set(
             supported_types.get(
                 "regular_session",
@@ -543,6 +1005,19 @@ def _order_checks(
                 _issue(
                     "REGULAR_ORDER_TYPE_UNSUPPORTED",
                     "regular session订单类型不支持",
+                    plan_id=plan_id,
+                )
+            )
+        if order.time_in_force not in set(
+            order_policy.settings.get(
+                "supported_time_in_force",
+                [],
+            )
+        ):
+            issues.append(
+                _issue(
+                    "REGULAR_TIME_IN_FORCE_UNSUPPORTED",
+                    "regular session TIF不受order policy支持",
                     plan_id=plan_id,
                 )
             )
@@ -590,6 +1065,11 @@ def _order_checks(
         queue = _mapping(
             order_policy.settings.get("queue_policy")
         )
+        closed_policy = _mapping(
+            order_policy.settings.get(
+                "closed_session_queue"
+            )
+        )
         capabilities = _mapping(
             snapshot.get("broker_capabilities")
         )
@@ -599,6 +1079,21 @@ def _order_checks(
                 "supports_closed_session_queue"
             )
             is True
+            and order.order_type
+            in set(
+                closed_policy.get(
+                    "supported_order_types",
+                    [],
+                )
+            )
+            and order.time_in_force
+            in set(
+                closed_policy.get(
+                    "supported_time_in_force",
+                    [],
+                )
+            )
+            and not order.extended_hours
         ):
             issues.append(
                 _issue(
@@ -629,6 +1124,7 @@ def _order_checks(
     )
     if (
         order.limit_price is not None
+        and not is_crypto
         and not _precision_valid(
             order.limit_price,
             price_precision,
@@ -641,6 +1137,37 @@ def _order_checks(
                 plan_id=plan_id,
             )
         )
+    for field, value in (
+        ("stop_price", order.stop_price),
+        ("trail_price", order.trail_price),
+        (
+            "take_profit_limit_price",
+            order.take_profit_limit_price,
+        ),
+        (
+            "stop_loss_stop_price",
+            order.stop_loss_stop_price,
+        ),
+        (
+            "stop_loss_limit_price",
+            order.stop_loss_limit_price,
+        ),
+    ):
+        if (
+            value is not None
+            and not is_crypto
+            and not _precision_valid(
+                value,
+                price_precision,
+            )
+        ):
+            issues.append(
+                _issue(
+                    "PROTECTIVE_PRICE_PRECISION_INVALID",
+                    f"{field}精度无效",
+                    plan_id=plan_id,
+                )
+            )
     boundary = order.price_condition.get(
         "do_not_execute_above"
     )
@@ -671,6 +1198,9 @@ def _order_checks(
         for item in open_orders
         if str(item.get("symbol", "")).upper()
         == order.symbol
+        and not is_system_protective_order(
+            item
+        )
         and str(item.get("side", "")).lower()
         == order.side
     ]
@@ -679,6 +1209,9 @@ def _order_checks(
         for item in open_orders
         if str(item.get("symbol", "")).upper()
         == order.symbol
+        and not is_system_protective_order(
+            item
+        )
         and str(item.get("side", "")).lower()
         not in {order.side, ""}
     ]

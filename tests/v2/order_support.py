@@ -83,6 +83,9 @@ def execution_decision(
 def execution_output(
     *decisions: dict[str, Any],
     actions: list[dict[str, Any]] | None = None,
+    protection_plans: list[
+        dict[str, Any]
+    ] | None = None,
 ) -> dict[str, Any]:
     return {
         "schema_version": "1.0",
@@ -96,6 +99,7 @@ def execution_output(
         "decisions": list(
             decisions or (execution_decision(),)
         ),
+        "protection_plans": protection_plans or [],
         "open_order_actions": actions or [],
         "requires_manual_review": False,
     }

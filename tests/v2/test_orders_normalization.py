@@ -47,6 +47,43 @@ class OrderNormalizationTests(unittest.TestCase):
             "MU",
         )
 
+    def test_advanced_order_legs_and_trailing_fields(
+        self,
+    ) -> None:
+        order = normalize_order(
+            fake_order(
+                order_class="oco",
+                trail_percent="5",
+                hwm="111.25",
+                legs=[
+                    fake_order(
+                        side="sell",
+                        type="stop_limit",
+                        stop_price="90",
+                        limit_price="89",
+                        order_class="oco",
+                        legs=[],
+                    )
+                ],
+            )
+        )
+        self.assertEqual(
+            order["order_class"],
+            "oco",
+        )
+        self.assertEqual(
+            order["trail_percent"],
+            5.0,
+        )
+        self.assertEqual(
+            order["high_water_mark"],
+            111.25,
+        )
+        self.assertEqual(
+            order["legs"][0]["stop_price"],
+            90.0,
+        )
+
 
 if __name__ == "__main__":
     unittest.main()

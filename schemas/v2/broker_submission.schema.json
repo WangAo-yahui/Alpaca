@@ -27,8 +27,8 @@
   ],
   "properties": {
     "schema_version": {"const": "1.0"},
-    "profile_id": {"const": "paper1"},
-    "environment": {"const": "paper"},
+    "profile_id": {"type": "string", "pattern": "^[A-Za-z0-9][A-Za-z0-9._-]*$"},
+    "environment": {"enum": ["paper", "live"]},
     "run_date": {"type": "string"},
     "cycle_id": {"type": "string"},
     "started_at": {"type": "string"},

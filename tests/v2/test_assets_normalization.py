@@ -57,6 +57,31 @@ class AssetNormalizationTests(unittest.TestCase):
         self.assertTrue(result["overnight_tradable"])
         self.assertFalse(result["overnight_halted"])
 
+    def test_crypto_order_increments_are_normalized(
+        self,
+    ) -> None:
+        result = normalize_asset(
+            fake_asset(
+                "USDT/USD",
+                asset_class="crypto",
+                min_order_size="0.10",
+                min_trade_increment="0.1000",
+                price_increment="0.000100",
+            )
+        )
+        self.assertEqual(
+            result["min_order_size"],
+            "0.1",
+        )
+        self.assertEqual(
+            result["min_trade_increment"],
+            "0.1",
+        )
+        self.assertEqual(
+            result["price_increment"],
+            "0.0001",
+        )
+
     def test_partial_asset_failure_is_reported(
         self,
     ) -> None:

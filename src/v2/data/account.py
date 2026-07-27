@@ -1,4 +1,4 @@
-"""读取并规范化 Alpaca paper 账户状态与资本字段。
+"""读取并规范化 Alpaca Paper/Live 账户状态与资本字段。
 
 作用：提供脱敏 account hash、cash、buying power、equity 和交易阻止标志。
 重要性：账户身份与可交易状态是每次 Stage G 写前门禁和写后对账的关键事实。
@@ -146,7 +146,11 @@ def fetch_account(
         "get_account",
         clients.trading.get_account,
     )
-    return normalize_account(
+    normalized = normalize_account(
         raw,
         retrieved_at=retrieved_at,
     )
+    normalized["source"] = (
+        f"alpaca_{clients.environment}"
+    )
+    return normalized

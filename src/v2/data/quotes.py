@@ -11,11 +11,13 @@ from typing import Any
 
 from alpaca.data.enums import DataFeed
 from alpaca.data.requests import (
+    CryptoLatestQuoteRequest,
     StockLatestQuoteRequest,
 )
 
 from v2.data._normalization import (
     as_utc_datetime,
+    crypto_request_symbol,
     finite_float,
     iso_timestamp,
     normalized_symbol,
@@ -142,12 +144,32 @@ def _quote_mapping(
     return {}
 
 
+def _canonical_crypto_symbol(value: object) -> str:
+    return normalized_symbol(value).replace("/", "")
+
+
+def _crypto_quote_mapping(
+    response: object,
+) -> dict[str, object]:
+    if isinstance(response, dict):
+        data = response
+    else:
+        data = read_field(response, "data", {})
+    if not isinstance(data, dict):
+        return {}
+    return {
+        _canonical_crypto_symbol(key): value
+        for key, value in data.items()
+    }
+
+
 def fetch_latest_quotes(
     clients: AlpacaClients,
     symbols: list[str],
     *,
     now: datetime | None = None,
     feed: DataFeed | None = None,
+    crypto_symbols: list[str] | None = None,
 ) -> dict[str, dict[str, Any]]:
     unique = sorted(
         {
@@ -158,19 +180,54 @@ def fetch_latest_quotes(
     )
     if not unique:
         return {}
-    response = call_api(
-        "get_stock_latest_quote",
-        clients.stock_data.get_stock_latest_quote,
-        StockLatestQuoteRequest(
-            symbol_or_symbols=unique,
-            feed=feed,
-        ),
-    )
-    mapping = _quote_mapping(response)
+    crypto = {
+        _canonical_crypto_symbol(symbol)
+        for symbol in (crypto_symbols or [])
+    }
+    stock = [
+        symbol
+        for symbol in unique
+        if _canonical_crypto_symbol(symbol)
+        not in crypto
+    ]
+    mapping: dict[str, object] = {}
+    if stock:
+        response = call_api(
+            "get_stock_latest_quote",
+            clients.stock_data.get_stock_latest_quote,
+            StockLatestQuoteRequest(
+                symbol_or_symbols=stock,
+                feed=feed,
+            ),
+        )
+        mapping.update(_quote_mapping(response))
+    if crypto:
+        if clients.crypto_data is None:
+            raise ValueError(
+                "Alpaca crypto data client不能为空"
+            )
+        response = call_api(
+            "get_crypto_latest_quote",
+            clients.crypto_data.get_crypto_latest_quote,
+            CryptoLatestQuoteRequest(
+                symbol_or_symbols=[
+                    crypto_request_symbol(symbol)
+                    for symbol in sorted(crypto)
+                ],
+            ),
+        )
+        mapping.update(
+            _crypto_quote_mapping(response)
+        )
     return {
         symbol: normalize_quote(
             symbol,
-            mapping.get(symbol),
+            mapping.get(
+                _canonical_crypto_symbol(symbol)
+                if _canonical_crypto_symbol(symbol)
+                in crypto
+                else symbol
+            ),
             now=now,
         )
         for symbol in unique

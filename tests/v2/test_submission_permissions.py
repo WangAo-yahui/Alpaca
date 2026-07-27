@@ -164,6 +164,34 @@ class SubmissionPermissionTests(unittest.TestCase):
         with self.assertRaises(SafetyBlockedError):
             self.check()
 
+    def test_protective_order_switch_blocks(
+        self,
+    ) -> None:
+        specs = {
+            **self.specs,
+            "requests": [
+                {
+                    "protection_role": "pt-stop",
+                }
+            ],
+        }
+        intent = {
+            **self.intent,
+            "request_specs_hash": canonical_hash(
+                specs
+            ),
+        }
+        self.policy.settings[
+            "deployment_switches"
+        ][
+            "protective_order_submission_enabled"
+        ] = False
+        with self.assertRaises(SafetyBlockedError):
+            self.check(
+                request_specs=specs,
+                intent=intent,
+            )
+
 
 if __name__ == "__main__":
     unittest.main()

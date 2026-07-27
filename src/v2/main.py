@@ -1,7 +1,7 @@
-"""WA Trader v2 Stage G paper 提交闭环主流程入口。
+"""WA Trader v2 Stage G Paper/Live 提交闭环主流程入口。
 
 作用：在 Stage F 硬校验后执行写前门禁、幂等提交/取消、即时对账、cycle summary 与日报。
-重要性：这是 paper1 唯一可到达券商写接口的编排层；live、盲重试和未校验订单始终被拒绝。
+重要性：这是唯一可到达券商写接口的编排层；环境串用、盲重试和未校验订单始终被拒绝。
 """
 
 from __future__ import annotations
@@ -186,9 +186,15 @@ from v2.trading.submission_journal import (  # noqa: E402
 from v2.reports.daily_report import (  # noqa: E402
     update_daily_report,
 )
+from v2.reports.natural_language_report import (  # noqa: E402
+    natural_report_path,
+    update_natural_language_report,
+    write_fallback_natural_language_report,
+    natural_report_error_path,
+)
 
 
-SCRIPT_VERSION = "2026-07-27-v2-overnight-hot-source-v3"
+SCRIPT_VERSION = "2026-07-27-v2-natural-report-sync-v4"
 
 
 @dataclass(frozen=True)
@@ -407,8 +413,16 @@ def load_runtime_identity(
         options.profile,
         project_root=root,
     )
-    if profile.environment != "paper":
-        raise LiveTradingRejected()
+    if (
+        options.live
+        != (profile.environment == "live")
+        or options.paper
+        != (profile.environment == "paper")
+    ):
+        raise ConfigurationError(
+            "CLI运行环境与profile环境不一致",
+            code="PROFILE_ENVIRONMENT_MISMATCH",
+        )
     risk_profile = load_risk_profile(
         profile.risk_profile,
         project_root=root,
@@ -972,7 +986,7 @@ def bootstrap_main(
     建立经过配置校验的日期状态、轮次状态和恢复点。
     阶段A不抓行情、不调用Codex、不提交订单。
     """
-    if options.live:
+    if options.live and options.profile != "live1":
         raise LiveTradingRejected()
 
     identity = load_runtime_identity(
@@ -1161,7 +1175,12 @@ def print_bootstrap_result(
         f"人工复查：{state.review_mode.value}"
     )
     print(
-        f"交易模式：paper"
+        "交易模式："
+        + (
+            "live"
+            if state.invocation.live
+            else "paper"
+        )
     )
     print(
         f"当前步骤：{state.current_step.value}"
@@ -1902,7 +1921,14 @@ def print_stage_e_result(
     state = result.resolution.state
     print_bootstrap_result(result.resolution)
     print(f"Profile：{state.profile_id}")
-    print("账户环境：paper")
+    print(
+        "账户环境："
+        + (
+            "live"
+            if state.invocation.live
+            else "paper"
+        )
+    )
     print(
         "策略："
         f"{state.release['strategy_id']}@"
@@ -2539,6 +2565,14 @@ def _submission_operations(
                         "side",
                         "time_in_force",
                         "limit_price",
+                        "order_class",
+                        "stop_price",
+                        "trail_price",
+                        "trail_percent",
+                        "take_profit_limit_price",
+                        "stop_loss_stop_price",
+                        "stop_loss_limit_price",
+                        "protection_role",
                         "extended_hours",
                         "client_order_id",
                     )
@@ -2585,7 +2619,7 @@ def _submission_intent(
     )
     return SubmissionIntent(
         profile_id=state.profile_id,
-        environment="paper",
+        environment=policy.environment,
         run_date=state.run_date,
         cycle_id=state.cycle_id,
         allow_trade=state.invocation.allow_trade,
@@ -2985,6 +3019,70 @@ def _load_optional_object(path: Path) -> dict[str, Any]:
     return load_json_object(path) if path.is_file() else {}
 
 
+def _maintain_natural_report(
+    *,
+    paths: CyclePaths,
+    state: CycleState,
+    validated: Mapping[str, Any],
+    submission: Mapping[str, Any],
+    reconciliation: Mapping[str, Any],
+    context: Mapping[str, Any],
+) -> None:
+    """Maintain the Live narrative without changing broker outcomes on failure."""
+
+    if not state.invocation.live:
+        return
+    error_path = natural_report_error_path(
+        paths.daily_report
+    )
+    try:
+        result = update_natural_language_report(
+            paths.daily_report,
+            state=state,
+            validated=validated,
+            submission=submission,
+            reconciliation=reconciliation,
+            context=context,
+        )
+        error_path.unlink(missing_ok=True)
+        print(
+            "自然语言日报："
+            f"{result.status} / {result.path}",
+            flush=True,
+        )
+    except Exception as error:
+        atomic_write_json(
+            error_path,
+            {
+                "schema_version": "1.0",
+                "profile_id": state.profile_id,
+                "run_date": state.run_date,
+                "cycle_id": state.cycle_id,
+                "code": "NATURAL_REPORT_FAILED",
+                "exception_type": (
+                    error.__class__.__name__
+                ),
+                "recorded_at": utc_now_iso(),
+            },
+        )
+        fallback = (
+            write_fallback_natural_language_report(
+                paths.daily_report,
+                state=state,
+                validated=validated,
+                submission=submission,
+                reconciliation=reconciliation,
+                context=context,
+            )
+        )
+        print(
+            "自然语言日报生成失败；"
+            "已写入无新闻的事实降级版："
+            f"{fallback.path}；错误：{error_path}",
+            flush=True,
+        )
+
+
 def _run_stage_g_maintenance_only(
     options: CLIOptions,
     *,
@@ -3031,7 +3129,7 @@ def _run_stage_g_maintenance_only(
     }
     intent_document = SubmissionIntent(
         profile_id=state.profile_id,
-        environment="paper",
+        environment=profile.environment,
         run_date=state.run_date,
         cycle_id=state.cycle_id,
         allow_trade=False,
@@ -3053,12 +3151,14 @@ def _run_stage_g_maintenance_only(
     journal = SubmissionJournal.load_or_create(
         paths.submission_journal,
         profile_id=state.profile_id,
+        environment=profile.environment,
         run_date=state.run_date,
         cycle_id=state.cycle_id,
         operations=[],
     )
     submission_document = broker_submission_document(
         profile_id=state.profile_id,
+        environment=profile.environment,
         run_date=state.run_date,
         cycle_id=state.cycle_id,
         submission_requested=False,
@@ -3083,6 +3183,7 @@ def _run_stage_g_maintenance_only(
     reconciliation_document = reconcile_submission(
         clients=clients,
         profile_id=state.profile_id,
+        environment=profile.environment,
         cycle_id=state.cycle_id,
         operations=[],
         output_path=paths.reconciliation,
@@ -3110,17 +3211,26 @@ def _run_stage_g_maintenance_only(
     if next_step(state) == StepName.UPDATE_REPORT:
         begin_next_step(state)
         save_cycle_state(paths.cycle_state, state)
+        report_context = {
+            "initial_guidance": _load_optional_object(
+                paths.initial_guidance
+            )
+        }
         update_daily_report(
             paths.daily_report,
             state=state,
             validated=validated,
             submission=submission_document,
             reconciliation=reconciliation_document,
-            context={
-                "initial_guidance": _load_optional_object(
-                    paths.initial_guidance
-                )
-            },
+            context=report_context,
+        )
+        _maintain_natural_report(
+            paths=paths,
+            state=state,
+            validated=validated,
+            submission=submission_document,
+            reconciliation=reconciliation_document,
+            context=report_context,
         )
         complete_current_step(
             state,
@@ -3182,7 +3292,7 @@ def run_stage_g(
     review_input_func: Callable[[str], str] = input,
     review_stdin: TextIO | None = None,
 ) -> StageGRunResult:
-    """Run the complete paper cycle while keeping all writes fail closed."""
+    """Run the complete Paper/Live cycle while keeping writes fail closed."""
 
     root = (
         project_root.expanduser().resolve()
@@ -3193,14 +3303,9 @@ def run_stage_g(
         options.profile,
         project_root=root,
     )
-    if profile.profile_id != "paper1":
-        raise SafetyBlockedError(
-            "Stage G写闭环仅允许paper1",
-            code="SUBMISSION_PROFILE_BLOCKED",
-        )
     if profile.submission_policy is None:
         raise ConfigurationError(
-            "paper1缺少submission_policy",
+            "当前profile缺少submission_policy",
             code="SUBMISSION_POLICY_REFERENCE_MISSING",
         )
     policy = load_submission_policy(
@@ -3337,6 +3442,7 @@ def run_stage_g(
     journal = SubmissionJournal.load_or_create(
         paths.submission_journal,
         profile_id=state.profile_id,
+        environment=profile.environment,
         run_date=state.run_date,
         cycle_id=state.cycle_id,
         operations=initial_operations,
@@ -3584,6 +3690,7 @@ def run_stage_g(
         )
         submission_document = broker_submission_document(
             profile_id=state.profile_id,
+            environment=profile.environment,
             run_date=state.run_date,
             cycle_id=state.cycle_id,
             submission_requested=bool(
@@ -3609,6 +3716,7 @@ def run_stage_g(
     reconciliation_document = reconcile_submission(
         clients=active_clients,
         profile_id=state.profile_id,
+        environment=profile.environment,
         cycle_id=state.cycle_id,
         operations=journal.operations,
         output_path=paths.reconciliation,
@@ -3661,29 +3769,38 @@ def run_stage_g(
     if next_step(state) == StepName.UPDATE_REPORT:
         begin_next_step(state)
         save_cycle_state(paths.cycle_state, state)
+        report_context = {
+            "initial_guidance": _load_optional_object(
+                paths.initial_guidance
+            ),
+            "base_snapshot": _load_optional_object(
+                paths.base_snapshot
+            ),
+            "coarse": _load_coarse_report_context(
+                paths
+            ),
+            "portfolio": _load_optional_object(
+                paths.portfolio_output
+            ),
+            "execution": _load_optional_object(
+                paths.execution_output
+            ),
+        }
         report_created = update_daily_report(
             paths.daily_report,
             state=state,
             validated=validated,
             submission=submission_document,
             reconciliation=reconciliation_document,
-            context={
-                "initial_guidance": _load_optional_object(
-                    paths.initial_guidance
-                ),
-                "base_snapshot": _load_optional_object(
-                    paths.base_snapshot
-                ),
-                "coarse": _load_coarse_report_context(
-                    paths
-                ),
-                "portfolio": _load_optional_object(
-                    paths.portfolio_output
-                ),
-                "execution": _load_optional_object(
-                    paths.execution_output
-                ),
-            },
+            context=report_context,
+        )
+        _maintain_natural_report(
+            paths=paths,
+            state=state,
+            validated=validated,
+            submission=submission_document,
+            reconciliation=reconciliation_document,
+            context=report_context,
         )
         complete_current_step(
             state,
@@ -3746,7 +3863,7 @@ def run_stage_g(
 def print_stage_g_result(
     result: StageGRunResult,
 ) -> None:
-    """Print only persisted paper facts, never planned fills."""
+    """Print persisted broker facts, never planned fills as executions."""
 
     state = result.resolution.state
     submission = result.broker_submission
@@ -3763,7 +3880,11 @@ def print_stage_g_result(
     print(
         "模式："
         + (
-            "paper-submit"
+            (
+                "live-submit"
+                if state.invocation.live
+                else "paper-submit"
+            )
             if state.invocation.allow_trade
             else "dry-run"
         )
@@ -3788,6 +3909,11 @@ def print_stage_g_result(
     print(f"最终状态：{state.status.value}")
     print(f"Cycle summary：{result.resolution.paths.cycle_summary}")
     print(f"日报：{result.resolution.paths.daily_report}")
+    natural_report = natural_report_path(
+        result.resolution.paths.daily_report
+    )
+    if natural_report.is_file():
+        print(f"自然语言日报：{natural_report}")
 
 
 def _raise_runtime_interrupted(

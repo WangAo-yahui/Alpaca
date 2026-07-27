@@ -16,6 +16,9 @@ from typing import Any, Mapping
 
 from jsonschema import Draft202012Validator
 
+from v2.crypto_liquidation import (
+    is_automatic_crypto_liquidation_decision,
+)
 from v2.models.state import CycleState
 from v2.profiles import RiskProfile
 from v2.releases import StrategyRelease, sha256_file
@@ -42,6 +45,10 @@ NON_EXECUTABLE_DECISIONS = {
     "defer",
     "reject",
     "no_action",
+}
+CLOSED_EQUITY_PHASES = {
+    "market_closed_weekend",
+    "market_closed_holiday",
 }
 
 
@@ -173,6 +180,54 @@ class ExecutionValidationResult:
         }
 
 
+def effective_execution_limits(
+    risk_profile: RiskProfile,
+    risk_limits: Mapping[str, Any],
+) -> dict[str, Any]:
+    """Overlay profile risk settings on shared execution mechanics."""
+
+    effective = dict(risk_limits)
+    settings = risk_profile.settings
+    aliases = {
+        "maximum_single_position_weight": (
+            "max_single_symbol_weight"
+        ),
+        "maximum_sector_weight": (
+            "max_sector_weight"
+        ),
+        "minimum_cash_weight": (
+            "minimum_cash_weight"
+        ),
+        "minimum_order_value": (
+            "minimum_order_value"
+        ),
+        "quote_max_age_seconds": (
+            "max_quote_age_seconds"
+        ),
+        "closed_session_quote_max_age_seconds": (
+            "max_closed_session_quote_age_seconds"
+        ),
+        "allow_short_positions": (
+            "allow_short"
+        ),
+        "regular_spread_limit_bps": (
+            "max_slippage_bps"
+        ),
+        "extended_spread_limit_bps": (
+            "max_extended_hours_spread_bps"
+        ),
+    }
+    for profile_key, execution_key in aliases.items():
+        if profile_key in settings:
+            effective[execution_key] = settings[
+                profile_key
+            ]
+    effective["risk_profile_reference"] = (
+        risk_profile.reference
+    )
+    return effective
+
+
 def build_execution_input(
     *,
     paths: CyclePaths,
@@ -263,7 +318,7 @@ def build_execution_input(
         "stage": "execution_decision",
         "profile": {
             "profile_id": paths.profile_id,
-            "environment": "paper",
+            "environment": risk_profile.environment,
         },
         "release": release_payload,
         "run_date": paths.run_date,
@@ -305,8 +360,11 @@ def build_execution_input(
             "settings": dict(
                 risk_profile.settings
             ),
-            "execution_limits": dict(
-                risk_limits
+            "execution_limits": (
+                effective_execution_limits(
+                    risk_profile,
+                    risk_limits,
+                )
             ),
         },
         "execution_policy": dict(
@@ -382,6 +440,692 @@ def _structured_prohibits(
         ):
             return True
     return False
+
+
+def _protection_issues(
+    payload: Mapping[str, Any],
+    *,
+    input_payload: Mapping[str, Any],
+    snapshot: Mapping[str, Any],
+    decisions: list[object],
+) -> list[dict[str, str]]:
+    """Validate Codex protection choices before Stage F can size them."""
+
+    issues: list[dict[str, str]] = []
+    policy = input_payload.get(
+        "execution_policy"
+    )
+    policy = (
+        policy
+        if isinstance(policy, Mapping)
+        else {}
+    )
+    settings = policy.get(
+        "position_protection"
+    )
+    settings = (
+        settings
+        if isinstance(settings, Mapping)
+        else {}
+    )
+    if settings.get("enabled") is not True:
+        return issues
+    plans = payload.get("protection_plans")
+    plans = plans if isinstance(plans, list) else []
+    raw_positions = snapshot.get("positions")
+    positions = {
+        str(item.get("symbol", "")).upper(): item
+        for item in (
+            raw_positions
+            if isinstance(raw_positions, list)
+            else []
+        )
+        if isinstance(item, Mapping)
+        and item.get("symbol")
+    }
+    assets = snapshot.get("assets")
+    assets = (
+        assets
+        if isinstance(assets, Mapping)
+        else {}
+    )
+    quotes = snapshot.get("quotes")
+    quotes = (
+        quotes
+        if isinstance(quotes, Mapping)
+        else {}
+    )
+    decision_by_symbol = {
+        str(item.get("symbol", "")).upper(): item
+        for item in decisions
+        if isinstance(item, Mapping)
+        and item.get("symbol")
+    }
+    entry_symbols = {
+        symbol
+        for symbol, item in decision_by_symbol.items()
+        if item.get("execution_decision")
+        in EXECUTABLE_DECISIONS
+        and item.get("side") == "buy"
+        and item.get("portfolio_action")
+        in {"open", "increase"}
+    }
+    long_symbols = {
+        symbol
+        for symbol, position in positions.items()
+        if str(position.get("side", "long")).lower()
+        == "long"
+        and _decimal_or_zero(
+            position.get("quantity")
+        )
+        > ZERO
+        and (
+            not isinstance(
+                assets.get(symbol),
+                Mapping,
+            )
+            or assets[symbol].get("asset_class")
+            != "crypto"
+        )
+    }
+    seen: set[str] = set()
+    plan_by_symbol: dict[
+        str,
+        Mapping[str, Any],
+    ] = {}
+    allowed_modes = set(
+        str(item)
+        for item in settings.get(
+            "allow_modes",
+            [],
+        )
+    )
+    for index, raw in enumerate(plans):
+        if not isinstance(raw, Mapping):
+            continue
+        path = f"$.protection_plans[{index}]"
+        symbol = str(
+            raw.get("symbol", "")
+        ).upper()
+        if symbol in seen:
+            issues.append(
+                _issue(
+                    "DUPLICATE_PROTECTION_SYMBOL",
+                    f"{symbol}保护计划重复",
+                    path,
+                )
+            )
+        seen.add(symbol)
+        plan_by_symbol[symbol] = raw
+        if (
+            symbol not in long_symbols
+            and symbol not in entry_symbols
+        ):
+            issues.append(
+                _issue(
+                    "PROTECTION_SYMBOL_OUT_OF_SCOPE",
+                    f"{symbol}既不是当前多头也不是本轮新入场",
+                    f"{path}.symbol",
+                )
+            )
+        mode = str(raw.get("mode", ""))
+        if mode != "none" and mode not in allowed_modes:
+            issues.append(
+                _issue(
+                    "PROTECTION_MODE_NOT_ALLOWED",
+                    f"{symbol}保护模式未获policy授权",
+                    f"{path}.mode",
+                )
+            )
+        apply_to = str(raw.get("apply_to", ""))
+        if (
+            symbol in long_symbols
+            and symbol not in entry_symbols
+            and apply_to == "new_entry"
+        ):
+            issues.append(
+                _issue(
+                    "PROTECTION_APPLY_TARGET_INVALID",
+                    f"{symbol}只有既有持仓，不能只保护new_entry",
+                    f"{path}.apply_to",
+                )
+            )
+        if (
+            symbol in entry_symbols
+            and symbol not in long_symbols
+            and apply_to == "existing_position"
+        ):
+            issues.append(
+                _issue(
+                    "PROTECTION_APPLY_TARGET_INVALID",
+                    f"{symbol}只有新入场，不能只保护existing_position",
+                    f"{path}.apply_to",
+                )
+            )
+        try:
+            coverage = _decimal(
+                raw.get("coverage_fraction")
+            )
+        except (InvalidOperation, ValueError):
+            coverage = Decimal("-1")
+        minimum_coverage = _decimal_or_zero(
+            settings.get(
+                "minimum_coverage_fraction"
+            )
+        )
+        maximum_coverage = _decimal_or_zero(
+            settings.get(
+                "maximum_coverage_fraction"
+            )
+        )
+        if mode == "none":
+            if coverage != ZERO:
+                issues.append(
+                    _issue(
+                        "PROTECTION_NONE_COVERAGE_INVALID",
+                        f"{symbol} mode=none时coverage必须为0",
+                        f"{path}.coverage_fraction",
+                    )
+                )
+        elif (
+            coverage < minimum_coverage
+            or coverage > maximum_coverage
+        ):
+            issues.append(
+                _issue(
+                    "PROTECTION_COVERAGE_INVALID",
+                    f"{symbol}保护覆盖比例越界",
+                    f"{path}.coverage_fraction",
+                )
+            )
+        numeric: dict[str, Decimal | None] = {}
+        for field in (
+            "take_profit_price",
+            "stop_price",
+            "stop_limit_price",
+            "trail_price",
+            "trail_percent",
+        ):
+            value = raw.get(field)
+            if value is None:
+                numeric[field] = None
+                continue
+            try:
+                parsed = _decimal(value)
+            except (InvalidOperation, ValueError):
+                parsed = Decimal("-1")
+            numeric[field] = parsed
+            if parsed <= ZERO:
+                issues.append(
+                    _issue(
+                        "PROTECTION_PRICE_INVALID",
+                        f"{symbol} {field}必须大于0",
+                        f"{path}.{field}",
+                    )
+                )
+        required_fields = {
+            "stop": ("stop_price",),
+            "stop_limit": (
+                "stop_price",
+                "stop_limit_price",
+            ),
+            "take_profit": (
+                "take_profit_price",
+            ),
+            "trailing_stop": (),
+            "oco": (
+                "take_profit_price",
+                "stop_price",
+            ),
+            "bracket": (
+                "take_profit_price",
+                "stop_price",
+            ),
+            "oto_stop": ("stop_price",),
+            "oto_take_profit": (
+                "take_profit_price",
+            ),
+        }
+        for field in required_fields.get(
+            mode,
+            (),
+        ):
+            if numeric.get(field) is None:
+                issues.append(
+                    _issue(
+                        "PROTECTION_FIELD_MISSING",
+                        f"{symbol} {mode}缺少{field}",
+                        f"{path}.{field}",
+                    )
+                )
+        allowed_numeric_fields = {
+            "none": set(),
+            "stop": {"stop_price"},
+            "stop_limit": {
+                "stop_price",
+                "stop_limit_price",
+            },
+            "take_profit": {
+                "take_profit_price",
+            },
+            "trailing_stop": {
+                "trail_price",
+                "trail_percent",
+            },
+            "oco": {
+                "take_profit_price",
+                "stop_price",
+                "stop_limit_price",
+            },
+            "bracket": {
+                "take_profit_price",
+                "stop_price",
+                "stop_limit_price",
+            },
+            "oto_stop": {
+                "stop_price",
+                "stop_limit_price",
+            },
+            "oto_take_profit": {
+                "take_profit_price",
+            },
+            "staged_oco": set(),
+        }.get(mode, set())
+        for field, value in numeric.items():
+            if (
+                value is not None
+                and field
+                not in allowed_numeric_fields
+            ):
+                issues.append(
+                    _issue(
+                        "UNEXPECTED_PROTECTION_FIELD",
+                        f"{symbol} {mode}不得设置{field}",
+                        f"{path}.{field}",
+                    )
+                )
+        if mode == "trailing_stop":
+            if (
+                (numeric["trail_price"] is None)
+                == (
+                    numeric[
+                        "trail_percent"
+                    ]
+                    is None
+                )
+            ):
+                issues.append(
+                    _issue(
+                        "TRAIL_CONFIGURATION_INVALID",
+                        f"{symbol}移动止损必须且只能设置trail_price或trail_percent",
+                        path,
+                    )
+                )
+            trail_percent = numeric[
+                "trail_percent"
+            ]
+            if trail_percent is not None and (
+                trail_percent
+                < _decimal_or_zero(
+                    settings.get(
+                        "minimum_trail_percent"
+                    )
+                )
+                or trail_percent
+                > _decimal_or_zero(
+                    settings.get(
+                        "maximum_trail_percent"
+                    )
+                )
+            ):
+                issues.append(
+                    _issue(
+                        "TRAIL_PERCENT_OUT_OF_RANGE",
+                        f"{symbol}移动止损百分比越界",
+                        f"{path}.trail_percent",
+                    )
+                )
+        stages = raw.get("stages")
+        stages = (
+            stages
+            if isinstance(stages, list)
+            else []
+        )
+        if mode == "staged_oco":
+            if (
+                not stages
+                or len(stages)
+                > int(
+                    settings.get(
+                        "maximum_stages",
+                        5,
+                    )
+                )
+            ):
+                issues.append(
+                    _issue(
+                        "PROTECTION_STAGES_INVALID",
+                        f"{symbol}分级OCO阶段数量无效",
+                        f"{path}.stages",
+                    )
+                )
+            stage_total = ZERO
+            for stage_index, stage in enumerate(
+                stages
+            ):
+                if not isinstance(stage, Mapping):
+                    continue
+                stage_path = (
+                    f"{path}.stages[{stage_index}]"
+                )
+                fraction = _decimal_or_zero(
+                    stage.get(
+                        "coverage_fraction"
+                    )
+                )
+                stage_total += fraction
+                take_profit = _decimal_or_zero(
+                    stage.get(
+                        "take_profit_price"
+                    )
+                )
+                stop = _decimal_or_zero(
+                    stage.get("stop_price")
+                )
+                stop_limit = (
+                    _decimal_or_zero(
+                        stage.get(
+                            "stop_limit_price"
+                        )
+                    )
+                    if stage.get(
+                        "stop_limit_price"
+                    )
+                    is not None
+                    else None
+                )
+                if (
+                    fraction <= ZERO
+                    or take_profit <= ZERO
+                    or stop <= ZERO
+                    or (
+                        stop_limit is not None
+                        and stop_limit > stop
+                    )
+                ):
+                    issues.append(
+                        _issue(
+                            "PROTECTION_STAGE_INVALID",
+                            f"{symbol}分级OCO参数无效",
+                            stage_path,
+                        )
+                    )
+            if stage_total != coverage:
+                issues.append(
+                    _issue(
+                        "PROTECTION_STAGE_COVERAGE_MISMATCH",
+                        f"{symbol}分级覆盖合计必须等于总覆盖比例",
+                        f"{path}.stages",
+                    )
+                )
+        elif stages:
+            issues.append(
+                _issue(
+                    "UNEXPECTED_PROTECTION_STAGES",
+                    f"{symbol}非staged_oco不得包含stages",
+                    f"{path}.stages",
+                )
+            )
+        position = positions.get(symbol, {})
+        quote = quotes.get(symbol, {})
+        quote = (
+            quote
+            if isinstance(quote, Mapping)
+            else {}
+        )
+        decision = decision_by_symbol.get(
+            symbol,
+            {},
+        )
+        price_condition = decision.get(
+            "price_condition",
+        )
+        price_condition = (
+            price_condition
+            if isinstance(
+                price_condition,
+                Mapping,
+            )
+            else {}
+        )
+        reference = next(
+            (
+                value
+                for value in (
+                    _decimal_or_zero(
+                        position.get(
+                            "current_price"
+                        )
+                    ),
+                    _decimal_or_zero(
+                        quote.get("midpoint")
+                    ),
+                    _decimal_or_zero(
+                        price_condition.get(
+                            "limit_price"
+                        )
+                    ),
+                    _decimal_or_zero(
+                        position.get(
+                            "average_entry_price"
+                        )
+                    ),
+                )
+                if value > ZERO
+            ),
+            ZERO,
+        )
+        take_profit = numeric[
+            "take_profit_price"
+        ]
+        stop = numeric["stop_price"]
+        stop_limit = numeric[
+            "stop_limit_price"
+        ]
+        if (
+            reference > ZERO
+            and take_profit is not None
+            and take_profit <= reference
+        ):
+            issues.append(
+                _issue(
+                    "TAKE_PROFIT_NOT_ABOVE_REFERENCE",
+                    f"{symbol}多头止盈必须高于当前参考价",
+                    f"{path}.take_profit_price",
+                )
+            )
+        minimum_stop_distance = (
+            _decimal_or_zero(
+                settings.get(
+                    "minimum_stop_distance_fraction"
+                )
+            )
+        )
+        maximum_stop_distance = (
+            _decimal_or_zero(
+                settings.get(
+                    "maximum_stop_distance_fraction"
+                )
+            )
+        )
+        minimum_take_profit_distance = (
+            _decimal_or_zero(
+                settings.get(
+                    "minimum_take_profit_distance_fraction"
+                )
+            )
+        )
+        maximum_take_profit_distance = (
+            _decimal_or_zero(
+                settings.get(
+                    "maximum_take_profit_distance_fraction"
+                )
+            )
+        )
+        if (
+            reference > ZERO
+            and stop is not None
+            and stop < reference
+        ):
+            distance = (
+                reference - stop
+            ) / reference
+            if (
+                distance
+                < minimum_stop_distance
+                or distance
+                > maximum_stop_distance
+            ):
+                issues.append(
+                    _issue(
+                        "STOP_DISTANCE_OUT_OF_RANGE",
+                        f"{symbol}止损距离越过policy范围",
+                        f"{path}.stop_price",
+                    )
+                )
+        if (
+            reference > ZERO
+            and take_profit is not None
+            and take_profit > reference
+        ):
+            distance = (
+                take_profit - reference
+            ) / reference
+            if (
+                distance
+                < minimum_take_profit_distance
+                or distance
+                > maximum_take_profit_distance
+            ):
+                issues.append(
+                    _issue(
+                        "TAKE_PROFIT_DISTANCE_OUT_OF_RANGE",
+                        f"{symbol}止盈距离越过policy范围",
+                        f"{path}.take_profit_price",
+                    )
+                )
+        if (
+            reference > ZERO
+            and mode == "staged_oco"
+        ):
+            for stage_index, stage in enumerate(
+                stages
+            ):
+                if not isinstance(stage, Mapping):
+                    continue
+                stage_take_profit = (
+                    _decimal_or_zero(
+                        stage.get(
+                            "take_profit_price"
+                        )
+                    )
+                )
+                stage_stop = _decimal_or_zero(
+                    stage.get("stop_price")
+                )
+                if (
+                    stage_take_profit
+                    <= reference
+                    or stage_stop
+                    >= reference
+                ):
+                    issues.append(
+                        _issue(
+                            "PROTECTION_STAGE_PRICE_RELATION_INVALID",
+                            f"{symbol}分级OCO必须满足止盈高于且止损低于参考价",
+                            f"{path}.stages[{stage_index}]",
+                        )
+                    )
+        if (
+            reference > ZERO
+            and stop is not None
+            and stop >= reference
+        ):
+            issues.append(
+                _issue(
+                    "STOP_NOT_BELOW_REFERENCE",
+                    f"{symbol}多头止损必须低于当前参考价",
+                    f"{path}.stop_price",
+                )
+            )
+        if (
+            stop is not None
+            and stop_limit is not None
+            and stop_limit > stop
+        ):
+            issues.append(
+                _issue(
+                    "STOP_LIMIT_RELATION_INVALID",
+                    f"{symbol}卖出stop-limit的limit不得高于stop",
+                    f"{path}.stop_limit_price",
+                )
+            )
+        quantity = _decimal_or_zero(
+            position.get("quantity")
+        )
+        if (
+            quantity > ZERO
+            and quantity
+            != quantity.to_integral_value()
+            and raw.get("time_in_force") != "day"
+        ):
+            issues.append(
+                _issue(
+                    "FRACTIONAL_PROTECTION_TIF_INVALID",
+                    f"{symbol}碎股保护单必须使用day",
+                    f"{path}.time_in_force",
+                )
+            )
+    required = set()
+    if settings.get(
+        "require_plan_for_existing_long_equity"
+    ) is True:
+        required.update(long_symbols)
+    if settings.get(
+        "require_plan_for_approved_entry"
+    ) is True:
+        required.update(entry_symbols)
+    for symbol in sorted(required):
+        plan = plan_by_symbol.get(symbol)
+        if plan is None:
+            issues.append(
+                _issue(
+                    "PROTECTION_PLAN_MISSING",
+                    f"{symbol}缺少必须的止盈止损计划",
+                    "$.protection_plans",
+                )
+            )
+        elif (
+            plan.get("mode") == "none"
+            and (
+                _decimal_or_zero(
+                    positions.get(
+                        symbol,
+                        {},
+                    ).get("current_price")
+                )
+                > ZERO
+                or symbol in entry_symbols
+            )
+        ):
+            issues.append(
+                _issue(
+                    "PROTECTION_NONE_NOT_ALLOWED",
+                    f"{symbol}具备定价事实时不得取消全部保护",
+                    "$.protection_plans",
+                )
+            )
+    return issues
 
 
 def validate_execution_output(
@@ -461,14 +1205,6 @@ def validate_execution_output(
                     f"$.{field}",
                 )
             )
-    if profile.get("profile_id") != "paper1":
-        errors.append(
-            _issue(
-                "EXECUTION_PROFILE_NOT_PAPER1",
-                "Stage E当前只允许paper1",
-                "$.profile_id",
-            )
-        )
     if payload.get("status") not in {
         "success",
         "success_local_only",
@@ -621,6 +1357,17 @@ def validate_execution_output(
         if isinstance(assets, Mapping)
         else {}
     )
+    raw_positions = snapshot.get("positions")
+    positions_by_symbol = {
+        str(item.get("symbol", "")).upper(): item
+        for item in (
+            raw_positions
+            if isinstance(raw_positions, list)
+            else []
+        )
+        if isinstance(item, Mapping)
+        and item.get("symbol")
+    }
     capability = snapshot.get(
         "broker_extended_hours_capability"
     )
@@ -652,6 +1399,15 @@ def validate_execution_output(
         policy
         if isinstance(policy, Mapping)
         else {}
+    )
+    profile_payload = input_payload.get("profile")
+    profile_payload = (
+        profile_payload
+        if isinstance(profile_payload, Mapping)
+        else {}
+    )
+    profile_environment = str(
+        profile_payload.get("environment", "")
     )
     adjustment = policy.get(
         "target_weight_adjustment"
@@ -688,8 +1444,45 @@ def validate_execution_output(
     maximum_fraction = _decimal_or_zero(
         fraction_policy.get("maximum")
     )
+    closed_policy = policy.get(
+        "closed_session_queue"
+    )
+    closed_policy = (
+        closed_policy
+        if isinstance(closed_policy, Mapping)
+        else {}
+    )
+    crypto_liquidation_policy = policy.get(
+        "crypto_liquidation"
+    )
+    crypto_liquidation_policy = (
+        crypto_liquidation_policy
+        if isinstance(
+            crypto_liquidation_policy,
+            Mapping,
+        )
+        else {}
+    )
+    closed_open_fraction = _decimal_or_zero(
+        closed_policy.get(
+            "maximum_open_execution_fraction"
+        )
+    )
+    closed_reduce_fraction = _decimal_or_zero(
+        closed_policy.get(
+            "maximum_reduce_execution_fraction"
+        )
+    )
     quote_age_limit = _decimal_or_zero(
         limits.get("max_quote_age_seconds")
+    )
+    closed_quote_age_limit = _decimal_or_zero(
+        limits.get(
+            "max_closed_session_quote_age_seconds",
+            closed_policy.get(
+                "quote_max_age_seconds"
+            ),
+        )
     )
     regular_spread_limit = _decimal_or_zero(
         limits.get("max_slippage_bps")
@@ -848,7 +1641,35 @@ def validate_execution_output(
         fraction = numeric_values[
             "execution_fraction"
         ]
-        if source is None:
+        asset = assets.get(symbol)
+        asset = (
+            asset
+            if isinstance(asset, Mapping)
+            else {}
+        )
+        position = positions_by_symbol.get(symbol)
+        position = (
+            position
+            if isinstance(position, Mapping)
+            else {}
+        )
+        automatic_crypto_liquidation = (
+            profile_environment == "live"
+            and (
+                is_automatic_crypto_liquidation_decision(
+                    raw,
+                    asset,
+                    crypto_liquidation_policy,
+                )
+            )
+        )
+        if (
+            source is None
+            and not (
+                automatic_crypto_liquidation
+                and position
+            )
+        ):
             errors.append(
                 _issue(
                     "SYMBOL_OUTSIDE_PORTFOLIO",
@@ -856,6 +1677,8 @@ def validate_execution_output(
                     f"{path}.symbol",
                 )
             )
+            source_target = ZERO
+        elif source is None:
             source_target = ZERO
         else:
             source_target = _decimal_or_zero(
@@ -923,6 +1746,7 @@ def validate_execution_output(
             if (
                 portfolio_action
                 != source.get("action")
+                and not automatic_crypto_liquidation
             ):
                 errors.append(
                     _issue(
@@ -963,7 +1787,10 @@ def validate_execution_output(
             difference > maximum_absolute
             or relative > maximum_relative
         )
-        if exceeded:
+        if (
+            exceeded
+            and not automatic_crypto_liquidation
+        ):
             adjustment_breached = True
             if (
                 decision != "defer"
@@ -1077,7 +1904,11 @@ def validate_execution_output(
                     f"{path}.execution_decision",
                 )
             )
-        if requires_replan and executable:
+        if (
+            requires_replan
+            and executable
+            and not automatic_crypto_liquidation
+        ):
             errors.append(
                 _issue(
                     "REPLAN_CANNOT_EXECUTE",
@@ -1087,7 +1918,17 @@ def validate_execution_output(
             )
         if not executable:
             continue
-        if market_phase == "unknown":
+        is_crypto = (
+            asset.get("asset_class") == "crypto"
+        )
+        is_closed_equity = (
+            market_phase in CLOSED_EQUITY_PHASES
+            and not is_crypto
+        )
+        if (
+            market_phase == "unknown"
+            and not is_crypto
+        ):
             errors.append(
                 _issue(
                     "UNKNOWN_PHASE_CANNOT_APPROVE",
@@ -1095,17 +1936,29 @@ def validate_execution_output(
                     f"{path}.execution_decision",
                 )
             )
-        if market_phase in {
-            "market_closed_weekend",
-            "market_closed_holiday",
-        }:
-            errors.append(
-                _issue(
-                    "CLOSED_MARKET_CANNOT_APPROVE",
-                    "闭市日不得形成执行意图",
-                    f"{path}.execution_decision",
-                )
+        if is_closed_equity:
+            maximum_closed_fraction = (
+                closed_open_fraction
+                if portfolio_action
+                in {"open", "increase"}
+                else closed_reduce_fraction
             )
+            if (
+                profile_environment != "live"
+                or closed_policy.get("enabled")
+                is not True
+                or maximum_closed_fraction
+                <= ZERO
+                or fraction
+                > maximum_closed_fraction
+            ):
+                errors.append(
+                    _issue(
+                        "CLOSED_SESSION_FRACTION_INVALID",
+                        f"{symbol}闭市排队执行比例超过保守上限",
+                        f"{path}.execution_fraction",
+                    )
+                )
         quote = quotes.get(symbol)
         quote = (
             quote
@@ -1116,10 +1969,18 @@ def validate_execution_output(
             quote.get("quote_age_seconds")
         )
         if (
-            quote.get("status") != "success"
-            or quote.get("quote_age_seconds")
-            is None
-            or quote_age > quote_age_limit
+            not automatic_crypto_liquidation
+            and (
+                quote.get("status") != "success"
+                or quote.get("quote_age_seconds")
+                is None
+                or quote_age
+                > (
+                    closed_quote_age_limit
+                    if is_closed_equity
+                    else quote_age_limit
+                )
+            )
         ):
             errors.append(
                 _issue(
@@ -1130,16 +1991,21 @@ def validate_execution_output(
             )
         spread_limit = (
             regular_spread_limit
-            if market_phase
-            == "regular_session"
+            if (
+                market_phase == "regular_session"
+                or is_crypto
+            )
             else extended_spread_limit
         )
         spread = _decimal_or_zero(
             quote.get("spread_bps")
         )
         if (
-            quote.get("spread_bps") is None
-            or spread > spread_limit
+            not automatic_crypto_liquidation
+            and (
+                quote.get("spread_bps") is None
+                or spread > spread_limit
+            )
         ):
             errors.append(
                 _issue(
@@ -1148,12 +2014,6 @@ def validate_execution_output(
                     path,
                 )
             )
-        asset = assets.get(symbol)
-        asset = (
-            asset
-            if isinstance(asset, Mapping)
-            else {}
-        )
         if (
             asset.get("tradable") is not True
             or asset.get("status")
@@ -1187,6 +2047,13 @@ def validate_execution_output(
                 else None
             ),
         }.get(reference)
+        if (
+            reference_available is None
+            and automatic_crypto_liquidation
+        ):
+            reference_available = position.get(
+                "current_price"
+            )
         if (
             reference == "none"
             or reference_available is None
@@ -1276,7 +2143,68 @@ def validate_execution_output(
                     f"{path}.price_condition",
                 )
             )
-        if market_phase != "regular_session":
+        if is_crypto:
+            if (
+                side != "sell"
+                or portfolio_action
+                not in {"reduce", "close"}
+            ):
+                errors.append(
+                    _issue(
+                        "CRYPTO_POSITION_EXPANSION_FORBIDDEN",
+                        f"{symbol}加密资产只允许减仓或清仓",
+                        path,
+                    )
+                )
+            if (
+                preferred_type
+                not in {"market", "limit"}
+                or order_intent.get(
+                    "time_in_force_preference"
+                )
+                not in {"gtc", "ioc"}
+                or order_intent.get(
+                    "extended_hours_requested"
+                )
+                is True
+            ):
+                errors.append(
+                    _issue(
+                        "CRYPTO_ORDER_INTENT_INVALID",
+                        f"{symbol}加密订单必须使用market/limit、gtc/ioc且不标记extended_hours",
+                        path,
+                    )
+                )
+        elif is_closed_equity:
+            if (
+                preferred_type != "limit"
+                or order_intent.get(
+                    "time_in_force_preference"
+                )
+                != closed_policy.get(
+                    "time_in_force"
+                )
+                or order_intent.get(
+                    "extended_hours_requested"
+                )
+                is not False
+                or order_intent.get(
+                    "allow_queue"
+                )
+                is not True
+                or price_condition.get(
+                    "limit_price"
+                )
+                is None
+            ):
+                errors.append(
+                    _issue(
+                        "CLOSED_SESSION_QUEUE_INTENT_INVALID",
+                        f"{symbol}闭市排队必须使用带价格的limit/day且allow_queue=true",
+                        path,
+                    )
+                )
+        elif market_phase != "regular_session":
             supported_phases = capability.get(
                 "supported_phases",
                 [],
@@ -1325,6 +2253,14 @@ def validate_execution_output(
                 "$.decisions",
             )
         )
+    errors.extend(
+        _protection_issues(
+            payload,
+            input_payload=input_payload,
+            snapshot=snapshot,
+            decisions=decisions,
+        )
+    )
     if adjustment_breached and not requires_replan:
         errors.append(
             _issue(

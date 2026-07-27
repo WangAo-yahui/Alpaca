@@ -1,0 +1,17 @@
+{
+  "_comment": "作用：定义 WA Trader v2 的 Alpaca Live 实盘账户、独立凭据文件和完整策略链路。重要性：所有 Live 读取和写入都只能使用本 profile，禁止与 paper1 凭据、绑定和运行产物混用。",
+  "schema_version": "1.0",
+  "profile_id": "live1",
+  "enabled": true,
+  "broker": "alpaca",
+  "environment": "live",
+  "credential_key_env": "ALPACA_LIVE_API_KEY",
+  "credential_secret_env": "ALPACA_LIVE_SECRET_KEY",
+  "strategy": {
+    "strategy_id": "core_long",
+    "strategy_version": "1.2.0"
+  },
+  "risk_profile": "live_full@1.0.0",
+  "order_policy": "live_equity@1.0.0",
+  "submission_policy": "alpaca_live@1.0.0"
+}

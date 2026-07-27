@@ -30,7 +30,8 @@
       "const": "1.0"
     },
     "profile_id": {
-      "const": "paper1"
+      "type": "string",
+      "pattern": "^[A-Za-z0-9][A-Za-z0-9._-]*$"
     },
     "strategy_id": {
       "const": "core_long"
@@ -39,10 +40,12 @@
       "const": "1.2.0"
     },
     "risk_profile": {
-      "const": "paper_standard@1.1.0"
+      "type": "string",
+      "pattern": "^[A-Za-z0-9._-]+@[A-Za-z0-9._-]+$"
     },
     "order_policy": {
-      "const": "paper_equity@1.0.0"
+      "type": "string",
+      "pattern": "^[A-Za-z0-9._-]+@[A-Za-z0-9._-]+$"
     },
     "run_date": {
       "type": "string"

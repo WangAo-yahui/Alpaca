@@ -13,11 +13,15 @@ from typing import Any
 from zoneinfo import ZoneInfo
 
 from alpaca.data.enums import DataFeed
-from alpaca.data.requests import StockBarsRequest
+from alpaca.data.requests import (
+    CryptoBarsRequest,
+    StockBarsRequest,
+)
 from alpaca.data.timeframe import TimeFrame
 from alpaca.trading.requests import GetCalendarRequest
 
 from v2.data._normalization import (
+    crypto_request_symbol,
     finite_float,
     iso_timestamp,
     normalized_symbol,
@@ -361,6 +365,7 @@ def fetch_intraday_summaries(
     window: int = 60,
     market_phase: str | None = None,
     feed: DataFeed | None = None,
+    crypto_symbols: list[str] | None = None,
 ) -> dict[str, dict[str, Any]]:
     unique = sorted(
         {
@@ -371,26 +376,75 @@ def fetch_intraday_summaries(
     )
     if not unique:
         return {}
-    response = call_api(
-        "get_stock_intraday_bars",
-        clients.stock_data.get_stock_bars,
-        StockBarsRequest(
-            symbol_or_symbols=unique,
-            timeframe=TimeFrame.Minute,
-            start=start,
-            end=end or utc_now(),
-            limit=max(window * len(unique), window),
-            feed=feed,
-        ),
-    )
-    mapping = _bar_mapping(response)
+    crypto = {
+        normalized_symbol(symbol).replace("/", "")
+        for symbol in (crypto_symbols or [])
+    }
+    stock = [
+        symbol
+        for symbol in unique
+        if symbol.replace("/", "") not in crypto
+    ]
+    mapping: dict[str, list[object]] = {}
+    if stock:
+        response = call_api(
+            "get_stock_intraday_bars",
+            clients.stock_data.get_stock_bars,
+            StockBarsRequest(
+                symbol_or_symbols=stock,
+                timeframe=TimeFrame.Minute,
+                start=start,
+                end=end or utc_now(),
+                limit=max(
+                    window * len(stock),
+                    window,
+                ),
+                feed=feed,
+            ),
+        )
+        mapping.update(_bar_mapping(response))
+    if crypto:
+        if clients.crypto_data is None:
+            raise ValueError(
+                "Alpaca crypto data client不能为空"
+            )
+        response = call_api(
+            "get_crypto_intraday_bars",
+            clients.crypto_data.get_crypto_bars,
+            CryptoBarsRequest(
+                symbol_or_symbols=[
+                    crypto_request_symbol(symbol)
+                    for symbol in sorted(crypto)
+                ],
+                timeframe=TimeFrame.Minute,
+                start=start,
+                end=end or utc_now(),
+                limit=max(
+                    window * len(crypto),
+                    window,
+                ),
+            ),
+        )
+        mapping.update(
+            {
+                normalized_symbol(symbol).replace(
+                    "/", ""
+                ): bars
+                for symbol, bars in _bar_mapping(
+                    response
+                ).items()
+            }
+        )
     phase = market_phase or determine_market_phase(
         end
     )
     return {
         symbol: summarize_intraday(
             symbol,
-            mapping.get(symbol, []),
+            mapping.get(
+                symbol.replace("/", ""),
+                [],
+            ),
             market_phase=phase,
             requested_window=window,
         )

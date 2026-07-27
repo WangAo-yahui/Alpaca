@@ -28,7 +28,7 @@ class ConfigTests(unittest.TestCase):
             )
             self.assertEqual(len(first.signature), 64)
 
-    def test_rejects_non_paper_configuration(
+    def test_rejects_disabling_live_profile_support(
         self,
     ) -> None:
         with tempfile.TemporaryDirectory() as temporary:
@@ -38,7 +38,7 @@ class ConfigTests(unittest.TestCase):
             payload = json.loads(
                 path.read_text(encoding="utf-8")
             )
-            payload["allow_live"] = True
+            payload["allow_live"] = False
             path.write_text(
                 json.dumps(payload),
                 encoding="utf-8",

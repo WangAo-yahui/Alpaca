@@ -56,6 +56,7 @@ def reconcile_submission(
     *,
     clients: AlpacaClients,
     profile_id: str,
+    environment: str = "paper",
     cycle_id: str,
     operations: Iterable[SubmissionOperation],
     output_path: Any | None = None,
@@ -63,6 +64,11 @@ def reconcile_submission(
     """Fetch one coherent post-write snapshot and persist it atomically."""
 
     clients.validate()
+    if (
+        environment not in {"paper", "live"}
+        or environment != clients.environment
+    ):
+        raise ValueError("reconciliation客户端环境不一致")
     errors: list[dict[str, str]] = []
     warnings: list[str] = []
     account: dict[str, Any] = {}
@@ -152,7 +158,7 @@ def reconcile_submission(
     payload = {
         "schema_version": "1.0",
         "profile_id": profile_id,
-        "environment": "paper",
+        "environment": environment,
         "cycle_id": cycle_id,
         "reconciled_at": utc_now_iso(),
         "account": account,
@@ -263,6 +269,7 @@ def maintain_previous_submissions(
         reconcile_submission(
             clients=clients,
             profile_id=profile_id,
+            environment=clients.environment,
             cycle_id=cycle_id,
             operations=operations,
             output_path=paths.reconciliation,

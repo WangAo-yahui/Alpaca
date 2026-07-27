@@ -1,7 +1,7 @@
 """WA Trader v2 命令行合同。
 
-作用：集中定义 profile、initial guidance、复查、交易许可和轮次模式参数。
-重要性：这里是所有运行身份与人工输入的第一道校验边界，冲突参数必须在写入状态前失败。
+作用：集中定义 profile、运行环境、initial guidance、复查、交易许可和轮次模式参数。
+重要性：这里是 Paper/Live 运行身份与人工输入的第一道校验边界，环境必须由 profile 决定，冲突参数必须在写入状态前失败。
 """
 
 from __future__ import annotations
@@ -17,7 +17,7 @@ from v2.runtime import (
 )
 
 
-SCRIPT_VERSION = "2026-07-25-v2-cli-stage-f-v1"
+SCRIPT_VERSION = "2026-07-27-v2-live-cli-v1"
 
 
 @dataclass(frozen=True)
@@ -73,13 +73,43 @@ def configured_default_profile(
     return profile
 
 
+def configured_profile_environment(
+    profile_id: str,
+    *,
+    project_root: Path | None = None,
+) -> str:
+    """Read the non-secret broker environment pinned by one profile."""
+
+    root = (
+        project_root.expanduser().resolve()
+        if project_root is not None
+        else get_project_root()
+    )
+    payload = load_json_object(
+        root
+        / "config"
+        / "v2"
+        / "profiles"
+        / f"{profile_id}.json"
+    )
+    environment = str(
+        payload.get("environment", "")
+    ).strip().lower()
+    if environment not in {"paper", "live"}:
+        raise ValueError(
+            f"profile环境无效：{profile_id}"
+        )
+    return environment
+
+
 def build_parser(
     *,
     project_root: Path | None = None,
 ) -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(
         description=(
-            "WA Trader v2 主流程。默认使用paper模式。"
+            "WA Trader v2 主流程。默认使用paper1；"
+            "Live 使用live1和独立.env_live。"
         )
     )
 
@@ -165,8 +195,8 @@ def build_parser(
         dest="allow_trade",
         action="store_true",
         help=(
-            "允许后续阶段提交Alpaca paper订单；"
-            "当前Stage E仍只生成执行意图且提交数为0"
+            "允许后续阶段提交当前profile对应的"
+            "Alpaca Paper或Live订单；仍需通过全部硬风控"
         ),
     )
 
@@ -211,15 +241,14 @@ def build_parser(
     mode_group.add_argument(
         "--paper",
         action="store_true",
-        help="显式使用paper交易模式",
+        help="断言所选profile属于paper环境",
     )
 
     mode_group.add_argument(
         "--live",
         action="store_true",
         help=(
-            "请求真实账户模式；"
-            "v2初期将拒绝执行"
+            "选择live1，或断言显式profile属于live环境"
         ),
     )
 
@@ -283,8 +312,32 @@ def parse_cli_args(
     profile = str(args.profile).strip()
     if not profile:
         parser.error("--profile不能为空")
-
-    paper = not args.live
+    default_profile = configured_default_profile(
+        project_root=project_root
+    )
+    if args.live and profile == default_profile:
+        profile = "live1"
+    try:
+        environment = configured_profile_environment(
+            profile,
+            project_root=project_root,
+        )
+    except (FileNotFoundError, ValueError) as error:
+        parser.error(str(error))
+    if args.paper and environment != "paper":
+        parser.error(
+            "--paper与所选profile环境不一致"
+        )
+    paper = (
+        False
+        if args.live
+        else environment == "paper"
+    )
+    live = (
+        True
+        if args.live
+        else environment == "live"
+    )
     no_review = bool(
         args.no_review or args.unattended
     )
@@ -309,7 +362,7 @@ def parse_cli_args(
         ),
         new_cycle=args.new_cycle,
         paper=paper,
-        live=args.live,
+        live=live,
         profile=profile,
         guidance=args.guidance,
         no_guidance=no_guidance,

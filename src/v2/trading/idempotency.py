@@ -84,6 +84,7 @@ def build_client_order_id(
             "wa2",
             _component(profile_id, limit=8),
             _component(cycle_id, limit=15),
+            _component(order_role, limit=6),
             _component(side, limit=4),
             _component(symbol, limit=10),
         )

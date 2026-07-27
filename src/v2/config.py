@@ -127,14 +127,14 @@ def _validate_system(payload: Mapping[str, Any]) -> None:
         field="timezone",
     )
     _require(
-        payload.get("trading_mode") == "paper",
-        "system.json.trading_mode必须为paper",
+        payload.get("trading_mode") == "profile",
+        "system.json.trading_mode必须为profile",
         file_name=file_name,
         field="trading_mode",
     )
     _require(
-        payload.get("allow_live") is False,
-        "system.json.allow_live必须为false",
+        payload.get("allow_live") is True,
+        "system.json.allow_live必须为true",
         file_name=file_name,
         field="allow_live",
     )
@@ -470,8 +470,8 @@ def _validate_order_policy(
     file_name = "order_policy.json"
     _validate_common(file_name, payload)
     _require(
-        payload.get("paper_only") is True,
-        "order_policy.json.paper_only必须为true",
+        payload.get("paper_only") is False,
+        "order_policy.json.paper_only必须为false",
         file_name=file_name,
         field="paper_only",
     )
@@ -516,8 +516,8 @@ def _validate_order_policy(
     assert isinstance(submission, dict)
     _require(
         submission.get("default_enabled") is False
-        and submission.get("paper_only") is True,
-        "订单提交必须默认关闭且仅允许paper",
+        and submission.get("paper_only") is False,
+        "订单提交必须默认关闭并由profile环境授权",
         file_name=file_name,
         field="submission",
     )

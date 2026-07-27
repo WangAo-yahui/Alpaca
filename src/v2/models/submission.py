@@ -1,4 +1,4 @@
-"""定义 Stage G paper 提交、恢复和对账的持久化模型。
+"""定义 Stage G Paper/Live 提交、恢复和对账的持久化模型。
 
 作用：为 submission intent、逐操作 journal、券商结果及状态分类提供严格数据合同。
 重要性：这些模型是幂等恢复的事实来源；没有写前记录或出现 uncertain 时绝不能盲目重试。
@@ -245,11 +245,11 @@ class SubmissionIntent:
 
     def to_dict(self) -> dict[str, Any]:
         if (
-            self.environment != "paper"
+            self.environment not in {"paper", "live"}
             or self.expected_write_count < 0
             or self.intent_revision < 1
         ):
-            raise ValueError("submission intent必须是有效paper计划")
+            raise ValueError("submission intent环境或写入数量无效")
         return {
             "schema_version": "1.0",
             "profile_id": self.profile_id,
@@ -278,6 +278,7 @@ class SubmissionIntent:
 def broker_submission_document(
     *,
     profile_id: str,
+    environment: str = "paper",
     run_date: str,
     cycle_id: str,
     submission_requested: bool,
@@ -291,6 +292,8 @@ def broker_submission_document(
 ) -> dict[str, Any]:
     """Build the canonical, secret-free result document."""
 
+    if environment not in {"paper", "live"}:
+        raise ValueError("broker submission环境无效")
     submitted = sum(
         operation.operation_type == SubmissionOperationType.SUBMIT
         and operation.attempt_count > 0
@@ -306,7 +309,7 @@ def broker_submission_document(
     return {
         "schema_version": "1.0",
         "profile_id": profile_id,
-        "environment": "paper",
+        "environment": environment,
         "run_date": run_date,
         "cycle_id": cycle_id,
         "started_at": started_at,

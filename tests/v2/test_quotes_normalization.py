@@ -6,6 +6,8 @@ from types import SimpleNamespace
 from zoneinfo import ZoneInfo
 
 from v2.data.quotes import normalize_quote
+from v2.data.alpaca_client import AlpacaClients
+from v2.data.quotes import fetch_latest_quotes
 
 
 UTC = ZoneInfo("UTC")
@@ -73,6 +75,57 @@ class QuoteNormalizationTests(unittest.TestCase):
         self.assertEqual(
             result["status"],
             "invalid_data",
+        )
+
+    def test_crypto_legacy_symbol_uses_pair_request(
+        self,
+    ) -> None:
+        captured: list[object] = []
+
+        def crypto_quote(request):
+            captured.append(request)
+            return {
+                "USDT/USD": SimpleNamespace(
+                    bid_price="0.999",
+                    bid_size="100",
+                    ask_price="1.001",
+                    ask_size="100",
+                    timestamp=(
+                        "2026-07-23T14:00:00+00:00"
+                    ),
+                )
+            }
+
+        clients = AlpacaClients(
+            trading=object(),
+            stock_data=SimpleNamespace(),
+            crypto_data=SimpleNamespace(
+                get_crypto_latest_quote=(
+                    crypto_quote
+                )
+            ),
+        )
+        result = fetch_latest_quotes(
+            clients,
+            ["USDTUSD"],
+            crypto_symbols=["USDTUSD"],
+            now=datetime(
+                2026,
+                7,
+                23,
+                14,
+                0,
+                1,
+                tzinfo=UTC,
+            ),
+        )
+        self.assertEqual(
+            captured[0].symbol_or_symbols,
+            ["USDT/USD"],
+        )
+        self.assertEqual(
+            result["USDTUSD"]["status"],
+            "success",
         )
 
 

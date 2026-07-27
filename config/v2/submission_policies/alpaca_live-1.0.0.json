@@ -1,10 +1,10 @@
 {
-  "_comment": "作用：集中定义 Alpaca paper 提交、取消、轮询、恢复与双开关规则。重要性：这是 Stage G 唯一允许券商写操作的版本化部署门禁，live 与直接 replace 始终关闭。",
+  "_comment": "作用：授权 live1 通过经过校验的唯一写路径提交和取消 Alpaca Live 订单。重要性：开放全部账户权益不等于绕过幂等、写前日志、账户绑定或不确定结果停止规则。",
   "schema_version": "1.0",
-  "policy_id": "alpaca_paper",
+  "policy_id": "alpaca_live",
   "version": "1.0.0",
   "broker": "alpaca",
-  "environment": "paper",
+  "environment": "live",
   "allow_submit": true,
   "allow_cancel": true,
   "allow_direct_replace": false,
@@ -39,8 +39,8 @@
     "fractional_quantity_max_decimals": 9
   },
   "deployment_switches": {
-    "paper_submission_enabled": true,
-    "live_submission_enabled": false,
+    "paper_submission_enabled": false,
+    "live_submission_enabled": true,
     "cancel_enabled": true,
     "protective_order_submission_enabled": true,
     "emergency_stop": false,

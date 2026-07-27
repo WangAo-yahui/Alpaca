@@ -622,8 +622,13 @@ def build_portfolio_input(
             holding["symbol"],
             "Unknown",
         )
-        sector_exposure[sector] = (
-            sector_exposure.get(sector, ZERO)
+        sector_key = (
+            sector
+            if sector != "Unknown"
+            else f"Unknown:{holding['symbol']}"
+        )
+        sector_exposure[sector_key] = (
+            sector_exposure.get(sector_key, ZERO)
             + _decimal_or_zero(
                 holding.get("current_weight")
             )
@@ -1192,10 +1197,23 @@ def validate_portfolio_output(
                 candidate.get("sector")
                 or "Unknown"
             )
-            sector_totals[sector] = (
-                sector_totals.get(sector, ZERO)
+            sector_key = (
+                sector
+                if sector != "Unknown"
+                else f"Unknown:{symbol}"
+            )
+            sector_totals[sector_key] = (
+                sector_totals.get(sector_key, ZERO)
                 + target
             )
+            if sector == "Unknown":
+                warnings.append(
+                    _issue(
+                        "SECTOR_UNKNOWN",
+                        f"{symbol}缺少行业分类，按标的单独计算上限",
+                        f"{decision_path}.target_weight",
+                    )
+                )
         holding = holding_by_symbol.get(symbol)
         candidate = candidate_by_symbol.get(symbol)
         if raw_decision.get(

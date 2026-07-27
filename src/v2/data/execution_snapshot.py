@@ -12,11 +12,13 @@ from typing import Any, Callable, TypeVar
 
 from alpaca.data.enums import DataFeed
 from alpaca.data.requests import (
+    CryptoLatestTradeRequest,
     StockLatestTradeRequest,
 )
 
 from v2.data._normalization import (
     compact_error,
+    crypto_request_symbol,
     finite_float,
     iso_timestamp,
     normalized_symbol,
@@ -162,6 +164,7 @@ def fetch_latest_trades(
     symbols: list[str],
     *,
     feed: DataFeed | None = None,
+    crypto_symbols: list[str] | None = None,
 ) -> dict[str, dict[str, Any]]:
     unique = sorted(
         {
@@ -172,19 +175,55 @@ def fetch_latest_trades(
     )
     if not unique:
         return {}
-    response = call_api(
-        "get_stock_latest_trade",
-        clients.stock_data.get_stock_latest_trade,
-        StockLatestTradeRequest(
-            symbol_or_symbols=unique,
-            feed=feed,
-        ),
-    )
-    mapping = _mapping(response)
+    crypto = {
+        normalized_symbol(symbol).replace("/", "")
+        for symbol in (crypto_symbols or [])
+    }
+    stock = [
+        symbol
+        for symbol in unique
+        if symbol.replace("/", "") not in crypto
+    ]
+    mapping: dict[str, object] = {}
+    if stock:
+        response = call_api(
+            "get_stock_latest_trade",
+            clients.stock_data.get_stock_latest_trade,
+            StockLatestTradeRequest(
+                symbol_or_symbols=stock,
+                feed=feed,
+            ),
+        )
+        mapping.update(_mapping(response))
+    if crypto:
+        if clients.crypto_data is None:
+            raise ValueError(
+                "Alpaca crypto data client不能为空"
+            )
+        response = call_api(
+            "get_crypto_latest_trade",
+            clients.crypto_data.get_crypto_latest_trade,
+            CryptoLatestTradeRequest(
+                symbol_or_symbols=[
+                    crypto_request_symbol(symbol)
+                    for symbol in sorted(crypto)
+                ],
+            ),
+        )
+        mapping.update(
+            {
+                normalized_symbol(symbol).replace(
+                    "/", ""
+                ): trade
+                for symbol, trade in _mapping(
+                    response
+                ).items()
+            }
+        )
     return {
         symbol: normalize_latest_trade(
             symbol,
-            mapping.get(symbol),
+            mapping.get(symbol.replace("/", "")),
         )
         for symbol in unique
     }
@@ -323,6 +362,18 @@ def create_execution_snapshot(
         else "unknown"
     )
     feed = market_data_feed(phase)
+    asset_result = (
+        asset_cache or AssetCache(clients)
+    ).get_many(symbols)
+    warnings.extend(asset_result.errors)
+    crypto_symbols = [
+        symbol
+        for symbol in symbols
+        if asset_result.assets.get(
+            symbol, {}
+        ).get("asset_class")
+        == "crypto"
+    ]
     quotes = _safe_fetch(
         "quotes",
         lambda: fetch_latest_quotes(
@@ -330,6 +381,7 @@ def create_execution_snapshot(
             symbols,
             now=retrieved,
             feed=feed,
+            crypto_symbols=crypto_symbols,
         ),
         errors=errors,
     )
@@ -347,6 +399,7 @@ def create_execution_snapshot(
             clients,
             symbols,
             feed=feed,
+            crypto_symbols=crypto_symbols,
         ),
         errors=errors,
     )
@@ -379,6 +432,7 @@ def create_execution_snapshot(
             window=minute_window,
             market_phase=phase,
             feed=feed,
+            crypto_symbols=crypto_symbols,
         ),
         errors=errors,
     )
@@ -398,10 +452,6 @@ def create_execution_snapshot(
             for symbol in symbols
         }
     )
-    asset_result = (
-        asset_cache or AssetCache(clients)
-    ).get_many(symbols)
-    warnings.extend(asset_result.errors)
     reserved, reserve_warnings = (
         estimate_open_order_reserve(
             normalized_open_orders

@@ -1,4 +1,4 @@
-"""实现顶层 ``./wa`` 的 Stage H 命令行合同。
+"""实现顶层 ``./wa`` 的 Paper/Live Stage H 命令行合同。
 
 作用：解析固定运维子命令，将管理器结果输出为人类文本或稳定 JSON。
 重要性：所有用户和 launchd 入口都必须经过同一错误映射，不能直接绕过锁或部署门禁。
@@ -25,46 +25,79 @@ def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(
         prog="wa",
         description=(
-            "WA Trader v2 macOS paper1 本地部署与运行工具"
+            "WA Trader v2 macOS Paper/Live 本地部署与运行工具"
         ),
     )
     commands = parser.add_subparsers(
         dest="command",
         required=True,
     )
-    commands.add_parser("bootstrap")
-    commands.add_parser("doctor")
+    def identity(command: argparse.ArgumentParser) -> None:
+        command.add_argument(
+            "--profile",
+            help="运行profile；默认paper1",
+        )
+        command.add_argument(
+            "--live",
+            action="store_true",
+            help="选择live1实盘profile",
+        )
+
+    bootstrap = commands.add_parser("bootstrap")
+    identity(bootstrap)
+    doctor = commands.add_parser("doctor")
+    identity(doctor)
     deploy = commands.add_parser("deploy")
+    identity(deploy)
     deploy.add_argument(
         "--enable-trading",
         action="store_true",
-        help="仅在真实paper submit已对账验证后启用自动交易",
+        help="为所选profile启用自动交易；Paper仍要求既有提交验证",
     )
     run = commands.add_parser("run")
+    identity(run)
     run.add_argument(
         "--allow-trade",
         action="store_true",
-        help="人工运行一次允许Stage G paper提交的cycle",
+        help="人工运行一次允许当前profile提交的cycle",
     )
     run.add_argument(
         "--force-full",
         action="store_true",
         help="人工强制生成新的完整决策，但不单独授予提交权限",
     )
-    commands.add_parser("start")
-    commands.add_parser("stop")
-    commands.add_parser("restart")
+    run.add_argument(
+        "--maintenance-only",
+        action="store_true",
+        help="只对账既有订单并维护日报，不生成或提交新订单",
+    )
+    run.add_argument(
+        "--bind-account",
+        action="store_true",
+        help="首次运行时绑定当前profile的账户hash",
+    )
+    start = commands.add_parser("start")
+    identity(start)
+    stop = commands.add_parser("stop")
+    identity(stop)
+    restart = commands.add_parser("restart")
+    identity(restart)
     status = commands.add_parser("status")
+    identity(status)
     status.add_argument("--json", action="store_true")
     health = commands.add_parser("health")
+    identity(health)
     health.add_argument("--json", action="store_true")
     logs = commands.add_parser("logs")
+    identity(logs)
     logs.add_argument("--follow", action="store_true")
-    commands.add_parser("rollback")
-    commands.add_parser(
+    rollback = commands.add_parser("rollback")
+    identity(rollback)
+    service_run = commands.add_parser(
         "_service-run",
         help="launchd内部防重入运行入口",
     )
+    identity(service_run)
     return parser
 
 
@@ -108,7 +141,25 @@ def main(
         if project_root is not None
         else Path(__file__).resolve().parents[3]
     )
-    manager = DeploymentManager(root)
+    profile_id = (
+        str(options.profile).strip()
+        if getattr(options, "profile", None)
+        else (
+            "live1"
+            if getattr(options, "live", False)
+            else "paper1"
+        )
+    )
+    manager = DeploymentManager(
+        root,
+        profile_id=profile_id,
+    )
+    if (
+        getattr(options, "live", False)
+        and manager.profile_environment != "live"
+    ):
+        print("--live与所选profile环境不一致")
+        return int(ExitCode.CONFIGURATION_ERROR)
     try:
         if options.command == "bootstrap":
             _print_document(
@@ -135,29 +186,42 @@ def main(
             )
             return int(ExitCode.SUCCESS)
         if options.command == "run":
+            run_arguments = {
+                "allow_trade": bool(
+                    options.allow_trade
+                ),
+                "force_full": bool(
+                    options.force_full
+                ),
+            }
+            if options.maintenance_only:
+                run_arguments[
+                    "maintenance_only"
+                ] = True
+            if options.bind_account:
+                run_arguments["bind_account"] = True
             return int(
-                manager.run(
-                    allow_trade=bool(
-                        options.allow_trade
-                    ),
-                    force_full=bool(
-                        options.force_full
-                    ),
-                )
+                manager.run(**run_arguments)
             )
         if options.command == "_service-run":
             return int(manager.service_run())
         if options.command == "start":
             manager.start()
-            print("paper1 launchd服务已启动")
+            print(
+                f"{manager.profile_id} launchd服务已启动"
+            )
             return int(ExitCode.SUCCESS)
         if options.command == "stop":
             manager.stop()
-            print("paper1 launchd服务已停止")
+            print(
+                f"{manager.profile_id} launchd服务已停止"
+            )
             return int(ExitCode.SUCCESS)
         if options.command == "restart":
             manager.restart()
-            print("paper1 launchd服务已重启")
+            print(
+                f"{manager.profile_id} launchd服务已重启"
+            )
             return int(ExitCode.SUCCESS)
         if options.command == "status":
             _print_document(

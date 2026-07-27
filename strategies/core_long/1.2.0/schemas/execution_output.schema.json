@@ -21,6 +21,7 @@
     "review_response",
     "portfolio_response",
     "decisions",
+    "protection_plans",
     "open_order_actions",
     "requires_portfolio_replan",
     "requires_manual_review",
@@ -39,7 +40,7 @@
     },
     "profile_id": {
       "type": "string",
-      "const": "paper1"
+      "pattern": "^[A-Za-z0-9][A-Za-z0-9._-]*$"
     },
     "strategy_id": {
       "type": "string",
@@ -340,6 +341,7 @@
                 "enum": [
                   "day",
                   "gtc",
+                  "ioc",
                   "none"
                 ]
               },
@@ -374,6 +376,131 @@
             "items": {
               "type": "string"
             }
+          }
+        }
+      }
+    },
+    "protection_plans": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "symbol",
+          "mode",
+          "apply_to",
+          "coverage_fraction",
+          "time_in_force",
+          "take_profit_price",
+          "stop_price",
+          "stop_limit_price",
+          "trail_price",
+          "trail_percent",
+          "stages",
+          "reason"
+        ],
+        "properties": {
+          "symbol": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 15
+          },
+          "mode": {
+            "type": "string",
+            "enum": [
+              "none",
+              "stop",
+              "stop_limit",
+              "take_profit",
+              "trailing_stop",
+              "oco",
+              "bracket",
+              "oto_stop",
+              "oto_take_profit",
+              "staged_oco"
+            ]
+          },
+          "apply_to": {
+            "type": "string",
+            "enum": [
+              "existing_position",
+              "new_entry",
+              "both"
+            ]
+          },
+          "coverage_fraction": {
+            "type": "string"
+          },
+          "time_in_force": {
+            "type": "string",
+            "enum": [
+              "day",
+              "gtc"
+            ]
+          },
+          "take_profit_price": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "stop_price": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "stop_limit_price": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "trail_price": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "trail_percent": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "stages": {
+            "type": "array",
+            "maxItems": 5,
+            "items": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": [
+                "coverage_fraction",
+                "take_profit_price",
+                "stop_price",
+                "stop_limit_price"
+              ],
+              "properties": {
+                "coverage_fraction": {
+                  "type": "string"
+                },
+                "take_profit_price": {
+                  "type": "string"
+                },
+                "stop_price": {
+                  "type": "string"
+                },
+                "stop_limit_price": {
+                  "type": [
+                    "string",
+                    "null"
+                  ]
+                }
+              }
+            }
+          },
+          "reason": {
+            "type": "string"
           }
         }
       }

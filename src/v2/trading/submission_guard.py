@@ -1,6 +1,6 @@
 """集中执行 Stage G 每次券商写操作之前的最终安全门禁。
 
-作用：核对 CLI、paper1、账户绑定、部署开关、release、产物哈希、状态机和 journal。
+作用：核对 CLI、profile环境、账户绑定、部署开关、release、产物哈希、状态机和 journal。
 重要性：任何一项不一致都会 fail closed；业务模块不能绕过这里把本地意图升级为券商写操作。
 """
 
@@ -37,19 +37,88 @@ def assert_submission_allowed(
 
     switches = policy.settings.get("deployment_switches", {})
     policy_hash = sha256_file(policy.source_path)
+    expected_paper = profile.environment == "paper"
+    environment_switch_enabled = (
+        switches.get(
+            f"{profile.environment}_submission_enabled"
+        )
+        is True
+        if isinstance(switches, Mapping)
+        else False
+    )
+    opposite_switch_disabled = (
+        switches.get(
+            (
+                "live_submission_enabled"
+                if expected_paper
+                else "paper_submission_enabled"
+            )
+        )
+        is False
+        if isinstance(switches, Mapping)
+        else False
+    )
+    contains_protective_order = any(
+        isinstance(item, Mapping)
+        and str(
+            item.get("protection_role", "none")
+        )
+        != "none"
+        for item in request_specs.get(
+            "requests",
+            [],
+        )
+    )
     checks = {
         "allow_trade": state.invocation.allow_trade,
-        "paper1_only": profile.profile_id == "paper1",
-        "paper_environment": profile.environment == "paper",
+        "supported_environment": (
+            profile.environment in {"paper", "live"}
+        ),
+        "policy_environment": (
+            policy.environment == profile.environment
+        ),
         "profile_enabled": profile.enabled,
-        "paper_client": clients.paper,
-        "live_disabled": not state.invocation.live,
+        "client_environment": (
+            clients.paper == expected_paper
+        ),
+        "invocation_environment": (
+            bool(
+                getattr(
+                    state.invocation,
+                    "paper",
+                    not bool(
+                        getattr(
+                            state.invocation,
+                            "live",
+                            False,
+                        )
+                    ),
+                )
+            )
+            == expected_paper
+            and bool(
+                getattr(
+                    state.invocation,
+                    "live",
+                    False,
+                )
+            )
+            == (not expected_paper)
+        ),
         "submit_step": (
             state.current_step == StepName.SUBMIT_ORDERS
         ),
         "validated_identity": (
             validated.get("profile_id") == profile.profile_id
             and validated.get("cycle_id") == state.cycle_id
+            and intent.get(
+                "profile_id", profile.profile_id
+            )
+            == profile.profile_id
+            and intent.get(
+                "environment", profile.environment
+            )
+            == profile.environment
         ),
         "submission_requested": (
             validated.get("submission_requested") is True
@@ -91,8 +160,8 @@ def assert_submission_allowed(
         ),
         "no_uncertain": not journal.has_uncertain,
         "credential_identity": (
-            profile.credential_key_env == "ALPACA_API_KEY"
-            and profile.credential_secret_env == "ALPACA_SECRET_KEY"
+            bool(profile.credential_key_env)
+            and bool(profile.credential_secret_env)
         ),
         "account_hash": (
             expected_account_hash is not None
@@ -105,13 +174,19 @@ def assert_submission_allowed(
             and not bool(account.get("account_blocked"))
             and not bool(account.get("trade_suspended_by_user"))
         ),
-        "paper_switch": (
-            isinstance(switches, Mapping)
-            and switches.get("paper_submission_enabled") is True
+        "environment_switch": environment_switch_enabled,
+        "protective_order_switch": (
+            not contains_protective_order
+            or (
+                isinstance(switches, Mapping)
+                and switches.get(
+                    "protective_order_submission_enabled"
+                )
+                is True
+            )
         ),
-        "live_switch_off": (
-            isinstance(switches, Mapping)
-            and switches.get("live_submission_enabled") is False
+        "opposite_environment_switch_off": (
+            opposite_switch_disabled
         ),
         "kill_switch_off": (
             isinstance(switches, Mapping)

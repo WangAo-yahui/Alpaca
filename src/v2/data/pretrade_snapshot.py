@@ -29,6 +29,9 @@ from v2.data.orders import (
 )
 from v2.data.positions import fetch_positions
 from v2.data.quotes import fetch_latest_quotes, no_quote
+from v2.crypto_liquidation import (
+    is_automatic_crypto_liquidation_decision,
+)
 from v2.exceptions import V2Error
 from v2.models.orders import (
     PreTradeSnapshot,
@@ -165,6 +168,9 @@ def _order_payload(
         "filled_quantity",
         "limit_price",
         "stop_price",
+        "trail_price",
+        "trail_percent",
+        "high_water_mark",
     ):
         value = order.get(field)
         result[field] = (
@@ -183,6 +189,16 @@ def _order_payload(
         if quantity is not None
         else None
     )
+    raw_legs = order.get("legs")
+    result["legs"] = [
+        _order_payload(item)
+        for item in (
+            raw_legs
+            if isinstance(raw_legs, list)
+            else []
+        )
+        if isinstance(item, Mapping)
+    ]
     return result
 
 
@@ -316,6 +332,18 @@ def create_pretrade_snapshot(
         else "unknown"
     )
     feed = market_data_feed(market_phase)
+    asset_result = (
+        asset_cache or AssetCache(clients)
+    ).get_many(list(symbols))
+    warnings.extend(asset_result.errors)
+    crypto_symbols = [
+        symbol
+        for symbol in symbols
+        if asset_result.assets.get(
+            symbol, {}
+        ).get("asset_class")
+        == "crypto"
+    ]
     quotes = _safe_fetch(
         "quotes",
         lambda: fetch_latest_quotes(
@@ -323,6 +351,7 @@ def create_pretrade_snapshot(
             list(symbols),
             now=retrieved,
             feed=feed,
+            crypto_symbols=crypto_symbols,
         ),
         errors=errors,
     )
@@ -335,10 +364,6 @@ def create_pretrade_snapshot(
             no_quote(symbol),
         )
 
-    asset_result = (
-        asset_cache or AssetCache(clients)
-    ).get_many(list(symbols))
-    warnings.extend(asset_result.errors)
     executable_symbols = {
         str(item.get("symbol", "")).strip().upper()
         for item in execution_output.get("decisions", [])
@@ -346,9 +371,36 @@ def create_pretrade_snapshot(
         and item.get("execution_decision")
         in {"approve", "modify"}
     }
+    crypto_policy = order_policy.settings.get(
+        "crypto"
+    )
+    crypto_policy = (
+        crypto_policy
+        if isinstance(crypto_policy, Mapping)
+        else {}
+    )
+    automatic_crypto_liquidations = {
+        str(item.get("symbol", "")).strip().upper()
+        for item in execution_output.get("decisions", [])
+        if isinstance(item, Mapping)
+        and is_automatic_crypto_liquidation_decision(
+            item,
+            asset_result.assets.get(
+                str(
+                    item.get("symbol", "")
+                ).strip().upper(),
+                {},
+            ),
+            crypto_policy,
+        )
+    }
+    required_quote_symbols = (
+        executable_symbols
+        - automatic_crypto_liquidations
+    )
     missing_quotes = sorted(
         symbol
-        for symbol in executable_symbols
+        for symbol in required_quote_symbols
         if normalized_quotes.get(symbol, {}).get(
             "status"
         )
@@ -384,10 +436,19 @@ def create_pretrade_snapshot(
         "quotes",
         "assets",
     }
-    order_planning_ready = not any(
-        item.get("component") in critical_components
+    critical_errors = [
+        item
         for item in errors
-    )
+        if (
+            item.get("component")
+            in critical_components
+            and not (
+                item.get("component") == "quotes"
+                and not required_quote_symbols
+            )
+        )
+    ]
+    order_planning_ready = not critical_errors
     payload: dict[str, Any] = {
         "schema_version": "1.0",
         "stage": "pretrade_snapshot",
@@ -439,7 +500,9 @@ def create_pretrade_snapshot(
         "order_policy": order_policy.reference,
         "order_planning_ready": order_planning_ready,
         "data_quality": {
-            "critical_error_count": len(errors),
+            "critical_error_count": len(
+                critical_errors
+            ),
             "warning_count": len(warnings),
             "errors": errors,
             "warnings": warnings,

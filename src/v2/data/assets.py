@@ -1,12 +1,13 @@
-"""读取并缓存 Alpaca 美股资产能力。
+"""读取并缓存 Alpaca 资产能力。
 
-作用：规范化 tradable、fractionable、shortable、交易所、资产类别和状态。
-重要性：订单构建与最终校验必须依据券商当前能力，不能假设标的始终可交易。
+作用：规范化交易能力、资产类别、状态，以及 Crypto 数量和价格最小步进。
+重要性：订单构建与最终校验必须依据券商当前能力与精度，不能假设标的始终可交易或使用统一小数位。
 """
 
 from __future__ import annotations
 
 from dataclasses import dataclass, field
+from decimal import Decimal, InvalidOperation
 from typing import Any
 
 from v2.data._normalization import (
@@ -20,6 +21,21 @@ from v2.data.alpaca_client import (
     call_api,
 )
 from v2.exceptions import V2Error
+
+
+def _positive_decimal_text(
+    value: object,
+) -> str | None:
+    if value is None:
+        return None
+    raw = getattr(value, "value", value)
+    try:
+        result = Decimal(str(raw))
+    except (InvalidOperation, ValueError):
+        return None
+    if not result.is_finite() or result <= 0:
+        return None
+    return format(result.normalize(), "f")
 
 
 def normalize_asset(
@@ -80,6 +96,18 @@ def normalize_asset(
         "status": enum_text(
             read_field(asset, "status")
         ).lower(),
+        "min_order_size": _positive_decimal_text(
+            read_field(asset, "min_order_size")
+        ),
+        "min_trade_increment": _positive_decimal_text(
+            read_field(
+                asset,
+                "min_trade_increment",
+            )
+        ),
+        "price_increment": _positive_decimal_text(
+            read_field(asset, "price_increment")
+        ),
         "attributes": attributes,
         "overnight_tradable": (
             bool(raw_overnight_tradable)

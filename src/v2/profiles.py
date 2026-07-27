@@ -164,7 +164,7 @@ class OrderPolicy:
 
 @dataclass(frozen=True)
 class SubmissionPolicy:
-    """装载后的版本化 paper 券商写操作规则。"""
+    """装载后的版本化 Paper/Live 券商写操作规则。"""
 
     schema_version: str
     policy_id: str
@@ -468,7 +468,7 @@ def load_submission_policy(
     *,
     project_root: Path | None = None,
 ) -> SubmissionPolicy:
-    """装载并严格校对 Stage G paper submission policy。"""
+    """装载并严格校对 Stage G Paper/Live submission policy。"""
 
     match = VERSIONED_REFERENCE.fullmatch(
         str(reference).strip()
@@ -538,15 +538,32 @@ def load_submission_policy(
         result.schema_version != "1.0"
         or result.reference != reference
         or result.broker != "alpaca"
-        or result.environment != "paper"
+        or result.environment not in {"paper", "live"}
         or result.settings.get("allow_direct_replace") is not False
         or not isinstance(retry, dict)
         or retry.get("blind_retry_count") != 0
         or not isinstance(switches, dict)
-        or switches.get("live_submission_enabled") is not False
+        or (
+            result.environment == "paper"
+            and (
+                switches.get("paper_submission_enabled")
+                is not True
+                or switches.get("live_submission_enabled")
+                is not False
+            )
+        )
+        or (
+            result.environment == "live"
+            and (
+                switches.get("live_submission_enabled")
+                is not True
+                or switches.get("paper_submission_enabled")
+                is not False
+            )
+        )
     ):
         raise ConfigurationError(
-            "submission policy不是安全的Stage G paper配置",
+            "submission policy不是安全的Stage G环境配置",
             code="SUBMISSION_POLICY_INVALID",
         )
     return result

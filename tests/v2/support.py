@@ -667,6 +667,77 @@ def valid_execution_output(
             }
         )
     local_only = status == "success_local_only"
+    assets = snapshot.get("assets", {})
+    positions = {
+        str(item.get("symbol", "")).upper(): item
+        for item in snapshot.get("positions", [])
+        if isinstance(item, dict)
+        and item.get("symbol")
+        and (
+            not isinstance(
+                assets.get(
+                    str(
+                        item.get(
+                            "symbol",
+                            "",
+                        )
+                    ).upper()
+                ),
+                dict,
+            )
+            or assets[
+                str(
+                    item.get(
+                        "symbol",
+                        "",
+                    )
+                ).upper()
+            ].get("asset_class")
+            != "crypto"
+        )
+    }
+    entry_symbols = {
+        str(item["symbol"]).upper()
+        for item in decisions
+        if item["execution_decision"] == "approve"
+        and item["side"] == "buy"
+        and item["portfolio_action"]
+        in {"open", "increase"}
+    }
+    protection_plans = []
+    for symbol in sorted(
+        {*positions, *entry_symbols}
+    ):
+        position = positions.get(symbol, {})
+        reference = float(
+            position.get("current_price")
+            or snapshot.get(
+                "quotes",
+                {},
+            ).get(
+                symbol,
+                {},
+            ).get("ask_price")
+            or 100
+        )
+        protection_plans.append(
+            valid_protection_plan(
+                symbol,
+                reference=reference,
+                apply_to=(
+                    "both"
+                    if (
+                        symbol in positions
+                        and symbol in entry_symbols
+                    )
+                    else (
+                        "existing_position"
+                        if symbol in positions
+                        else "new_entry"
+                    )
+                ),
+            )
+        )
     return {
         "schema_version": "1.0",
         "stage": "execution_decision",
@@ -722,6 +793,7 @@ def valid_execution_output(
             "rejected_symbols": [],
         },
         "decisions": decisions,
+        "protection_plans": protection_plans,
         "open_order_actions": [
             {
                 "order_reference": str(
@@ -760,6 +832,67 @@ def valid_execution_output(
                 ),
             }
         ],
+    }
+
+
+def valid_protection_plan(
+    symbol: str,
+    *,
+    reference: float = 100.0,
+    apply_to: str = "existing_position",
+    mode: str = "oco",
+) -> dict[str, Any]:
+    """Return one schema-valid deterministic long protection plan."""
+
+    return {
+        "symbol": symbol,
+        "mode": mode,
+        "apply_to": apply_to,
+        "coverage_fraction": "1",
+        "time_in_force": "day",
+        "take_profit_price": (
+            f"{reference * 1.10:.2f}"
+            if mode
+            in {
+                "take_profit",
+                "oco",
+                "bracket",
+                "oto_take_profit",
+            }
+            else None
+        ),
+        "stop_price": (
+            f"{reference * 0.90:.2f}"
+            if mode
+            in {
+                "stop",
+                "stop_limit",
+                "oco",
+                "bracket",
+                "oto_stop",
+            }
+            else None
+        ),
+        "stop_limit_price": (
+            f"{reference * 0.89:.2f}"
+            if mode
+            in {
+                "stop_limit",
+                "oco",
+                "bracket",
+            }
+            else None
+        ),
+        "trail_price": (
+            "5.00"
+            if mode == "trailing_stop"
+            else None
+        ),
+        "trail_percent": None,
+        "stages": [],
+        "reason": (
+            "Deterministic full position protection"
+        ),
     }
 
 

@@ -1,10 +1,10 @@
 {
-  "_comment": "作用：定义 v2 全局运行模式、默认 profile、输出目录及 Codex 超时重试。重要性：paper1 是唯一安全默认账户，live 永不允许成为隐式启动身份。",
+  "_comment": "作用：定义 v2 的 profile 驱动运行模式、默认账户、输出目录及 Codex 超时重试。重要性：默认仍是paper1；Live必须显式选择live1并读取独立.env_live。",
   "schema_version": "1.0",
   "config_version": "2026-07-23-stage-b-v1",
   "timezone": "America/New_York",
-  "trading_mode": "paper",
-  "allow_live": false,
+  "trading_mode": "profile",
+  "allow_live": true,
   "default_profile": "paper1",
   "runtime_root": "decision_runtime_v2",
   "report_root": "reports/v2/daily",

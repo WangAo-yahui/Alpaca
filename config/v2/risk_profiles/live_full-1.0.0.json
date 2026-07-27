@@ -1,0 +1,21 @@
+{
+  "_comment": "作用：定义 live1 可使用全部账户权益的版本化硬风控。重要性：最低现金为0且单轮可部署100%，但订单仍必须满足账户、行情、幂等和策略合同，且不启用做空或额外杠杆。",
+  "schema_version": "1.0",
+  "risk_profile_id": "live_full",
+  "risk_profile_version": "1.0.0",
+  "environment": "live",
+  "settings": {
+    "maximum_gross_exposure": "1.00",
+    "maximum_single_position_weight": "1.00",
+    "maximum_sector_weight": "1.00",
+    "minimum_cash_weight": "0.00",
+    "maximum_new_capital_per_cycle_weight": "1.00",
+    "maximum_order_count": 20,
+    "minimum_order_value": "1.00",
+    "allow_short_positions": false,
+    "quote_max_age_seconds": "15",
+    "closed_session_quote_max_age_seconds": "345600",
+    "regular_spread_limit_bps": "50",
+    "extended_spread_limit_bps": "50"
+  }
+}

@@ -31,6 +31,24 @@ def _detailed_report(
     reconciliation: Mapping[str, Any],
     context: Mapping[str, Any],
 ) -> str:
+    invocation = getattr(
+        state,
+        "invocation",
+        None,
+    )
+    is_live = bool(
+        getattr(
+            invocation,
+            "live",
+            str(
+                getattr(
+                    state,
+                    "profile_id",
+                    "",
+                )
+            ).startswith("live"),
+        )
+    )
     account = reconciliation.get("account", {})
     account = account if isinstance(account, Mapping) else {}
     capital = reconciliation.get("capital", {})
@@ -70,8 +88,14 @@ def _detailed_report(
                 f"- {item.get('symbol')}："
                 f"{item.get('status')} / "
                 f"{item.get('side')} "
-                f"{item.get('quantity')} @ "
-                f"{item.get('limit_price')}"
+                f"{item.get('quantity')} / "
+                f"{item.get('order_class', 'simple')} "
+                f"{item.get('order_type')}；"
+                f"limit={item.get('limit_price')}，"
+                f"stop={item.get('stop_price') or item.get('stop_loss_stop_price')}，"
+                f"take-profit={item.get('take_profit_limit_price')}，"
+                f"trail={item.get('trail_price') or item.get('trail_percent')}，"
+                f"保护角色={item.get('protection_role', 'none')}"
             )
             for item in validated_orders
         )
@@ -97,6 +121,7 @@ def _detailed_report(
         f"# WA Trader v2 日报 — {state.run_date}\n\n"
         "## 运行身份\n\n"
         f"- Profile：{state.profile_id}\n"
+        f"- 环境：{'live' if is_live else 'paper'}\n"
         f"- 账户 hash：{str(account.get('account_id_hash', 'unknown'))[:12]}\n"
         f"- App：{state.release.get('app_version')}\n"
         f"- Strategy：{state.release.get('strategy_id')}@{state.release.get('strategy_version')}\n"
@@ -124,7 +149,7 @@ def _detailed_report(
         f"- 提交：{submission.get('submitted_count', 0)}\n"
         f"- 既有幂等订单：{submission.get('existing_count', 0)}\n"
         f"- 取消确认：{submission.get('cancel_confirmed_count', 0)}\n\n"
-        "### Proposed / validated 明细\n\n"
+        "### Proposed / validated 与止盈止损明细\n\n"
         f"{order_lines}\n\n"
         "## 对账\n\n"
         f"- 成交：{_count(reconciliation, 'filled')}\n"

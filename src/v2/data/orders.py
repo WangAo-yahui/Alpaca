@@ -29,6 +29,57 @@ from v2.exceptions import StateValidationError
 
 NEW_YORK_TZ = ZoneInfo("America/New_York")
 SYSTEM_CLIENT_ORDER_PREFIX = "wa2-"
+SYSTEM_PROTECTION_TOKEN = "-pt-"
+
+
+def is_system_protective_order(
+    order: object,
+) -> bool:
+    """Return whether a broker/order mapping carries WA's protection role."""
+
+    if isinstance(order, dict):
+        client_order_id = str(
+            order.get("client_order_id", "")
+        )
+        advanced_sell = (
+            str(order.get("side", "")).lower()
+            == "sell"
+            and str(
+                order.get(
+                    "order_class",
+                    "simple",
+                )
+            ).lower()
+            in {"bracket", "oco", "oto"}
+        )
+    else:
+        client_order_id = enum_text(
+            read_field(order, "client_order_id")
+        )
+        advanced_sell = (
+            enum_text(
+                read_field(order, "side")
+            ).lower()
+            == "sell"
+            and enum_text(
+                read_field(
+                    order,
+                    "order_class",
+                    "simple",
+                )
+            ).lower()
+            in {"bracket", "oco", "oto"}
+        )
+    return (
+        client_order_id.startswith(
+            SYSTEM_CLIENT_ORDER_PREFIX
+        )
+        and (
+            SYSTEM_PROTECTION_TOKEN
+            in client_order_id
+            or advanced_sell
+        )
+    )
 
 
 def normalize_order(
@@ -52,6 +103,15 @@ def normalize_order(
     filled_quantity = finite_float(
         read_field(order, "filled_qty", 0)
     )
+    raw_legs = read_field(order, "legs")
+    legs = (
+        [
+            normalize_order(item)
+            for item in raw_legs
+        ]
+        if isinstance(raw_legs, (list, tuple))
+        else []
+    )
     return {
         "broker_order_id": enum_text(
             read_field(order, "id")
@@ -66,6 +126,14 @@ def normalize_order(
         "type": enum_text(
             read_field(order, "type")
         ).lower(),
+        "order_class": enum_text(
+            read_field(
+                order,
+                "order_class",
+                "simple",
+            )
+        ).lower()
+        or "simple",
         "time_in_force": enum_text(
             read_field(order, "time_in_force")
         ).lower(),
@@ -85,6 +153,15 @@ def normalize_order(
         "stop_price": finite_float(
             read_field(order, "stop_price")
         ),
+        "trail_price": finite_float(
+            read_field(order, "trail_price")
+        ),
+        "trail_percent": finite_float(
+            read_field(order, "trail_percent")
+        ),
+        "high_water_mark": finite_float(
+            read_field(order, "hwm")
+        ),
         "status": enum_text(
             read_field(order, "status")
         ).lower(),
@@ -101,6 +178,7 @@ def normalize_order(
         "updated_at": iso_timestamp(
             read_field(order, "updated_at")
         ),
+        "legs": legs,
     }
 
 

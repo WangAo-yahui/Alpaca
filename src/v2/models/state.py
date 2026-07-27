@@ -146,9 +146,9 @@ class InvocationState:
     live: bool
 
     def validate(self) -> None:
-        if self.live or not self.paper:
+        if self.live == self.paper:
             raise ValueError(
-                "v2状态只允许paper且live必须为false"
+                "v2状态必须且只能选择paper或live之一"
             )
 
     def to_dict(self) -> dict[str, bool]:
