@@ -871,6 +871,7 @@ class DeploymentManager:
         old_previous = self._previous_document()
         switched = False
         try:
+            self.paths.ensure_local_directories()
             if (
                 enable_trading
                 and self.profile_environment == "paper"

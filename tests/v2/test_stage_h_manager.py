@@ -177,6 +177,38 @@ class StageHManagerTests(unittest.TestCase):
             ):
                 manager.deploy(enable_trading=True)
 
+    def test_deploy_prepares_first_profile_directories(
+        self,
+    ) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            manager = DeploymentManager(
+                root,
+                home=root / "home",
+                platform_name="Darwin",
+            )
+            with (
+                patch(
+                    "v2.deployment.paths."
+                    "DeploymentPaths."
+                    "ensure_local_directories",
+                ) as ensure_directories,
+                patch.object(
+                    manager,
+                    "doctor",
+                    side_effect=DeploymentError(
+                        "stop after directory check"
+                    ),
+                ),
+            ):
+                with self.assertRaises(
+                    DeploymentError
+                ):
+                    manager.deploy(
+                        enable_trading=False
+                    )
+            ensure_directories.assert_called_once_with()
+
     def test_doctor_checks_required_local_inputs(
         self,
     ) -> None:
