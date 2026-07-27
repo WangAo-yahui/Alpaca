@@ -23,6 +23,7 @@ from unittest.mock import MagicMock, patch
 from v2.codex import runner as runner_module
 from v2.codex.runner import (
     CodexRunner,
+    _exact_identity_instruction,
     _execute,
     _probe_codex_network,
 )
@@ -38,6 +39,44 @@ from tests.v2.support import (
 
 
 class CoarseRunnerTests(unittest.TestCase):
+    def test_exact_identity_instruction_copies_input_values(
+        self,
+    ) -> None:
+        with tempfile.TemporaryDirectory() as temp:
+            input_file = Path(temp) / "input.json"
+            signature = "a" * 64
+            input_file.write_text(
+                json.dumps(
+                    {
+                        "input_signature": signature,
+                        "run_date": "2026-07-26",
+                        "cycle_id": "cycle-1",
+                        "profile": {
+                            "profile_id": "paper1"
+                        },
+                        "release": {
+                            "strategy_id": "core_long",
+                            "strategy_version": "1.2.0",
+                        },
+                    }
+                ),
+                encoding="utf-8",
+            )
+            instruction = (
+                _exact_identity_instruction(
+                    input_file
+                )
+            )
+        self.assertIn(signature, instruction)
+        self.assertIn(
+            '"profile_id":"paper1"',
+            instruction,
+        )
+        self.assertIn(
+            '"strategy_version":"1.2.0"',
+            instruction,
+        )
+
     def test_default_runner_caps_wait_and_disables_outer_retry(
         self,
     ) -> None:

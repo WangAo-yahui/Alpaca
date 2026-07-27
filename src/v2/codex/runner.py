@@ -380,6 +380,65 @@ def _load_json_message(
     return payload
 
 
+def _exact_identity_instruction(
+    input_file: Path,
+) -> str:
+    """Build deterministic output identities that Codex must copy."""
+
+    try:
+        payload = json.loads(
+            input_file.read_text(encoding="utf-8")
+        )
+    except (
+        FileNotFoundError,
+        json.JSONDecodeError,
+        OSError,
+    ):
+        return ""
+    if not isinstance(payload, dict):
+        return ""
+    identities: dict[str, str] = {}
+    direct_fields = (
+        "input_signature",
+        "run_date",
+        "cycle_id",
+    )
+    for field_name in direct_fields:
+        value = payload.get(field_name)
+        if isinstance(value, str) and value:
+            identities[field_name] = value
+    nested_fields = {
+        "profile_id": ("profile", "profile_id"),
+        "strategy_id": ("release", "strategy_id"),
+        "strategy_version": (
+            "release",
+            "strategy_version",
+        ),
+    }
+    for output_name, (parent, child) in (
+        nested_fields.items()
+    ):
+        container = payload.get(parent)
+        if not isinstance(container, dict):
+            continue
+        value = container.get(child)
+        if isinstance(value, str) and value:
+            identities[output_name] = value
+    if not identities:
+        return ""
+    serialized = json.dumps(
+        identities,
+        ensure_ascii=True,
+        sort_keys=True,
+        separators=(",", ":"),
+    )
+    return (
+        " Copy these exact output identity values "
+        "verbatim; do not recalculate, abbreviate, or "
+        f"alter them: {serialized}."
+    )
+
+
 @dataclass
 class CodexRunner:
     timeout_seconds: float
@@ -411,6 +470,9 @@ class CodexRunner:
             "then return only the required JSON object. "
             "When status is success_local_only, include an "
             "explicit non-empty network limitation warning."
+            + _exact_identity_instruction(
+                workspace.input_file
+            )
         )
         return [
             self.executable,
@@ -634,6 +696,9 @@ class PortfolioCodexRunner(CodexRunner):
             "success_local_only, include an explicit "
             "non-empty network limitation warning. "
             "Do not create orders."
+            + _exact_identity_instruction(
+                workspace.input_file
+            )
         )
         return [
             self.executable,
@@ -686,6 +751,9 @@ class ExecutionCodexRunner(CodexRunner):
             "status is success_local_only, include explicit "
             "non-empty network limitation warnings. "
             "Do not create orders."
+            + _exact_identity_instruction(
+                workspace.input_file
+            )
         )
         return [
             self.executable,
