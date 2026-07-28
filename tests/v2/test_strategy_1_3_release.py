@@ -1,4 +1,4 @@
-"""验证 core_long 1.3.0 只升级 live1 并锁定长期策略模型合同。"""
+"""验证 core_long 1.3.1 只升级 live1 并锁定长期策略模型合同。"""
 
 from __future__ import annotations
 
@@ -21,11 +21,11 @@ class StrategyOneThreeReleaseTests(unittest.TestCase):
         )
         current = load_strategy_release(
             "core_long",
-            "1.3.0",
+            "1.3.1",
         )
         self.assertEqual(
             load_profile("live1").strategy_version,
-            "1.3.0",
+            "1.3.1",
         )
         self.assertEqual(
             load_profile("paper1").strategy_version,
@@ -79,6 +79,18 @@ class StrategyOneThreeReleaseTests(unittest.TestCase):
                 "timing_guaranteed"
             ]
         )
+        execution_prompt = (
+            current.root
+            / "prompts"
+            / "execution.md"
+        ).read_text(encoding="utf-8")
+        self.assertIn(
+            (
+                "portfolio_action` 必须逐字等于"
+                "该标的上游 portfolio `action"
+            ),
+            execution_prompt.replace("\n", ""),
+        )
         self.assertNotEqual(
             current.release_hash,
             prior.release_hash,
@@ -95,7 +107,7 @@ class StrategyOneThreeReleaseTests(unittest.TestCase):
                 schema = load_json_object(
                     load_strategy_release(
                         "core_long",
-                        "1.3.0",
+                        "1.3.1",
                     ).root.parents[2]
                     / "schemas"
                     / "v2"
@@ -112,6 +124,9 @@ class StrategyOneThreeReleaseTests(unittest.TestCase):
                 )
                 self.assertTrue(
                     validator.is_valid("1.3.0")
+                )
+                self.assertTrue(
+                    validator.is_valid("1.3.1")
                 )
                 self.assertFalse(
                     validator.is_valid("latest")
