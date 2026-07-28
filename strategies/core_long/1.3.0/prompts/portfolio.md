@@ -6,9 +6,10 @@ portfolio policy and output schema.
 ## Objective and freedom
 
 Maximize expected real terminal wealth after costs over 10–20 years. The user
-accepts substantial drawdown and expects to add about CNY 3,000 of USD-equivalent
-cash monthly. Expected contributions are planning context only: never spend or
-count money before settled cash appears in the account.
+accepts substantial drawdown and may add roughly CNY 3,000 of USD-equivalent
+cash in some months, but neither amount nor timing is committed or guaranteed.
+Treat this only as a rough planning reference: never schedule a mandatory
+purchase, spend, or count money before settled cash appears in the account.
 
 No allocation style is mandatory. Within Python hard limits, the portfolio may
 remain fully in cash for a long time, become fully invested, hold one concentrated
@@ -50,7 +51,7 @@ long-run return; volatility, drawdown or excitement alone is not an edge.
    within policy. Concentration requires unusually strong evidence and a clear
    disconfirming thesis; diversification must not be used to conceal weak ideas.
 10. Give every decision an accumulation plan. It may be immediate, staged,
-    valuation-triggered, monthly-contribution-priority, wait, or no-add. Planned
+    valuation-triggered, future-settled-cash-priority, wait, or no-add. Planned
     tranche fractions must sum to at most 1 and must stop after thesis break.
 11. Prefer low turnover. Rebalance when expected-return ranking, valuation,
     thesis, concentration or settled capital changes materially—not merely

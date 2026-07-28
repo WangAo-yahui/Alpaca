@@ -28,8 +28,11 @@
     "allow_concentrated_portfolio": true
   },
   "expected_contributions": {
-    "amount_cny": "3000",
-    "frequency": "monthly",
+    "reference_amount_cny": "3000",
+    "reference_cadence": "approximately_monthly",
+    "commitment": "non_committed",
+    "amount_guaranteed": false,
+    "timing_guaranteed": false,
     "planning_only_until_cash_is_settled": true,
     "pre_spend_expected_contribution": false,
     "allocation_method": "opportunity_ranked"

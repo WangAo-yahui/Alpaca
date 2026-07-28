@@ -56,9 +56,25 @@ class StrategyOneThreeReleaseTests(unittest.TestCase):
         )
         self.assertEqual(
             policy["expected_contributions"][
-                "amount_cny"
+                "reference_amount_cny"
             ],
             "3000",
+        )
+        self.assertEqual(
+            policy["expected_contributions"][
+                "commitment"
+            ],
+            "non_committed",
+        )
+        self.assertFalse(
+            policy["expected_contributions"][
+                "amount_guaranteed"
+            ]
+        )
+        self.assertFalse(
+            policy["expected_contributions"][
+                "timing_guaranteed"
+            ]
         )
         self.assertNotEqual(
             current.release_hash,

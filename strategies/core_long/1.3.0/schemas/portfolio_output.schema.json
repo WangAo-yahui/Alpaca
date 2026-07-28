@@ -174,24 +174,31 @@
       "type": "object",
       "additionalProperties": false,
       "required": [
-        "expected_monthly_contribution_cny",
-        "contribution_status",
+        "reference_amount_cny",
+        "reference_cadence",
+        "commitment_status",
+        "amount_or_timing_guaranteed",
         "deploy_only_settled_cash",
         "current_capital_action",
-        "next_contribution_priority",
+        "next_settled_cash_priority",
         "rationale"
       ],
       "properties": {
-        "expected_monthly_contribution_cny": {
+        "reference_amount_cny": {
           "type": "string",
           "const": "3000"
         },
-        "contribution_status": {
+        "reference_cadence": {
           "type": "string",
-          "enum": [
-            "planning_only",
-            "observed_settled"
-          ]
+          "const": "approximately_monthly"
+        },
+        "commitment_status": {
+          "type": "string",
+          "const": "non_committed"
+        },
+        "amount_or_timing_guaranteed": {
+          "type": "boolean",
+          "const": false
         },
         "deploy_only_settled_cash": {
           "type": "boolean",
@@ -206,7 +213,7 @@
             "raise_cash"
           ]
         },
-        "next_contribution_priority": {
+        "next_settled_cash_priority": {
           "type": "array",
           "items": {
             "type": "string"
@@ -528,7 +535,7 @@
               "style",
               "planned_total_fraction",
               "tranches",
-              "monthly_contribution_priority",
+              "future_settled_cash_priority",
               "stop_conditions"
             ],
             "properties": {
@@ -538,7 +545,7 @@
                   "immediate",
                   "staged",
                   "valuation_triggered",
-                  "monthly_contribution_priority",
+                  "future_settled_cash_priority",
                   "wait",
                   "no_add"
                 ]
@@ -586,7 +593,7 @@
                   }
                 }
               },
-              "monthly_contribution_priority": {
+              "future_settled_cash_priority": {
                 "type": "integer",
                 "minimum": 0
               },

@@ -54,8 +54,9 @@
     `time_in_force_preference="none"`，三个布尔字段全部为 `false`。
     可在 `decision_reason`、`execution_risks` 和 `required_checks` 中保留未来复查条件。
 18. 执行分批建仓：只有当前报价落入相应 tranche 条件、估值证据仍有效且资金已经
-    settled 时才 approve/modify。不得为了“每月定投”机械买入已明显高估或 thesis
-    破裂的标的；也不得因为计划分批而拒绝证据充分、价格优势明显的一次性建仓。
+    settled 时才 approve/modify。约 CNY 3,000 只是金额和时间均不保证的未来参考，
+    不得据此安排固定月供或机械买入已明显高估、thesis 破裂的标的；也不得因为计划
+    分批而拒绝证据充分、价格优势明显的一次性建仓。
 19. 避免同日反复微额补仓。普通建仓/加仓的目标权重差小于 policy 的 material
     gap，或同一标的当天已完成两次 discretionary entry 时，原则上 defer；
     只有估值或风险出现新的重大变化才可例外并明确解释。
