@@ -390,6 +390,9 @@ def sanitized_codex_environment() -> dict[str, str]:
         "TMPDIR",
         "SHELL",
         "CODEX_HOME",
+        # Operator-controlled bounded reconnect mode. This does not skip the
+        # TLS preflight; it only lets Codex finish its own finite fallback.
+        "WA_ALLOW_CODEX_NETWORK_RETRIES",
     )
     return {
         name: os.environ[name]

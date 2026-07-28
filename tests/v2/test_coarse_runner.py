@@ -163,6 +163,12 @@ class CoarseRunnerTests(unittest.TestCase):
                 timeout: float,
             ) -> subprocess.CompletedProcess[str]:
                 calls.append(command)
+                self.assertEqual(
+                    env.get(
+                        "WA_ALLOW_CODEX_NETWORK_RETRIES"
+                    ),
+                    "1",
+                )
                 self.assertNotIn(
                     "APCA_API_KEY_ID",
                     env,
@@ -200,6 +206,7 @@ class CoarseRunnerTests(unittest.TestCase):
                 {
                     "APCA_API_KEY_ID": "secret",
                     "ALPACA_SECRET_KEY": "secret",
+                    "WA_ALLOW_CODEX_NETWORK_RETRIES": "1",
                 },
             ):
                 runner = CodexRunner(
@@ -494,6 +501,11 @@ class CoarseRunnerTests(unittest.TestCase):
     ) -> None:
         started = time.monotonic()
         output = io.StringIO()
+        environment = dict(os.environ)
+        environment.pop(
+            "WA_ALLOW_CODEX_NETWORK_RETRIES",
+            None,
+        )
         script = (
             "import sys,time; "
             "sys.stderr.write("
@@ -529,7 +541,7 @@ class CoarseRunnerTests(unittest.TestCase):
                         script,
                     ],
                     cwd=Path(temp),
-                    env=dict(os.environ),
+                    env=environment,
                     timeout=10,
                 )
         self.assertEqual(
