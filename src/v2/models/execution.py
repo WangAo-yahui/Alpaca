@@ -1754,10 +1754,23 @@ def validate_execution_output(
                         f"{path}.symbol",
                     )
                 )
+            filled_open_is_neutral_hold = (
+                source.get("action") == "open"
+                and portfolio_action == "hold"
+                and _decimal_or_zero(
+                    position.get("quantity")
+                )
+                > ZERO
+                and decision
+                in NON_EXECUTABLE_DECISIONS
+                and side == "none"
+                and fraction == ZERO
+            )
             if (
                 portfolio_action
                 != source.get("action")
                 and not automatic_crypto_liquidation
+                and not filled_open_is_neutral_hold
             ):
                 errors.append(
                     _issue(

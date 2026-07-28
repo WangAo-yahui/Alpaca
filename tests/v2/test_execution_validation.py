@@ -29,6 +29,110 @@ from tests.v2.support import (
 
 
 class ExecutionValidationTests(unittest.TestCase):
+    def test_filled_open_may_be_neutral_hold_only(
+        self,
+    ) -> None:
+        with tempfile.TemporaryDirectory() as temp:
+            root = Path(temp)
+            result = stage_e_fixture(root)
+            assert result.execution is not None
+            source = copy.deepcopy(
+                result.execution.input_result.payload
+            )
+            source["execution_snapshot"][
+                "market_phase"
+            ] = "regular_session"
+            symbol = source["portfolio"][
+                "decisions"
+            ][0]["symbol"]
+            source["execution_snapshot"][
+                "positions"
+            ].append(
+                {
+                    "symbol": symbol,
+                    "side": "long",
+                    "quantity": "0.123081",
+                    "available_quantity": "0.123081",
+                    "average_entry_price": "396.68",
+                    "current_price": "397.00",
+                    "market_value": "48.86",
+                }
+            )
+            baseline = valid_execution_output(
+                source
+            )
+            neutral = copy.deepcopy(baseline)
+            decision = neutral["decisions"][0]
+            decision.update(
+                {
+                    "portfolio_action": "hold",
+                    "execution_decision": (
+                        "no_action"
+                    ),
+                    "side": "none",
+                    "execution_fraction": "0",
+                    "urgency": "none",
+                }
+            )
+            decision["price_condition"] = {
+                "reference": "none",
+                "limit_price": None,
+                "do_not_execute_above": None,
+                "review_below": None,
+            }
+            decision["order_intent"] = {
+                "preferred_type": "none",
+                "time_in_force_preference": "none",
+                "extended_hours_requested": False,
+                "allow_queue": False,
+                "allow_partial_fill": False,
+            }
+            for plan in neutral[
+                "protection_plans"
+            ]:
+                if plan["symbol"] == symbol:
+                    plan["apply_to"] = (
+                        "existing_position"
+                    )
+
+            release = load_strategy_release(
+                "core_long",
+                "1.2.0",
+                project_root=root,
+            )
+            schema = load_json_object(
+                release.root
+                / "schemas/execution_output.schema.json"
+            )
+            validation = validate_execution_output(
+                neutral,
+                input_payload=source,
+                schema=schema,
+            )
+            self.assertTrue(
+                validation.valid,
+                validation.errors,
+            )
+
+            executable_mismatch = copy.deepcopy(
+                baseline
+            )
+            executable_mismatch["decisions"][0][
+                "portfolio_action"
+            ] = "hold"
+            codes = {
+                item["code"]
+                for item in validate_execution_output(
+                    executable_mismatch,
+                    input_payload=source,
+                    schema=schema,
+                ).errors
+            }
+            self.assertIn(
+                "PORTFOLIO_ACTION_MISMATCH",
+                codes,
+            )
+
     def test_none_protection_has_no_fractional_tif_requirement(
         self,
     ) -> None:
