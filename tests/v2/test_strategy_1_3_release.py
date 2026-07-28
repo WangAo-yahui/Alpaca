@@ -5,9 +5,12 @@ from __future__ import annotations
 import json
 import unittest
 
+from jsonschema import Draft202012Validator
+
 from v2.codex.runner import codex_runner_settings
 from v2.profiles import load_profile
 from v2.releases import load_strategy_release
+from v2.runtime import load_json_object
 
 
 class StrategyOneThreeReleaseTests(unittest.TestCase):
@@ -80,6 +83,39 @@ class StrategyOneThreeReleaseTests(unittest.TestCase):
             current.release_hash,
             prior.release_hash,
         )
+
+    def test_stage_f_schemas_accept_versioned_releases(
+        self,
+    ) -> None:
+        for name in (
+            "proposed_orders.schema.json",
+            "validated_orders.schema.json",
+        ):
+            with self.subTest(name=name):
+                schema = load_json_object(
+                    load_strategy_release(
+                        "core_long",
+                        "1.3.0",
+                    ).root.parents[2]
+                    / "schemas"
+                    / "v2"
+                    / name
+                )
+                version_schema = schema[
+                    "properties"
+                ]["strategy_version"]
+                validator = Draft202012Validator(
+                    version_schema
+                )
+                self.assertTrue(
+                    validator.is_valid("1.2.0")
+                )
+                self.assertTrue(
+                    validator.is_valid("1.3.0")
+                )
+                self.assertFalse(
+                    validator.is_valid("latest")
+                )
 
 
 if __name__ == "__main__":

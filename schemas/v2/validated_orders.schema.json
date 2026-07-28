@@ -37,7 +37,8 @@
       "const": "core_long"
     },
     "strategy_version": {
-      "const": "1.2.0"
+      "type": "string",
+      "pattern": "^[0-9]+\\.[0-9]+\\.[0-9]+$"
     },
     "risk_profile": {
       "type": "string",
