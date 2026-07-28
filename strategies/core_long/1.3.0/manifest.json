@@ -22,6 +22,6 @@
     "config/coarse_policy.json": "ac25ecd2d5635db458496e44bcb6e49e95a3609d752c77cc0bb0c2ed95c19f73",
     "config/portfolio_policy.json": "217d34d35bfbd5780edbd71ff0143479f8768f2f5c076de5ea1ce0c87b248a59",
     "config/execution_policy.json": "e8933a24b6f16fbe781d32be92d106b8f6db1f4f98a7c1f41aee54e1ab760935",
-    "config/codex_policy.json": "5e25c621cd000626689debb15b5509beae2590e7c99ff7ccd00c583c14a32391"
+    "config/codex_policy.json": "d930abd0bc520d1c6457bb832468d492cff33fb59bf0f5ba80e8aea2b993800e"
   }
 }

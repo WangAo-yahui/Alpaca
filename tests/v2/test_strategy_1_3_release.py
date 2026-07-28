@@ -36,7 +36,7 @@ class StrategyOneThreeReleaseTests(unittest.TestCase):
             codex_runner_settings(current),
             {
                 "model": "gpt-5.6-sol",
-                "reasoning_effort": "xhigh",
+                "reasoning_effort": "high",
                 "verbosity": "high",
             },
         )
