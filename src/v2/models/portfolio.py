@@ -1402,15 +1402,43 @@ def validate_portfolio_output(
             )
         }
         if valuation_status == "no_reliable_estimate":
+            estimate_numbers = (
+                valuation_numbers[
+                    "value_range_low"
+                ],
+                valuation_numbers[
+                    "value_range_high"
+                ],
+                valuation_numbers[
+                    "margin_of_safety_fraction"
+                ],
+            )
             if any(
                 value is not None
-                for value in valuation_numbers.values()
+                for value in estimate_numbers
             ):
                 errors.append(
                     _issue(
                         "UNRELIABLE_VALUATION_HAS_NUMBERS",
-                        f"{symbol}无可靠估值时数值字段必须为null",
+                        f"{symbol}无可靠估值时价值区间与安全边际必须为null",
                         f"{decision_path}.valuation",
+                    )
+                )
+            market_price = valuation_numbers[
+                "market_price"
+            ]
+            if (
+                market_price is not None
+                and market_price <= ZERO
+            ):
+                errors.append(
+                    _issue(
+                        "VALUATION_MARKET_PRICE_INVALID",
+                        f"{symbol}市场参考价必须为正数或null",
+                        (
+                            f"{decision_path}."
+                            "valuation.market_price"
+                        ),
                     )
                 )
             if (

@@ -5,6 +5,7 @@ from __future__ import annotations
 import copy
 import tempfile
 import unittest
+from datetime import datetime, timedelta, timezone
 from pathlib import Path
 
 from v2.main import run_stage_d
@@ -23,6 +24,114 @@ from tests.v2.support import (
 
 
 class PortfolioValidationTests(unittest.TestCase):
+    def test_unreliable_value_can_keep_known_market_price(
+        self,
+    ) -> None:
+        generated = datetime.now(timezone.utc)
+        input_payload = {
+            "profile": {"profile_id": "live1"},
+            "release": {
+                "strategy_id": "core_long",
+                "strategy_version": "1.3.0",
+            },
+            "run_date": "2026-07-28",
+            "cycle_id": "20260728T120000",
+            "input_signature": "a" * 64,
+            "policy": {
+                "maximum_sector_weight": "1",
+                "target_holdings": {
+                    "minimum": 0,
+                    "maximum": 20,
+                },
+                "risk_profile": {
+                    "maximum_single_position_weight": "1",
+                    "minimum_cash_weight": "0",
+                },
+            },
+            "positions": [],
+            "candidates": [
+                {
+                    "symbol": "SPY",
+                    "sector": "ETF",
+                    "screen_new_position_eligible": True,
+                }
+            ],
+            "open_orders": [],
+        }
+        decision = {
+            "symbol": "SPY",
+            "current_position": False,
+            "in_current_coarse": True,
+            "action": "watch",
+            "target_weight": "0",
+            "maximum_weight": "0",
+            "valuation": {
+                "status": "no_reliable_estimate",
+                "market_price": "739.46",
+                "value_range_low": None,
+                "value_range_high": None,
+                "margin_of_safety_fraction": None,
+                "evidence_quality": "insufficient",
+            },
+            "accumulation_plan": {
+                "style": "wait",
+                "planned_total_fraction": "0",
+                "tranches": [],
+            },
+        }
+        payload = {
+            "stage": "portfolio_decision",
+            "profile_id": "live1",
+            "strategy_id": "core_long",
+            "strategy_version": "1.3.0",
+            "run_date": "2026-07-28",
+            "cycle_id": "20260728T120000",
+            "input_signature": "a" * 64,
+            "status": "success_local_only",
+            "generated_at": generated.isoformat(),
+            "valid_until": (
+                generated + timedelta(hours=1)
+            ).isoformat(),
+            "allocation": {
+                "target_cash_weight": "1",
+                "target_invested_weight": "0",
+                "target_position_count": 0,
+                "maximum_single_symbol_weight": "1",
+                "maximum_sector_weight": "1",
+            },
+            "decisions": [decision],
+        }
+        accepted = validate_portfolio_output(
+            payload,
+            input_payload=input_payload,
+            schema={"type": "object"},
+        )
+        accepted_codes = {
+            item["code"]
+            for item in accepted.errors
+        }
+        self.assertNotIn(
+            "UNRELIABLE_VALUATION_HAS_NUMBERS",
+            accepted_codes,
+        )
+
+        with_estimated_value = copy.deepcopy(payload)
+        with_estimated_value["decisions"][0][
+            "valuation"
+        ]["value_range_low"] = "700"
+        rejected = validate_portfolio_output(
+            with_estimated_value,
+            input_payload=input_payload,
+            schema={"type": "object"},
+        )
+        self.assertIn(
+            "UNRELIABLE_VALUATION_HAS_NUMBERS",
+            {
+                item["code"]
+                for item in rejected.errors
+            },
+        )
+
     def test_core_business_rules(
         self,
     ) -> None:
