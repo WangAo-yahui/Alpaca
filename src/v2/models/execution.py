@@ -1080,7 +1080,8 @@ def _protection_issues(
             position.get("quantity")
         )
         if (
-            quantity > ZERO
+            raw.get("mode") != "none"
+            and quantity > ZERO
             and quantity
             != quantity.to_integral_value()
             and raw.get("time_in_force") != "day"

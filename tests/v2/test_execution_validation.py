@@ -29,6 +29,62 @@ from tests.v2.support import (
 
 
 class ExecutionValidationTests(unittest.TestCase):
+    def test_none_protection_has_no_fractional_tif_requirement(
+        self,
+    ) -> None:
+        with tempfile.TemporaryDirectory() as temp:
+            root = Path(temp)
+            result = stage_e_fixture(root)
+            assert result.execution is not None
+            source = copy.deepcopy(
+                result.execution.input_result.payload
+            )
+            source["execution_snapshot"][
+                "market_phase"
+            ] = "regular_session"
+            source["execution_policy"][
+                "position_protection"
+            ]["allow_none_when_thesis_based"] = True
+            source["execution_snapshot"][
+                "positions"
+            ][0]["quantity"] = "0.5"
+            payload = valid_execution_output(source)
+            plan = payload["protection_plans"][0]
+            plan.update(
+                {
+                    "mode": "none",
+                    "coverage_fraction": "0",
+                    "time_in_force": "gtc",
+                    "take_profit_price": None,
+                    "stop_price": None,
+                    "stop_limit_price": None,
+                    "trail_price": None,
+                    "trail_percent": None,
+                    "stages": [],
+                }
+            )
+            release = load_strategy_release(
+                "core_long",
+                "1.2.0",
+                project_root=root,
+            )
+            schema = load_json_object(
+                release.root
+                / "schemas/execution_output.schema.json"
+            )
+            validation = validate_execution_output(
+                payload,
+                input_payload=source,
+                schema=schema,
+            )
+            self.assertNotIn(
+                "FRACTIONAL_PROTECTION_TIF_INVALID",
+                {
+                    item["code"]
+                    for item in validation.errors
+                },
+            )
+
     def test_dry_run_model_approval_is_safely_deferred(
         self,
     ) -> None:
