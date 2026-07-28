@@ -37,6 +37,30 @@ class PortfolioInputTests(unittest.TestCase):
                 len(payload["candidates"]),
                 60,
             )
+            quote_references = [
+                item["latest_quote"]
+                for item in payload["candidates"]
+            ]
+            self.assertTrue(
+                any(
+                    item["status"]
+                    in {
+                        "position_snapshot",
+                        "daily_close",
+                    }
+                    for item in quote_references
+                )
+            )
+            self.assertTrue(
+                all(
+                    item["is_live_quote"] is False
+                    and item[
+                        "execution_revalidation_required"
+                    ]
+                    is True
+                    for item in quote_references
+                )
+            )
             self.assertEqual(
                 Decimal(
                     payload["open_orders"][0][

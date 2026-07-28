@@ -382,6 +382,10 @@ def _report_prompt(*, initial: bool) -> str:
 12. 本轮只要存在新提交、成交、部分成交、拒绝、取消、挂单状态变化，或持仓/现金发生变化，就属于实质变化，绝不能输出 {NO_UPDATE_MARKER}。
 13. 若前序日报中的账户快照已被本轮事实取代，必须明确说明旧快照已过时，并以本轮 facts.json 为准。
 14. 必须单独核对止盈止损：区分 Codex 保护计划、Python 降级后的 validated 保护单、已提交/已挂券商保护单；写明 order class、覆盖数量、触发价、限价、止盈价或 trailing 参数，并指出尚未被实际保护的持仓，不能把计划中的保护误写成已生效。
+15. 若 portfolio 提供 valuation、expected_return 和 accumulation_plan，逐个说明市场价格与价值区间的关系、证据质量、bear/base/bull 回报假设及当前应执行的 tranche；不得把估值模型写成事实。
+16. 明确说明约 CNY 3,000 月度贡献只是规划背景，只有 facts.json 已显示 settled cash 后才属于可部署资金。
+17. 不得强制防守、满仓或分散；长期空仓、重仓和较大回撤都可以是策略结果，但必须写清其机会成本、永久损失风险和改变结论的条件。
+18. `protection mode=none` 必须表述为“没有生效的券商自动保护”，并列出替代的 thesis/估值/集中度复查条件。
 
 第一份完整报告结构：
 # WA Trader v2 自然语言日报 — 日期
@@ -705,6 +709,9 @@ def update_natural_language_report(
     context: Mapping[str, Any],
     timeout_seconds: float = 600,
     executable: str = "codex",
+    model: str | None = None,
+    reasoning_effort: str | None = None,
+    verbosity: str | None = None,
 ) -> NaturalReportResult:
     """Call Codex once and atomically create or maintain the daily narrative."""
 
@@ -799,6 +806,30 @@ def update_natural_language_report(
     command = [
         executable,
         "exec",
+        *(
+            ["--model", model]
+            if model is not None
+            else []
+        ),
+        *(
+            [
+                "--config",
+                (
+                    "model_reasoning_effort="
+                    f'"{reasoning_effort}"'
+                ),
+            ]
+            if reasoning_effort is not None
+            else []
+        ),
+        *(
+            [
+                "--config",
+                f'model_verbosity="{verbosity}"',
+            ]
+            if verbosity is not None
+            else []
+        ),
         "--skip-git-repo-check",
         "--ephemeral",
         "--ignore-user-config",

@@ -29,6 +29,9 @@ if __package__ in {None, ""}:
 
 
 from v2.cli import CLIOptions, parse_cli_args  # noqa: E402
+from v2.codex.runner import (  # noqa: E402
+    codex_runner_settings,
+)
 from v2.config import V2Config, load_config  # noqa: E402
 from v2.data.alpaca_client import (  # noqa: E402
     AlpacaClients,
@@ -3036,6 +3039,11 @@ def _maintain_natural_report(
         paths.daily_report
     )
     try:
+        release = load_strategy_release(
+            paths.strategy_id,
+            paths.strategy_version,
+            project_root=paths.project_root,
+        )
         result = update_natural_language_report(
             paths.daily_report,
             state=state,
@@ -3043,6 +3051,7 @@ def _maintain_natural_report(
             submission=submission,
             reconciliation=reconciliation,
             context=context,
+            **codex_runner_settings(release),
         )
         error_path.unlink(missing_ok=True)
         print(

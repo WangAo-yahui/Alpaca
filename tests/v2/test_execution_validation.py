@@ -42,8 +42,15 @@ class ExecutionValidationTests(unittest.TestCase):
             source["trade_permission"][
                 "submission_enabled"
             ] = False
+            source["execution_snapshot"][
+                "market_phase"
+            ] = "regular_session"
+            model_source = copy.deepcopy(source)
+            model_source["trade_permission"][
+                "submission_enabled"
+            ] = True
             payload = valid_execution_output(
-                result.execution.input_result.payload
+                model_source
             )
             self.assertTrue(
                 any(
@@ -110,6 +117,9 @@ class ExecutionValidationTests(unittest.TestCase):
             source["execution_snapshot"][
                 "assets"
             ][symbol]["asset_class"] = "crypto"
+            source["execution_snapshot"][
+                "market_phase"
+            ] = "regular_session"
             source["execution_snapshot"][
                 "quotes"
             ][symbol]["quote_age_seconds"] = "7200"
@@ -224,6 +234,9 @@ class ExecutionValidationTests(unittest.TestCase):
             source["execution_snapshot"][
                 "assets"
             ][symbol]["asset_class"] = "crypto"
+            source["execution_snapshot"][
+                "market_phase"
+            ] = "regular_session"
             source["execution_snapshot"][
                 "positions"
             ].append(

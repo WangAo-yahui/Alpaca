@@ -90,6 +90,52 @@ class CoarseRunnerTests(unittest.TestCase):
         )
         self.assertEqual(runner.retry_count, 0)
 
+    def test_release_model_and_xhigh_reasoning_are_explicit(
+        self,
+    ) -> None:
+        with tempfile.TemporaryDirectory() as temp:
+            root = Path(temp)
+            prepare_stage_c_project(root)
+            workspace = prepare_coarse_workspace(
+                build_daily_paths(
+                    "2026-07-23",
+                    project_root=root,
+                ),
+                config=load_config(
+                    project_root=root
+                ),
+                input_payload={"ok": True},
+            )
+            runner = CodexRunner(
+                timeout_seconds=1,
+                executor=lambda *args, **kwargs: (
+                    subprocess.CompletedProcess(
+                        args[0],
+                        0,
+                        "",
+                        "",
+                    )
+                ),
+                model="gpt-5.6-sol",
+                reasoning_effort="xhigh",
+                verbosity="high",
+            )
+            command = runner._command(workspace)
+        self.assertEqual(
+            command[
+                command.index("--model") + 1
+            ],
+            "gpt-5.6-sol",
+        )
+        self.assertIn(
+            'model_reasoning_effort="xhigh"',
+            command,
+        )
+        self.assertIn(
+            'model_verbosity="high"',
+            command,
+        )
+
     def test_retry_and_secret_free_environment(
         self,
     ) -> None:

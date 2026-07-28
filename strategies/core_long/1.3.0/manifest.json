@@ -1,0 +1,27 @@
+{
+  "_comment": "作用：锁定 core_long 1.3.0 的长期复利、估值、资金流、分批建仓及 Codex 模型合同。重要性：Live 运行前逐文件校验，确保策略自由度和高级推理设置均可审计复现。",
+  "schema_version": "1.0",
+  "strategy_id": "core_long",
+  "strategy_version": "1.3.0",
+  "compatible_app_version": ">=2.0.0,<3.0.0",
+  "description": "10-20 year terminal-wealth strategy with valuation, flexible cash, concentration and staged accumulation",
+  "prompt_hashes": {
+    "prompts/coarse.md": "47bb9639676635289ed67281a025704f07d4cd12a80f03275049b5dbb8e5e1ce",
+    "prompts/coarse_AGENTS.md": "83a5191d26545ef85285f6e78b44b8c53120072e5dd23b2b3eea0f8295188826",
+    "prompts/portfolio.md": "f0422d32856b1b2df492e8b9453b7b71e0cd5dadede0aace7a874a4c423ca41e",
+    "prompts/portfolio_AGENTS.md": "582bcabc523a4330a87ceb8b74b91cb8735a234ebdbe122dd13ed470a787fc60",
+    "prompts/execution.md": "0c0cd333900a4cfed385bd51a70797244cd0b717d8c09fe93b1446819fab330f",
+    "prompts/execution_AGENTS.md": "72d0942c907e3b9e4267caf13c3068ceee2e076349fe41c9177dcb0ab68d4fdf"
+  },
+  "schema_hashes": {
+    "schemas/coarse_output.schema.json": "55c7e1f111be24400771673167495b2532db6f7b59678aa19fd91ce0d877aa74",
+    "schemas/portfolio_output.schema.json": "a9df9eff4a39c3c48ca71338e8159a5d6af665e9e6a500ee7ed4f242acfc4fcf",
+    "schemas/execution_output.schema.json": "3b65194b3165080dfe5639885a45210b1524e18551292315a504bc1b8fca1cf6"
+  },
+  "config_hashes": {
+    "config/coarse_policy.json": "ac25ecd2d5635db458496e44bcb6e49e95a3609d752c77cc0bb0c2ed95c19f73",
+    "config/portfolio_policy.json": "217d34d35bfbd5780edbd71ff0143479f8768f2f5c076de5ea1ce0c87b248a59",
+    "config/execution_policy.json": "e8933a24b6f16fbe781d32be92d106b8f6db1f4f98a7c1f41aee54e1ab760935",
+    "config/codex_policy.json": "5e25c621cd000626689debb15b5509beae2590e7c99ff7ccd00c583c14a32391"
+  }
+}

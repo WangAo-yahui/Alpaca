@@ -16,6 +16,7 @@ from v2.cli import CLIOptions
 from v2.codex.runner import (
     CodexRunResult,
     PortfolioCodexRunner,
+    codex_runner_settings,
 )
 from v2.codex.validation import (
     load_coarse_schema,
@@ -738,6 +739,7 @@ def execute_portfolio_decision(
                     "codex_retry_count"
                 ]
             ),
+            **codex_runner_settings(active_release),
         )
     )
     try:

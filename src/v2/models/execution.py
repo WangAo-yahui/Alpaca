@@ -283,6 +283,12 @@ def build_execution_input(
             "config/execution_policy.json",
             "",
         ),
+        "codex_policy_hash": (
+            release.config_hashes.get(
+                "config/codex_policy.json",
+                "",
+            )
+        ),
     }
     signature_payload = {
         "profile_id": paths.profile_id,
@@ -1107,6 +1113,10 @@ def _protection_issues(
             )
         elif (
             plan.get("mode") == "none"
+            and settings.get(
+                "allow_none_when_thesis_based"
+            )
+            is not True
             and (
                 _decimal_or_zero(
                     positions.get(

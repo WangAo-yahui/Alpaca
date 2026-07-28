@@ -25,9 +25,11 @@ from v2.codex.workspace import (
     PortfolioWorkspace,
 )
 from v2.exceptions import (
+    ConfigurationError,
     CodexTimeoutError,
     TemporaryDataError,
 )
+from v2.releases import StrategyRelease
 from v2.runtime import utc_now_iso
 
 
@@ -53,6 +55,58 @@ CODEX_NETWORK_ERROR_MARKERS = (
     "error sending request for url",
     "stream disconnected before completion",
 )
+CODEX_REASONING_EFFORTS = frozenset(
+    {"minimal", "low", "medium", "high", "xhigh"}
+)
+CODEX_VERBOSITY_LEVELS = frozenset(
+    {"low", "medium", "high"}
+)
+
+
+def codex_runner_settings(
+    release: StrategyRelease,
+) -> dict[str, str]:
+    """Load an optional, release-scoped Codex invocation contract."""
+
+    path = (
+        release.root
+        / "config"
+        / "codex_policy.json"
+    )
+    if not path.is_file():
+        return {}
+    try:
+        payload = json.loads(
+            path.read_text(encoding="utf-8")
+        )
+    except (OSError, json.JSONDecodeError) as error:
+        raise ConfigurationError(
+            "strategy Codex policy无法读取",
+            code="CODEX_POLICY_INVALID",
+        ) from error
+    if not isinstance(payload, dict):
+        raise ConfigurationError(
+            "strategy Codex policy必须是对象",
+            code="CODEX_POLICY_INVALID",
+        )
+    model = payload.get("model")
+    reasoning = payload.get("reasoning_effort")
+    verbosity = payload.get("verbosity")
+    if (
+        not isinstance(model, str)
+        or not model.strip()
+        or reasoning not in CODEX_REASONING_EFFORTS
+        or verbosity not in CODEX_VERBOSITY_LEVELS
+    ):
+        raise ConfigurationError(
+            "strategy Codex model、reasoning或verbosity无效",
+            code="CODEX_POLICY_INVALID",
+        )
+    return {
+        "model": model.strip(),
+        "reasoning_effort": str(reasoning),
+        "verbosity": str(verbosity),
+    }
 
 
 def _stage_label(command: list[str]) -> str:
@@ -480,12 +534,29 @@ class CodexRunner:
     retry_count: int = 1
     executable: str = "codex"
     executor: Executor = _execute
+    model: str | None = None
+    reasoning_effort: str | None = None
+    verbosity: str | None = None
     last_call_record: dict[str, Any] | None = field(
         default=None,
         init=False,
     )
 
     def __post_init__(self) -> None:
+        if self.model is not None and not self.model.strip():
+            raise ValueError("Codex model不得为空")
+        if (
+            self.reasoning_effort is not None
+            and self.reasoning_effort
+            not in CODEX_REASONING_EFFORTS
+        ):
+            raise ValueError("Codex reasoning effort无效")
+        if (
+            self.verbosity is not None
+            and self.verbosity
+            not in CODEX_VERBOSITY_LEVELS
+        ):
+            raise ValueError("Codex verbosity无效")
         if self.executor is _execute:
             self.timeout_seconds = min(
                 float(self.timeout_seconds),
@@ -495,6 +566,31 @@ class CodexRunner:
             # A second application-level attempt previously doubled a
             # network outage from 15 to almost 30 minutes.
             self.retry_count = 0
+
+    def _model_options(self) -> list[str]:
+        options: list[str] = []
+        if self.model is not None:
+            options.extend(
+                ["--model", self.model]
+            )
+        if self.reasoning_effort is not None:
+            options.extend(
+                [
+                    "--config",
+                    (
+                        "model_reasoning_effort="
+                        f'"{self.reasoning_effort}"'
+                    ),
+                ]
+            )
+        if self.verbosity is not None:
+            options.extend(
+                [
+                    "--config",
+                    f'model_verbosity="{self.verbosity}"',
+                ]
+            )
+        return options
 
     def _command(
         self,
@@ -512,6 +608,7 @@ class CodexRunner:
         return [
             self.executable,
             "exec",
+            *self._model_options(),
             "--skip-git-repo-check",
             "--ephemeral",
             "--ignore-user-config",
@@ -556,6 +653,9 @@ class CodexRunner:
             ],
             "timeout_seconds": self.timeout_seconds,
             "retry_count": self.retry_count,
+            "model": self.model,
+            "reasoning_effort": self.reasoning_effort,
+            "verbosity": self.verbosity,
             "attempts": attempts,
         }
         for attempt_number in range(
@@ -738,6 +838,7 @@ class PortfolioCodexRunner(CodexRunner):
         return [
             self.executable,
             "exec",
+            *self._model_options(),
             "--skip-git-repo-check",
             "--ephemeral",
             "--ignore-user-config",
@@ -793,6 +894,7 @@ class ExecutionCodexRunner(CodexRunner):
         return [
             self.executable,
             "exec",
+            *self._model_options(),
             "--skip-git-repo-check",
             "--ephemeral",
             "--ignore-user-config",

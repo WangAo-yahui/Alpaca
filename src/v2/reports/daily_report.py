@@ -77,6 +77,66 @@ def _detailed_report(
     )
     market = execution.get("market_assessment", {})
     market = market if isinstance(market, Mapping) else {}
+    capital_plan = portfolio.get(
+        "capital_deployment_plan",
+        {},
+    )
+    capital_plan = (
+        capital_plan
+        if isinstance(capital_plan, Mapping)
+        else {}
+    )
+    portfolio_decisions = [
+        item
+        for item in portfolio.get("decisions", [])
+        if isinstance(item, Mapping)
+    ]
+    strategy_lines: list[str] = []
+    for item in portfolio_decisions:
+        valuation = item.get("valuation", {})
+        valuation = (
+            valuation
+            if isinstance(valuation, Mapping)
+            else {}
+        )
+        expected = item.get(
+            "expected_return",
+            {},
+        )
+        expected = (
+            expected
+            if isinstance(expected, Mapping)
+            else {}
+        )
+        accumulation = item.get(
+            "accumulation_plan",
+            {},
+        )
+        accumulation = (
+            accumulation
+            if isinstance(accumulation, Mapping)
+            else {}
+        )
+        strategy_lines.append(
+            f"- {item.get('symbol')}："
+            f"{item.get('action')} → "
+            f"{item.get('target_weight')}；"
+            f"风险桶={item.get('risk_bucket', '未提供')}；"
+            f"价格={valuation.get('market_price')}，"
+            f"价值区间={valuation.get('value_range_low')}"
+            f"–{valuation.get('value_range_high')}，"
+            f"证据={valuation.get('evidence_quality')}；"
+            f"bear/base/bull="
+            f"{expected.get('bear_annualized')}/"
+            f"{expected.get('base_annualized')}/"
+            f"{expected.get('bull_annualized')}；"
+            f"建仓={accumulation.get('style')} "
+            f"{accumulation.get('planned_total_fraction')}"
+        )
+    portfolio_strategy_lines = (
+        "\n".join(strategy_lines)
+        or "- 本版本没有结构化估值/分批建仓结论。"
+    )
     validated_orders = [
         item
         for item in validated.get("orders", [])
@@ -139,7 +199,12 @@ def _detailed_report(
         f"- 市场结论：{market.get('summary', '未提供')}\n"
         f"- 目标现金：{allocation.get('target_cash_weight')}\n"
         f"- 目标持仓数：{allocation.get('target_position_count')}\n"
+        f"- 月度贡献规划：CNY "
+        f"{capital_plan.get('expected_monthly_contribution_cny', '未提供')}"
+        f"（{capital_plan.get('contribution_status', 'unknown')}）\n"
         f"- Execution 状态：{execution.get('status', 'unknown')}\n\n"
+        "### 长期估值与分批建仓\n\n"
+        f"{portfolio_strategy_lines}\n\n"
         "## 本轮决策与订单\n\n"
         f"- Cycle：{state.cycle_id}\n"
         f"- 类型：{state.cycle_kind.value}\n"

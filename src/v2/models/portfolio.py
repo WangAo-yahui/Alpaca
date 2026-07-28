@@ -307,6 +307,61 @@ def _normalize_money_fields(
     return result
 
 
+def _valuation_price_reference(
+    *,
+    symbol: str,
+    daily_summary: Mapping[str, Any],
+    positions_by_symbol: Mapping[str, Mapping[str, Any]],
+    snapshot_retrieved_at: object,
+) -> dict[str, Any]:
+    """Expose an auditable strategic price reference, never a live quote."""
+
+    position = positions_by_symbol.get(symbol, {})
+    position_price = _decimal_text(
+        position.get("current_price")
+    )
+    if (
+        position_price is not None
+        and _decimal_or_zero(position_price) > ZERO
+    ):
+        return {
+            "status": "position_snapshot",
+            "reference_price": position_price,
+            "observed_at": (
+                str(snapshot_retrieved_at)
+                if snapshot_retrieved_at
+                else None
+            ),
+            "is_live_quote": False,
+            "execution_revalidation_required": True,
+        }
+
+    daily_price = _decimal_text(
+        daily_summary.get("last_close")
+    )
+    if (
+        daily_price is not None
+        and _decimal_or_zero(daily_price) > ZERO
+    ):
+        return {
+            "status": "daily_close",
+            "reference_price": daily_price,
+            "observed_at": daily_summary.get(
+                "last_bar_date"
+            ),
+            "is_live_quote": False,
+            "execution_revalidation_required": True,
+        }
+
+    return {
+        "status": "no_data",
+        "reference_price": None,
+        "observed_at": None,
+        "is_live_quote": False,
+        "execution_revalidation_required": True,
+    }
+
+
 def _portfolio_positions(
     positions: list[Mapping[str, Any]],
     *,
@@ -489,6 +544,10 @@ def build_portfolio_input(
         for item in universe_items
         if isinstance(item, Mapping)
     }
+    positions_by_symbol = {
+        str(item.get("symbol", "")).upper(): item
+        for item in positions_source
+    }
     candidates: list[dict[str, Any]] = []
     for selection in selections:
         symbol = str(
@@ -498,27 +557,40 @@ def build_portfolio_input(
             symbol,
             {},
         )
+        daily_summary_source = universe_item.get(
+            "daily_summary",
+            {},
+        )
+        daily_summary = (
+            dict(daily_summary_source)
+            if isinstance(
+                daily_summary_source,
+                Mapping,
+            )
+            else {}
+        )
         candidates.append(
             {
                 **dict(selection),
                 "symbol": symbol,
-                "daily_summary": dict(
-                    universe_item.get(
-                        "daily_summary",
-                        {},
-                    )
-                )
-                if isinstance(
-                    universe_item.get("daily_summary"),
-                    Mapping,
-                )
-                else {},
+                "daily_summary": daily_summary,
                 "intraday_summary": {
                     "status": "no_data"
                 },
-                "latest_quote": {
-                    "status": "no_data"
-                },
+                "latest_quote": (
+                    _valuation_price_reference(
+                        symbol=symbol,
+                        daily_summary=daily_summary,
+                        positions_by_symbol=(
+                            positions_by_symbol
+                        ),
+                        snapshot_retrieved_at=(
+                            base_snapshot.get(
+                                "retrieved_at"
+                            )
+                        ),
+                    )
+                ),
                 "asset_status": dict(
                     universe_item.get(
                         "asset_status",
@@ -724,6 +796,12 @@ def build_portfolio_input(
         "policy_hash": release.config_hashes.get(
             "config/portfolio_policy.json",
             "",
+        ),
+        "codex_policy_hash": (
+            release.config_hashes.get(
+                "config/codex_policy.json",
+                "",
+            )
         ),
     }
     signature_payload = {
@@ -1298,6 +1376,222 @@ def validate_portfolio_output(
                         f"{decision_path}.target_weight",
                     )
                 )
+
+        valuation = raw_decision.get("valuation")
+        valuation = (
+            valuation
+            if isinstance(valuation, Mapping)
+            else {}
+        )
+        valuation_status = str(
+            valuation.get("status", "")
+        )
+        valuation_numbers = {
+            field: (
+                None
+                if valuation.get(field) is None
+                else _decimal_or_zero(
+                    valuation.get(field)
+                )
+            )
+            for field in (
+                "market_price",
+                "value_range_low",
+                "value_range_high",
+                "margin_of_safety_fraction",
+            )
+        }
+        if valuation_status == "no_reliable_estimate":
+            if any(
+                value is not None
+                for value in valuation_numbers.values()
+            ):
+                errors.append(
+                    _issue(
+                        "UNRELIABLE_VALUATION_HAS_NUMBERS",
+                        f"{symbol}无可靠估值时数值字段必须为null",
+                        f"{decision_path}.valuation",
+                    )
+                )
+            if (
+                valuation.get("evidence_quality")
+                != "insufficient"
+            ):
+                errors.append(
+                    _issue(
+                        "UNRELIABLE_VALUATION_EVIDENCE_MISMATCH",
+                        f"{symbol}无可靠估值时证据质量必须为insufficient",
+                        (
+                            f"{decision_path}.valuation."
+                            "evidence_quality"
+                        ),
+                    )
+                )
+        elif valuation_status:
+            market_price = valuation_numbers[
+                "market_price"
+            ]
+            value_low = valuation_numbers[
+                "value_range_low"
+            ]
+            value_high = valuation_numbers[
+                "value_range_high"
+            ]
+            if (
+                market_price is None
+                or value_low is None
+                or value_high is None
+                or market_price <= ZERO
+                or value_low <= ZERO
+                or value_high < value_low
+            ):
+                errors.append(
+                    _issue(
+                        "VALUATION_RANGE_INVALID",
+                        f"{symbol}估值价格或价值区间无效",
+                        f"{decision_path}.valuation",
+                    )
+                )
+
+        expected_return = raw_decision.get(
+            "expected_return"
+        )
+        expected_return = (
+            expected_return
+            if isinstance(
+                expected_return,
+                Mapping,
+            )
+            else {}
+        )
+        scenario_values = [
+            (
+                None
+                if expected_return.get(field) is None
+                else _decimal_or_zero(
+                    expected_return.get(field)
+                )
+            )
+            for field in (
+                "bear_annualized",
+                "base_annualized",
+                "bull_annualized",
+            )
+        ]
+        populated_scenarios = [
+            value
+            for value in scenario_values
+            if value is not None
+        ]
+        if (
+            populated_scenarios
+            and len(populated_scenarios) != 3
+        ):
+            errors.append(
+                _issue(
+                    "EXPECTED_RETURN_SCENARIOS_INCOMPLETE",
+                    f"{symbol}预期回报场景必须全部填写或全部为null",
+                    f"{decision_path}.expected_return",
+                )
+            )
+        elif len(populated_scenarios) == 3:
+            bear, base, bull = populated_scenarios
+            if not bear <= base <= bull:
+                errors.append(
+                    _issue(
+                        "EXPECTED_RETURN_SCENARIOS_UNORDERED",
+                        f"{symbol}回报场景必须满足bear<=base<=bull",
+                        f"{decision_path}.expected_return",
+                    )
+                )
+
+        accumulation = raw_decision.get(
+            "accumulation_plan"
+        )
+        accumulation = (
+            accumulation
+            if isinstance(accumulation, Mapping)
+            else {}
+        )
+        planned_fraction = _decimal_or_zero(
+            accumulation.get(
+                "planned_total_fraction"
+            )
+        )
+        tranches = accumulation.get("tranches")
+        tranches = (
+            tranches
+            if isinstance(tranches, list)
+            else []
+        )
+        tranche_total = ZERO
+        for tranche_index, raw_tranche in enumerate(
+            tranches
+        ):
+            if not isinstance(
+                raw_tranche,
+                Mapping,
+            ):
+                continue
+            fraction = _decimal_or_zero(
+                raw_tranche.get("fraction")
+            )
+            tranche_total += fraction
+            low = raw_tranche.get(
+                "price_trigger_low"
+            )
+            high = raw_tranche.get(
+                "price_trigger_high"
+            )
+            low_value = (
+                None
+                if low is None
+                else _decimal_or_zero(low)
+            )
+            high_value = (
+                None
+                if high is None
+                else _decimal_or_zero(high)
+            )
+            if (
+                fraction <= ZERO
+                or (
+                    low_value is not None
+                    and high_value is not None
+                    and high_value < low_value
+                )
+            ):
+                errors.append(
+                    _issue(
+                        "ACCUMULATION_TRANCHE_INVALID",
+                        f"{symbol}分批建仓阶段无效",
+                        (
+                            f"{decision_path}."
+                            "accumulation_plan.tranches"
+                            f"[{tranche_index}]"
+                        ),
+                    )
+                )
+        style = str(accumulation.get("style", ""))
+        if (
+            planned_fraction < ZERO
+            or planned_fraction > ONE
+            or tranche_total != planned_fraction
+            or (
+                style in {"wait", "no_add"}
+                and (
+                    planned_fraction != ZERO
+                    or bool(tranches)
+                )
+            )
+        ):
+            errors.append(
+                _issue(
+                    "ACCUMULATION_PLAN_INVALID",
+                    f"{symbol}分批建仓比例或等待状态无效",
+                    f"{decision_path}.accumulation_plan",
+                )
+            )
     if len(symbols) != len(set(symbols)):
         errors.append(
             _issue(

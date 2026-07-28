@@ -19,6 +19,7 @@ from typing import Any, Mapping, Protocol
 from v2.codex.runner import (
     CodexRunResult,
     ExecutionCodexRunner,
+    codex_runner_settings,
 )
 from v2.codex.validation import (
     preflight_output_schema,
@@ -1435,6 +1436,7 @@ def execute_execution_decision(
                     "codex_retry_count"
                 ]
             ),
+            **codex_runner_settings(active_release),
         )
     )
     try:

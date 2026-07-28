@@ -15,6 +15,7 @@ from v2.cli import CLIOptions
 from v2.codex.runner import (
     CodexRunResult,
     CodexRunner,
+    codex_runner_settings,
 )
 from v2.codex.validation import (
     load_coarse_schema,
@@ -501,6 +502,7 @@ def execute_coarse_selection(
         retry_count=int(
             config.system["codex_retry_count"]
         ),
+        **codex_runner_settings(active_release),
     )
     try:
         run_result = active_runner.run(
