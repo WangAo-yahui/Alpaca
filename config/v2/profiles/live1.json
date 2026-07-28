@@ -22,7 +22,7 @@
     "running_timeout_minutes": 45,
     "display_sleep_after_close": true
   },
-  "risk_profile": "live_full@1.0.0",
+  "risk_profile": "live_full@1.1.0",
   "order_policy": "live_equity@1.0.0",
   "submission_policy": "alpaca_live@1.0.0"
 }

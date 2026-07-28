@@ -1,0 +1,26 @@
+{
+  "_comment": "作用：定义 live1 可使用全部账户权益的版本化硬风控，并明确使用 IEX 实时行情时对瞬时宽点差进行有界连续复核。重要性：复核只适用于常规时段限价单，最终报价、账户和订单状态必须重新验证；任何不稳定或缺失仍然失败关闭。",
+  "schema_version": "1.0",
+  "risk_profile_id": "live_full",
+  "risk_profile_version": "1.1.0",
+  "environment": "live",
+  "settings": {
+    "maximum_gross_exposure": "1.00",
+    "maximum_single_position_weight": "1.00",
+    "maximum_sector_weight": "1.00",
+    "minimum_cash_weight": "0.00",
+    "maximum_new_capital_per_cycle_weight": "1.00",
+    "maximum_order_count": 20,
+    "minimum_order_value": "1.00",
+    "allow_short_positions": false,
+    "quote_max_age_seconds": "15",
+    "closed_session_quote_max_age_seconds": "345600",
+    "regular_spread_limit_bps": "50",
+    "extended_spread_limit_bps": "50",
+    "regular_equity_data_feed": "iex",
+    "spread_recheck_enabled": true,
+    "spread_recheck_window_seconds": "6.5",
+    "spread_recheck_interval_seconds": "0.5",
+    "spread_recheck_required_consecutive_passes": 3
+  }
+}

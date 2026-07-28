@@ -31,6 +31,8 @@ class QuoteNormalizationTests(unittest.TestCase):
                 bid_size="10",
                 ask_price="101",
                 ask_size="11",
+                bid_exchange="V",
+                ask_exchange="Q",
                 timestamp=(
                     "2026-07-23T14:00:00+00:00"
                 ),
@@ -44,6 +46,7 @@ class QuoteNormalizationTests(unittest.TestCase):
                 5,
                 tzinfo=UTC,
             ),
+            data_feed="iex",
         )
         self.assertEqual(
             result["midpoint"],
@@ -57,6 +60,18 @@ class QuoteNormalizationTests(unittest.TestCase):
         self.assertEqual(
             result["quote_age_seconds"],
             5.0,
+        )
+        self.assertEqual(
+            result["data_feed"],
+            "iex",
+        )
+        self.assertEqual(
+            result["bid_exchange"],
+            "V",
+        )
+        self.assertEqual(
+            result["ask_exchange"],
+            "Q",
         )
 
     def test_crossed_quote_is_invalid(self) -> None:

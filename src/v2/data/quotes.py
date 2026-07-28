@@ -34,10 +34,14 @@ def no_quote(
     symbol: str,
     *,
     status: str = "no_data",
+    data_feed: str | None = None,
 ) -> dict[str, Any]:
     return {
         "symbol": normalized_symbol(symbol),
         "status": status,
+        "data_feed": data_feed,
+        "bid_exchange": None,
+        "ask_exchange": None,
         "bid_price": None,
         "bid_size": None,
         "ask_price": None,
@@ -55,10 +59,14 @@ def normalize_quote(
     quote: object | None,
     *,
     now: datetime | None = None,
+    data_feed: str | None = None,
 ) -> dict[str, Any]:
     normalized = normalized_symbol(symbol)
     if quote is None:
-        return no_quote(normalized)
+        return no_quote(
+            normalized,
+            data_feed=data_feed,
+        )
 
     bid = finite_float(
         read_field(quote, "bid_price")
@@ -75,6 +83,14 @@ def normalize_quote(
     timestamp = as_utc_datetime(
         read_field(quote, "timestamp")
     )
+    bid_exchange = str(
+        read_field(quote, "bid_exchange", "")
+        or ""
+    ).strip() or None
+    ask_exchange = str(
+        read_field(quote, "ask_exchange", "")
+        or ""
+    ).strip() or None
 
     if (
         bid is None
@@ -87,6 +103,7 @@ def normalize_quote(
         return no_quote(
             normalized,
             status="invalid_data",
+            data_feed=data_feed,
         )
 
     midpoint = (bid + ask) / 2
@@ -113,6 +130,9 @@ def normalize_quote(
     return {
         "symbol": normalized,
         "status": "success",
+        "data_feed": data_feed,
+        "bid_exchange": bid_exchange,
+        "ask_exchange": ask_exchange,
         "bid_price": bid,
         "bid_size": bid_size,
         "ask_price": ask,
@@ -191,6 +211,11 @@ def fetch_latest_quotes(
         not in crypto
     ]
     mapping: dict[str, object] = {}
+    stock_feed = (
+        feed.value
+        if feed is not None
+        else "subscription_default"
+    )
     if stock:
         response = call_api(
             "get_stock_latest_quote",
@@ -229,6 +254,12 @@ def fetch_latest_quotes(
                 else symbol
             ),
             now=now,
+            data_feed=(
+                "crypto"
+                if _canonical_crypto_symbol(symbol)
+                in crypto
+                else stock_feed
+            ),
         )
         for symbol in unique
     }

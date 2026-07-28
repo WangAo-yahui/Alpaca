@@ -2222,6 +2222,7 @@ def run_stage_f(
                         execution_output
                     ),
                     order_policy=order_policy,
+                    risk_profile=risk_profile,
                 )
             )
             _validate_stage_f_document(
@@ -2725,6 +2726,7 @@ def _refresh_after_confirmed_replacements(
         clients,
         execution_output=execution_output,
         order_policy=order_policy,
+        risk_profile=risk_profile,
     )
     _validate_stage_f_document(
         refreshed.payload,

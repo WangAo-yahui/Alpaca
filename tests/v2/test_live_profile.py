@@ -60,6 +60,26 @@ class LiveProfileTests(unittest.TestCase):
             ],
             "345600",
         )
+        self.assertEqual(
+            risk.settings[
+                "regular_equity_data_feed"
+            ],
+            "iex",
+        )
+        self.assertTrue(
+            risk.settings[
+                "spread_recheck_enabled"
+            ]
+        )
+        self.assertEqual(
+            risk.settings[
+                (
+                    "spread_recheck_required_"
+                    "consecutive_passes"
+                )
+            ],
+            3,
+        )
         limits = effective_execution_limits(
             risk,
             {
