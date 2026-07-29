@@ -17,12 +17,72 @@ from v2.models.coarse import (
     build_coarse_input,
     summarize_daily_bars,
 )
+from v2.runtime import load_json_object
 from tests.v2.support import (
     prepare_stage_c_project,
 )
 
 
 class CoarseModelTests(unittest.TestCase):
+    def test_python_shortlists_rank_stocks_and_etfs_separately(
+        self,
+    ) -> None:
+        with tempfile.TemporaryDirectory() as temp:
+            root = Path(temp)
+            prepare_stage_c_project(
+                root,
+                stock_count=110,
+            )
+            policy = load_json_object(
+                root
+                / "strategies"
+                / "core_long"
+                / "1.4.0"
+                / "config"
+                / "coarse_policy.json"
+            )
+            result = build_coarse_input(
+                config=load_config(
+                    project_root=root
+                ),
+                run_date="2026-07-23",
+                base_snapshot={
+                    "market_phase": (
+                        "regular_session"
+                    ),
+                    "positions": [],
+                    "open_orders": [],
+                    "assets": [],
+                },
+                strategy_version="1.4.0",
+                coarse_policy=policy,
+            )
+        shortlists = result.payload[
+            "python_shortlists"
+        ]
+        self.assertEqual(
+            len(shortlists["stock"]),
+            100,
+        )
+        self.assertEqual(
+            len(shortlists["etf"]),
+            6,
+        )
+        self.assertTrue(
+            all(
+                item["score_model"]
+                == "stock_research_priority_v1"
+                for item in shortlists["stock"]
+            )
+        )
+        self.assertTrue(
+            all(
+                item["score_model"]
+                == "etf_research_priority_v1"
+                for item in shortlists["etf"]
+            )
+        )
+
     def test_daily_summary_has_required_metrics(
         self,
     ) -> None:

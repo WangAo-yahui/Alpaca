@@ -1,0 +1,82 @@
+{
+  "_comment": "作用：定义 core_long 1.4.0 的长期复利、资本竞争、反持仓锚定、非定期现金流和再平衡边界。重要性：仓位形态与风险取舍主要交给模型，持仓身份只能形成有证据的换手缓冲，不能替代与现金及非持仓候选的同口径比较。",
+  "schema_version": "1.0",
+  "portfolio_valid_minutes": 1440,
+  "capital_change_materiality": {
+    "absolute_usd": "100",
+    "relative_fraction": "0.01"
+  },
+  "target_holdings": {
+    "minimum": 0,
+    "maximum": 20
+  },
+  "weight_tolerance": "0.01",
+  "minimum_target_weight": "0.01",
+  "maximum_sector_weight": "1.00",
+  "allow_increase_outside_coarse": false,
+  "allow_empty_portfolio": true,
+  "investment_objective": {
+    "horizon_years_minimum": 10,
+    "horizon_years_maximum": 20,
+    "primary_objective": "maximize_expected_real_terminal_wealth_after_costs",
+    "drawdown_tolerance": "model_determined_including_moderate",
+    "forced_defensive_allocation": false,
+    "forced_investment": false,
+    "forced_diversification": false,
+    "allow_long_term_full_cash": true,
+    "allow_long_term_fully_invested": true,
+    "allow_concentrated_portfolio": true
+  },
+  "expected_contributions": {
+    "pattern": "irregular_uncommitted",
+    "commitment": "non_committed",
+    "amount_guaranteed": false,
+    "timing_guaranteed": false,
+    "planning_only_until_cash_is_available": true,
+    "pre_spend_expected_contribution": false,
+    "allocation_method": "opportunity_ranked",
+    "usdt_to_usd_priority": "convert_before_equity_deployment_when_detected"
+  },
+  "allocation_guidance": {
+    "model_may_choose_cash_weight_from_zero_to_one": true,
+    "model_may_choose_balanced_or_concentrated": true,
+    "moderate_drawdown_is_acceptable_when_rewarded": true,
+    "core_satellite_is_optional": true,
+    "opportunistic_weight_is_not_a_quota": true,
+    "soft_reference_opportunistic_maximum": "0.35",
+    "permit_zero_opportunistic_weight": true,
+    "require_higher_evidence_for_concentration": true,
+    "prefer_low_turnover": true
+  },
+  "capital_competition_requirements": {
+    "enabled": true,
+    "require_cash_comparator": true,
+    "minimum_non_held_comparators": 2,
+    "require_counterfactual_for_each_holding": true,
+    "holding_status_is_not_quality_evidence": true,
+    "increase_requires_would_buy_if_not_held": true,
+    "supplemental_discoveries_are_research_only": true
+  },
+  "emerging_growth_watchlist": {
+    "source_name": "watchlist_non_sp500",
+    "maximum_initial_target_weight": "0.03",
+    "maximum_aggregate_target_weight": "0.10",
+    "require_staged_entry": true,
+    "require_primary_source_research": true,
+    "allow_zero_allocation": true
+  },
+  "valuation_requirements": {
+    "separate_price_from_value": true,
+    "allow_no_reliable_estimate": true,
+    "require_scenario_range": true,
+    "require_source_or_input_reference": true,
+    "forbid_price_decline_as_sole_undervaluation_evidence": true
+  },
+  "accumulation_requirements": {
+    "allow_immediate_full_entry": true,
+    "allow_staged_entry": true,
+    "allow_wait": true,
+    "maximum_planned_tranches": 5,
+    "do_not_average_down_after_thesis_break": true
+  }
+}

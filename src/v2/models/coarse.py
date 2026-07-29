@@ -188,6 +188,10 @@ class CoarseInput:
     generated_at: str
     input_signature: str
     universe: tuple[CoarseUniverseItem, ...]
+    python_shortlists: dict[
+        str,
+        tuple[dict[str, Any], ...],
+    ]
     must_include: tuple[str, ...]
     exclusions: tuple[str, ...]
     current_positions: tuple[
@@ -224,6 +228,46 @@ class CoarseInput:
             )
         for item in self.universe:
             item.validate()
+        if set(self.python_shortlists) != {
+            "stock",
+            "etf",
+        }:
+            raise ValueError(
+                "CoarseInput.python_shortlists必须分别包含stock和etf"
+            )
+        combined_shortlist: list[str] = []
+        universe_types = {
+            item.symbol: item.asset_type
+            for item in self.universe
+        }
+        for asset_type, items in (
+            self.python_shortlists.items()
+        ):
+            shortlist_symbols = [
+                str(item.get("symbol", ""))
+                for item in items
+            ]
+            if len(shortlist_symbols) != len(
+                set(shortlist_symbols)
+            ):
+                raise ValueError(
+                    "CoarseInput.python_shortlists不能包含重复symbol"
+                )
+            if any(
+                universe_types.get(symbol)
+                != asset_type
+                for symbol in shortlist_symbols
+            ):
+                raise ValueError(
+                    "CoarseInput.python_shortlists资产类型与universe不一致"
+                )
+            combined_shortlist.extend(
+                shortlist_symbols
+            )
+        if not combined_shortlist:
+            raise ValueError(
+                "CoarseInput.python_shortlists不能为空"
+            )
 
     def to_dict(self) -> dict[str, Any]:
         self.validate()
@@ -239,6 +283,15 @@ class CoarseInput:
                 item.to_dict()
                 for item in self.universe
             ],
+            "python_shortlists": {
+                asset_type: [
+                    dict(item)
+                    for item in self.python_shortlists[
+                        asset_type
+                    ]
+                ]
+                for asset_type in ("stock", "etf")
+            },
             "screening_summary": dict(
                 self.screening_summary
             ),
@@ -299,6 +352,27 @@ class CoarseInput:
                 for item in raw_universe
                 if isinstance(item, Mapping)
             ),
+            python_shortlists={
+                asset_type: tuple(
+                    dict(item)
+                    for item in (
+                        payload.get(
+                            "python_shortlists",
+                            {},
+                        ).get(asset_type, [])
+                        if isinstance(
+                            payload.get(
+                                "python_shortlists",
+                                {},
+                            ),
+                            Mapping,
+                        )
+                        else []
+                    )
+                    if isinstance(item, Mapping)
+                )
+                for asset_type in ("stock", "etf")
+            },
             must_include=tuple(
                 str(value)
                 for value in payload.get(
@@ -364,6 +438,7 @@ class CoarseSelection:
     main_risks: tuple[str, ...]
     key_factors: tuple[str, ...]
     source_references: tuple[str, ...]
+    selection_origin: str | None = None
 
     def validate(self) -> None:
         if not 1 <= self.rank <= 60:
@@ -389,10 +464,21 @@ class CoarseSelection:
             raise TypeError(
                 "CoarseSelection eligibility必须是布尔值"
             )
+        if (
+            self.selection_origin is not None
+            and self.selection_origin
+            not in {
+                "python_shortlist",
+                "codex_supplement",
+            }
+        ):
+            raise ValueError(
+                "CoarseSelection.selection_origin无效"
+            )
 
     def to_dict(self) -> dict[str, Any]:
         self.validate()
-        return {
+        payload = {
             "rank": self.rank,
             "symbol": self.symbol,
             "asset_type": self.asset_type,
@@ -417,6 +503,11 @@ class CoarseSelection:
                 self.source_references
             ),
         }
+        if self.selection_origin is not None:
+            payload["selection_origin"] = (
+                self.selection_origin
+            )
+        return payload
 
     @classmethod
     def from_dict(
@@ -476,6 +567,14 @@ class CoarseSelection:
                     [],
                 )
             ),
+            selection_origin=(
+                str(payload["selection_origin"])
+                if payload.get(
+                    "selection_origin"
+                )
+                is not None
+                else None
+            ),
         )
         value.validate()
         return value
@@ -498,6 +597,9 @@ class CoarseOutput:
         dict[str, Any],
         ...,
     ]
+    external_discoveries: (
+        tuple[dict[str, Any], ...] | None
+    ) = None
 
     def validate(self) -> None:
         if (
@@ -530,7 +632,7 @@ class CoarseOutput:
 
     def to_dict(self) -> dict[str, Any]:
         self.validate()
-        return {
+        payload = {
             "schema_version": self.schema_version,
             "stage": self.stage,
             "run_date": self.run_date,
@@ -556,6 +658,12 @@ class CoarseOutput:
                 for item in self.source_references
             ],
         }
+        if self.external_discoveries is not None:
+            payload["external_discoveries"] = [
+                dict(item)
+                for item in self.external_discoveries
+            ]
+        return payload
 
     @classmethod
     def from_dict(
@@ -619,6 +727,19 @@ class CoarseOutput:
                     [],
                 )
                 if isinstance(item, Mapping)
+            ),
+            external_discoveries=(
+                tuple(
+                    dict(item)
+                    for item in payload.get(
+                        "external_discoveries",
+                        [],
+                    )
+                    if isinstance(item, Mapping)
+                )
+                if "external_discoveries"
+                in payload
+                else None
             ),
         )
         value.validate()
@@ -1050,6 +1171,217 @@ def _asset_status(
     }
 
 
+def _common_research_readiness(
+    candidate: Mapping[str, Any],
+) -> tuple[float, list[str], Mapping[str, Any]]:
+    """Score shared data readiness, not investment attractiveness."""
+
+    summary = candidate.get("daily_summary")
+    summary = (
+        summary
+        if isinstance(summary, Mapping)
+        else {}
+    )
+    quality = candidate.get("data_quality")
+    quality = (
+        quality
+        if isinstance(quality, Mapping)
+        else {}
+    )
+    score = 0.0
+    tags: list[str] = []
+    if candidate.get("research_eligible") is True:
+        score += 20.0
+    if quality.get(
+        "asset_metadata_available"
+    ) is True:
+        score += 5.0
+    bars_available = int(
+        summary.get("bars_available") or 0
+    )
+    score += min(bars_available / 252.0, 1.0) * 15.0
+    if bars_available >= 252:
+        tags.append("full_year_history")
+    average_dollar_volume = summary.get(
+        "average_dollar_volume_20d"
+    )
+    if isinstance(
+        average_dollar_volume,
+        (int, float),
+    ) and average_dollar_volume > 0:
+        liquidity_score = max(
+            0.0,
+            min(
+                (
+                    math.log10(
+                        float(
+                            average_dollar_volume
+                        )
+                    )
+                    - 6.0
+                )
+                / 4.0,
+                1.0,
+            ),
+        )
+        score += liquidity_score * 15.0
+        if average_dollar_volume >= 100_000_000:
+            tags.append("high_liquidity")
+    signal_fields = (
+        "return_20d",
+        "return_60d",
+        "return_252d",
+        "volatility_60d",
+        "drawdown_from_52w_high",
+        "distance_from_sma_200",
+        "rsi_14",
+    )
+    signal_count = sum(
+        summary.get(field) is not None
+        for field in signal_fields
+    )
+    score += signal_count / len(signal_fields) * 10.0
+    return score, tags, summary
+
+
+def _stock_research_priority(
+    candidate: Mapping[str, Any],
+) -> tuple[float, list[str]]:
+    """Rank stock research readiness and observable company-price setups."""
+
+    score, tags, summary = (
+        _common_research_readiness(candidate)
+    )
+    drawdown = summary.get(
+        "drawdown_from_52w_high"
+    )
+    if isinstance(drawdown, (int, float)):
+        if drawdown <= -0.15:
+            tags.append("material_drawdown")
+            score += 3.0
+        if drawdown <= -0.35:
+            tags.append("extreme_drawdown")
+            score += 2.0
+    annual_return = summary.get("return_252d")
+    if (
+        isinstance(annual_return, (int, float))
+        and annual_return > 0
+    ):
+        tags.append("positive_252d_return")
+        score += min(float(annual_return), 1.0) * 8.0
+    medium_return = summary.get("return_60d")
+    if isinstance(medium_return, (int, float)):
+        score += max(
+            -3.0,
+            min(float(medium_return), 0.5) * 6.0,
+        )
+    volatility = summary.get("volatility_60d")
+    if (
+        isinstance(volatility, (int, float))
+        and volatility >= 0.60
+    ):
+        tags.append("high_volatility")
+    if candidate.get("must_include") is True:
+        score += 100.0
+        tags.append("must_include")
+    return score, tags
+
+
+def _etf_research_priority(
+    candidate: Mapping[str, Any],
+) -> tuple[float, list[str]]:
+    """Rank ETFs independently on implementation and time-series readiness."""
+
+    score, tags, summary = (
+        _common_research_readiness(candidate)
+    )
+    volatility = summary.get("volatility_60d")
+    if isinstance(volatility, (int, float)):
+        score += max(
+            0.0,
+            12.0 - min(float(volatility), 1.0) * 12.0,
+        )
+        if volatility <= 0.25:
+            tags.append("moderate_or_low_volatility")
+    annual_return = summary.get("return_252d")
+    if isinstance(annual_return, (int, float)):
+        score += max(
+            -2.0,
+            min(float(annual_return), 0.5) * 6.0,
+        )
+    drawdown = summary.get(
+        "drawdown_from_52w_high"
+    )
+    if (
+        isinstance(drawdown, (int, float))
+        and drawdown <= -0.15
+    ):
+        tags.append("material_drawdown")
+    if candidate.get("must_include") is True:
+        score += 100.0
+        tags.append("must_include")
+    return score, tags
+
+
+def _build_python_shortlist(
+    candidates: list[dict[str, Any]],
+    *,
+    asset_type: str,
+    count: int,
+) -> list[dict[str, Any]]:
+    ranked = []
+    for candidate in candidates:
+        if candidate.get("asset_type") != asset_type:
+            continue
+        if (
+            candidate.get("research_eligible")
+            is not True
+            and candidate.get("must_include")
+            is not True
+            and candidate.get("currently_held")
+            is not True
+            and candidate.get("has_open_order")
+            is not True
+        ):
+            continue
+        score, tags = (
+            _stock_research_priority(candidate)
+            if asset_type == "stock"
+            else _etf_research_priority(candidate)
+        )
+        ranked.append(
+            (
+                -score,
+                str(candidate.get("symbol", "")),
+                {
+                    "symbol": str(
+                        candidate.get("symbol", "")
+                    ),
+                    "research_priority_score": (
+                        format(score, ".6f")
+                    ),
+                    "score_model": (
+                        f"{asset_type}_research_priority_v1"
+                    ),
+                    "signal_tags": tags,
+                },
+            )
+        )
+    ranked.sort(
+        key=lambda item: (item[0], item[1])
+    )
+    selected = [
+        item[2]
+        for item in ranked[: max(0, count)]
+    ]
+    for rank, item in enumerate(
+        selected,
+        start=1,
+    ):
+        item["rank"] = rank
+    return selected
+
+
 def _screen_reasons(
     *,
     asset_type: str,
@@ -1122,6 +1454,7 @@ def build_coarse_input(
     strategy_id: str = "core_long",
     strategy_version: str = "1.0.0",
     guidance: Mapping[str, Any] | None = None,
+    coarse_policy: Mapping[str, Any] | None = None,
 ) -> CoarseInputBuildResult:
     """Build a coarse input without including cash, quotes, or cycle identity."""
 
@@ -1346,6 +1679,11 @@ def build_coarse_input(
             ],
         }
     )
+    strategy_policy = (
+        coarse_policy
+        if isinstance(coarse_policy, Mapping)
+        else {}
+    )
     signature_payload = {
         "run_date": run_date,
         "profile_id": profile_id,
@@ -1424,6 +1762,9 @@ def build_coarse_input(
                 "coarse_schema_version"
             ]
         ),
+        "strategy_coarse_policy": dict(
+            strategy_policy
+        ),
     }
     input_signature = _sha256(
         signature_payload
@@ -1453,6 +1794,42 @@ def build_coarse_input(
             f"{latest_daily_date}"
         )
     generated = generated_at or utc_now_iso()
+    raw_shortlist_counts = strategy_policy.get(
+        "python_shortlist_count",
+        {},
+    )
+    if isinstance(raw_shortlist_counts, Mapping):
+        shortlist_counts = {
+            "stock": int(
+                raw_shortlist_counts.get(
+                    "stock",
+                    120,
+                )
+            ),
+            "etf": int(
+                raw_shortlist_counts.get(
+                    "etf",
+                    30,
+                )
+            ),
+        }
+    else:
+        legacy_count = int(
+            raw_shortlist_counts
+            or min(120, len(candidates))
+        )
+        shortlist_counts = {
+            "stock": legacy_count,
+            "etf": legacy_count,
+        }
+    python_shortlists = {
+        asset_type: _build_python_shortlist(
+            candidates,
+            asset_type=asset_type,
+            count=shortlist_counts[asset_type],
+        )
+        for asset_type in ("stock", "etf")
+    }
     payload: dict[str, Any] = {
         "schema_version": (
             COARSE_INPUT_SCHEMA_VERSION
@@ -1498,6 +1875,7 @@ def build_coarse_input(
             ),
         },
         "universe": candidates,
+        "python_shortlists": python_shortlists,
         "screening_summary": {
             "input_count": (
                 len(entries_to_process)
@@ -1580,6 +1958,38 @@ def build_coarse_input(
                     "coarse_schema_version"
                 ]
             ),
+            "python_shortlist_count": {
+                asset_type: len(
+                    python_shortlists[asset_type]
+                )
+                for asset_type in ("stock", "etf")
+            },
+            "codex_supplement_selection": dict(
+                strategy_policy.get(
+                    "codex_supplement_selection",
+                    {},
+                )
+            )
+            if isinstance(
+                strategy_policy.get(
+                    "codex_supplement_selection"
+                ),
+                Mapping,
+            )
+            else {},
+            "external_discovery": dict(
+                strategy_policy.get(
+                    "external_discovery",
+                    {},
+                )
+            )
+            if isinstance(
+                strategy_policy.get(
+                    "external_discovery"
+                ),
+                Mapping,
+            )
+            else {},
         },
     }
     normalized_payload = (

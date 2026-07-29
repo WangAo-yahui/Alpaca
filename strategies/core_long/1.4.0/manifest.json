@@ -1,0 +1,27 @@
+{
+  "_comment": "作用：锁定 core_long 1.4.0 的客观初筛、Codex补充发现、资本竞争、反持仓锚定及长期执行合同。重要性：补充研究不能绕过Python资格、组合与下单门禁。",
+  "schema_version": "1.0",
+  "strategy_id": "core_long",
+  "strategy_version": "1.4.0",
+  "compatible_app_version": ">=2.0.0,<3.0.0",
+  "description": "10-20 year terminal-wealth strategy with objective shortlist, separately tagged Codex discoveries, capital competition and staged execution",
+  "prompt_hashes": {
+    "prompts/coarse.md": "0803f5a45fdd5971f4338e1e074187d0cd641a95307ef9d9c96e41449919d46a",
+    "prompts/coarse_AGENTS.md": "aa85984afe85d3710d46e09b68f1c01c6d742c70471210df431087f2c60a160b",
+    "prompts/portfolio.md": "3f811971124a4611f21e511b30fc688b7119e9d031a8a3cae50d4dcfaeb5fd18",
+    "prompts/portfolio_AGENTS.md": "045273d5d0e08dd6a7632e9d466259a1cf09dd0bc298da1c6d893897acd494ee",
+    "prompts/execution.md": "df9187dd5aff02b8856579ecf5dbad8927b3b01ec7d558416f352c823b79cfab",
+    "prompts/execution_AGENTS.md": "72d0942c907e3b9e4267caf13c3068ceee2e076349fe41c9177dcb0ab68d4fdf"
+  },
+  "schema_hashes": {
+    "schemas/coarse_output.schema.json": "422471b236dc0a0fcd58e488e7f973e822c4d7e79fb8b9b4b4ebfcee7da093b7",
+    "schemas/portfolio_output.schema.json": "8996c736cefc84c3e17b6f91b208216158d871f9ffb372ee596875590bb0e805",
+    "schemas/execution_output.schema.json": "578c247892304adbcfe9a7ad110cf615ca109bea0e6a3c4cfd4655238634e056"
+  },
+  "config_hashes": {
+    "config/coarse_policy.json": "33a8c20a4f2eed5189111b2aca61ebf9ee5382680402139e5ab0b14aa67479b5",
+    "config/portfolio_policy.json": "03efd0eebddabf13c8677e9730377b20e23818d09fc2772f4c63fc0a532ea727",
+    "config/execution_policy.json": "e8933a24b6f16fbe781d32be92d106b8f6db1f4f98a7c1f41aee54e1ab760935",
+    "config/codex_policy.json": "9d2b31872dc6c6f70d4be34402c8dad9c33831db3c0c953cb75bb20a564af616"
+  }
+}

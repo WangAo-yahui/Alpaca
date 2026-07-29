@@ -333,6 +333,11 @@ def execute_coarse_selection(
             paths.strategy_version
         ),
         guidance=guidance.to_dict(),
+        coarse_policy=load_json_object(
+            active_release.root
+            / "config"
+            / "coarse_policy.json"
+        ),
     )
     revision = build_coarse_revision_paths(
         daily_paths,

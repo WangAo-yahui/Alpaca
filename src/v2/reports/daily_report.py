@@ -57,7 +57,12 @@ ZH_VALUES = {
     "True": "是",
     "False": "否",
     "None": "无",
-    "approximately_monthly": "大约每月",
+    "irregular_uncommitted": "不定期且非承诺",
+    "not_detected": "未检测到",
+    "planned": "已规划",
+    "awaiting_broker_confirmation": "等待券商确认",
+    "completed": "已完成",
+    "not_supported": "券商不支持",
     "non_committed": "非承诺",
 }
 
@@ -257,11 +262,10 @@ def _detailed_report(
         f"- 市场结论：{_chinese_summary(market.get('summary'))}\n"
         f"- 目标现金：{allocation.get('target_cash_weight')}\n"
         f"- 目标持仓数：{allocation.get('target_position_count')}\n"
-        f"- 非承诺资金参考：约人民币 "
-        f"{capital_plan.get('reference_amount_cny', '未提供')} / "
-        f"{_zh(capital_plan.get('reference_cadence', 'unknown'))}；"
-        f"{_zh(capital_plan.get('commitment_status', 'unknown'))}，"
-        "金额和时间均不保证\n"
+        f"- 未来入金：{_zh(capital_plan.get('contribution_pattern', 'irregular_uncommitted'))}；"
+        "金额和时间均不预设\n"
+        f"- USDT 资金准备：{_zh(capital_plan.get('usdt_conversion_status', 'not_detected'))}；"
+        "检测到后优先兑换 USD，券商确认前不计入股票购买力\n"
         f"- 执行状态：{_zh(execution.get('status', 'unknown'))}\n\n"
         "### 长期估值与分批建仓\n\n"
         f"{portfolio_strategy_lines}\n\n"

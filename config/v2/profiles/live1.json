@@ -9,7 +9,7 @@
   "credential_secret_env": "ALPACA_LIVE_SECRET_KEY",
   "strategy": {
     "strategy_id": "core_long",
-    "strategy_version": "1.3.0"
+    "strategy_version": "1.4.0"
   },
   "schedule": {
     "timezone": "America/New_York",

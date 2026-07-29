@@ -202,6 +202,35 @@ def valid_coarse_output(
         item["symbol"]: item
         for item in items
     }
+    policy = input_payload.get("policy", {})
+    version_four_contract = bool(
+        isinstance(policy, dict)
+        and policy.get(
+            "codex_supplement_selection"
+        )
+    )
+    raw_shortlists = input_payload.get(
+        "python_shortlists",
+        {},
+    )
+    shortlist_symbols = {
+        asset_type: {
+            str(item.get("symbol", ""))
+            for item in (
+                raw_shortlists.get(
+                    asset_type,
+                    [],
+                )
+                if isinstance(
+                    raw_shortlists,
+                    dict,
+                )
+                else []
+            )
+            if isinstance(item, dict)
+        }
+        for asset_type in ("stock", "etf")
+    }
     required = list(
         input_payload["must_include"]
     )
@@ -209,14 +238,47 @@ def valid_coarse_output(
         by_symbol[symbol]
         for symbol in required
     ]
+    ordinary_pool = (
+        [
+            item
+            for item in items
+            if item["symbol"]
+            in shortlist_symbols.get(
+                item["asset_type"],
+                set(),
+            )
+        ]
+        if version_four_contract
+        else items
+    )
     selected.extend(
         item
-        for item in items
+        for item in ordinary_pool
         if item["symbol"] not in set(required)
     )
     selected = selected[:60]
     local_only = status == "success_local_only"
-    return {
+    if version_four_contract and not local_only:
+        selected_symbols = {
+            item["symbol"]
+            for item in selected
+        }
+        supplements = [
+            item
+            for item in items
+            if item["symbol"]
+            not in shortlist_symbols.get(
+                item["asset_type"],
+                set(),
+            )
+            and item["symbol"]
+            not in selected_symbols
+        ][:3]
+        selected = [
+            *selected[: 60 - len(supplements)],
+            *supplements,
+        ]
+    output = {
         "schema_version": "1.0",
         "stage": "coarse_selection",
         "run_date": input_payload["run_date"],
@@ -274,6 +336,23 @@ def valid_coarse_output(
                     "Price and liquidity"
                 ],
                 "source_references": ["input"],
+                **(
+                    {
+                        "selection_origin": (
+                            "python_shortlist"
+                            if item["symbol"]
+                            in shortlist_symbols.get(
+                                item[
+                                    "asset_type"
+                                ],
+                                set(),
+                            )
+                            else "codex_supplement"
+                        )
+                    }
+                    if version_four_contract
+                    else {}
+                ),
             }
             for index, item in enumerate(
                 selected,
@@ -297,6 +376,75 @@ def valid_coarse_output(
             }
         ],
     }
+    if version_four_contract:
+        output["external_discoveries"] = (
+            []
+            if local_only
+            else [
+                {
+                    "symbol": "DISC1",
+                    "asset_type": "stock",
+                    "candidate_type": "satellite",
+                    "research_only": True,
+                    "why_python_may_miss": (
+                        "Outside configured universe"
+                    ),
+                    "thesis": "Test discovery",
+                    "primary_evidence": [
+                        "Issuer evidence"
+                    ],
+                    "main_risks": ["Discovery risk"],
+                    "next_validation_steps": [
+                        "Verify eligibility"
+                    ],
+                    "source_references": ["web1"],
+                },
+                {
+                    "symbol": "DISCETF",
+                    "asset_type": "etf",
+                    "candidate_type": (
+                        "diversifier_etf"
+                    ),
+                    "research_only": True,
+                    "why_python_may_miss": (
+                        "Outside configured universe"
+                    ),
+                    "thesis": "Test ETF discovery",
+                    "primary_evidence": [
+                        "Sponsor evidence"
+                    ],
+                    "main_risks": ["Structure risk"],
+                    "next_validation_steps": [
+                        "Verify eligibility"
+                    ],
+                    "source_references": ["web2"],
+                },
+            ]
+        )
+        if not local_only:
+            output["source_references"].extend(
+                [
+                    {
+                        "id": "web1",
+                        "title": "Issuer source",
+                        "url": "https://example.com/stock",
+                        "source_type": "web",
+                        "retrieved_at": input_payload[
+                            "generated_at"
+                        ],
+                    },
+                    {
+                        "id": "web2",
+                        "title": "ETF sponsor source",
+                        "url": "https://example.com/etf",
+                        "source_type": "web",
+                        "retrieved_at": input_payload[
+                            "generated_at"
+                        ],
+                    },
+                ]
+            )
+    return output
 
 
 class FakeCoarseRunner:

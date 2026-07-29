@@ -283,6 +283,9 @@ def validate_coarse_output(
     }
     selected_symbols: list[str] = []
     ranks: list[int] = []
+    selection_origins: list[
+        tuple[str, str, str, int]
+    ] = []
     for index, selection in enumerate(selections):
         if not isinstance(selection, dict):
             continue
@@ -291,6 +294,24 @@ def validate_coarse_output(
             selection.get("symbol", "")
         ).strip().upper()
         selected_symbols.append(symbol)
+        selection_origins.append(
+            (
+                symbol,
+                str(
+                    selection.get(
+                        "asset_type",
+                        "",
+                    )
+                ),
+                str(
+                    selection.get(
+                        "selection_origin",
+                        "",
+                    )
+                ),
+                index,
+            )
+        )
         rank = selection.get("rank")
         if isinstance(rank, int) and not isinstance(
             rank,
@@ -355,6 +376,257 @@ def validate_coarse_output(
                     path=(
                         f"{path}.selection_reason"
                     ),
+                )
+            )
+
+    input_policy = input_payload.get(
+        "policy",
+        {},
+    )
+    input_policy = (
+        input_policy
+        if isinstance(input_policy, Mapping)
+        else {}
+    )
+    supplement_policy = input_policy.get(
+        "codex_supplement_selection",
+        {},
+    )
+    supplement_policy = (
+        supplement_policy
+        if isinstance(
+            supplement_policy,
+            Mapping,
+        )
+        else {}
+    )
+    shortlists = input_payload.get(
+        "python_shortlists",
+        {},
+    )
+    shortlists = (
+        shortlists
+        if isinstance(shortlists, Mapping)
+        else {}
+    )
+    shortlist_sets = {
+        asset_type: {
+            str(item.get("symbol", ""))
+            .strip()
+            .upper()
+            for item in (
+                shortlists.get(asset_type, [])
+                if isinstance(
+                    shortlists.get(asset_type, []),
+                    list,
+                )
+                else []
+            )
+            if isinstance(item, Mapping)
+            and item.get("symbol")
+        }
+        for asset_type in ("stock", "etf")
+    }
+    supplement_count = 0
+    if supplement_policy:
+        for (
+            symbol,
+            asset_type,
+            origin,
+            index,
+        ) in selection_origins:
+            path = (
+                f"$.selections[{index}]"
+                ".selection_origin"
+            )
+            asset_shortlist = shortlist_sets.get(
+                asset_type,
+                set(),
+            )
+            if origin == "python_shortlist":
+                if symbol not in asset_shortlist:
+                    errors.append(
+                        _issue(
+                            "PYTHON_SHORTLIST_ORIGIN_MISMATCH",
+                            f"{symbol}未进入对应的{asset_type} Python榜",
+                            path=path,
+                        )
+                    )
+            elif origin == "codex_supplement":
+                supplement_count += 1
+                if symbol in asset_shortlist:
+                    errors.append(
+                        _issue(
+                            "CODEX_SUPPLEMENT_ORIGIN_MISMATCH",
+                            f"{symbol}已在对应的{asset_type} Python榜内",
+                            path=path,
+                        )
+                    )
+            else:
+                errors.append(
+                    _issue(
+                        "INVALID_SELECTION_ORIGIN",
+                        f"{symbol}缺少有效selection_origin",
+                        path=path,
+                    )
+                )
+        if payload.get("status") == "success":
+            minimum = int(
+                supplement_policy.get(
+                    "minimum_when_web_available",
+                    0,
+                )
+            )
+            maximum = int(
+                supplement_policy.get(
+                    "maximum",
+                    len(selections),
+                )
+            )
+            if not (
+                minimum
+                <= supplement_count
+                <= maximum
+            ):
+                errors.append(
+                    _issue(
+                        "CODEX_SUPPLEMENT_COUNT_OUT_OF_RANGE",
+                        "联网成功时Codex补充候选数量不符合策略",
+                        path="$.selections",
+                    )
+                )
+        elif supplement_count:
+            errors.append(
+                _issue(
+                    "LOCAL_ONLY_CODEX_SUPPLEMENT_FORBIDDEN",
+                    "未完成联网研究时不得标记Codex补充候选",
+                    path="$.selections",
+                )
+            )
+
+    discoveries = payload.get(
+        "external_discoveries",
+        [],
+    )
+    discoveries = (
+        discoveries
+        if isinstance(discoveries, list)
+        else []
+    )
+    discovery_policy = input_policy.get(
+        "external_discovery",
+        {},
+    )
+    discovery_policy = (
+        discovery_policy
+        if isinstance(
+            discovery_policy,
+            Mapping,
+        )
+        else {}
+    )
+    discovery_symbols: list[str] = []
+    if discovery_policy:
+        for index, discovery in enumerate(
+            discoveries
+        ):
+            if not isinstance(
+                discovery,
+                Mapping,
+            ):
+                continue
+            symbol = str(
+                discovery.get("symbol", "")
+            ).strip().upper()
+            discovery_symbols.append(symbol)
+            if symbol in set(selected_symbols):
+                errors.append(
+                    _issue(
+                        "EXTERNAL_DISCOVERY_ALREADY_SELECTED",
+                        f"{symbol}已在60只粗选中",
+                        path=(
+                            "$.external_discoveries"
+                            f"[{index}].symbol"
+                        ),
+                    )
+                )
+            asset_type = discovery.get(
+                "asset_type"
+            )
+            candidate_type = discovery.get(
+                "candidate_type"
+            )
+            stock_types = {
+                "satellite",
+                "emerging_compounder",
+                "contrarian",
+                "turnaround",
+                "special_situation",
+            }
+            etf_types = {
+                "broad_or_factor_etf",
+                "thematic_etf",
+                "diversifier_etf",
+            }
+            expected_types = (
+                stock_types
+                if asset_type == "stock"
+                else etf_types
+                if asset_type == "etf"
+                else set()
+            )
+            if candidate_type not in expected_types:
+                errors.append(
+                    _issue(
+                        "DISCOVERY_TYPE_ASSET_MISMATCH",
+                        f"{symbol}的候选类型与资产类型不匹配",
+                        path=(
+                            "$.external_discoveries"
+                            f"[{index}].candidate_type"
+                        ),
+                    )
+                )
+        if len(discovery_symbols) != len(
+            set(discovery_symbols)
+        ):
+            errors.append(
+                _issue(
+                    "DUPLICATE_EXTERNAL_DISCOVERY",
+                    "external_discoveries包含重复symbol",
+                    path="$.external_discoveries",
+                )
+            )
+        if payload.get("status") == "success":
+            minimum = int(
+                discovery_policy.get(
+                    "minimum_when_web_available",
+                    0,
+                )
+            )
+            maximum = int(
+                discovery_policy.get(
+                    "maximum",
+                    len(discoveries),
+                )
+            )
+            if not (
+                minimum
+                <= len(discoveries)
+                <= maximum
+            ):
+                errors.append(
+                    _issue(
+                        "EXTERNAL_DISCOVERY_COUNT_OUT_OF_RANGE",
+                        "联网成功时外部发现数量不符合策略",
+                        path="$.external_discoveries",
+                    )
+                )
+        elif discoveries:
+            errors.append(
+                _issue(
+                    "LOCAL_ONLY_EXTERNAL_DISCOVERY_FORBIDDEN",
+                    "未完成联网研究时不得输出外部发现",
+                    path="$.external_discoveries",
                 )
             )
 
@@ -494,6 +766,64 @@ def validate_coarse_output(
                     ),
                 )
             )
+    if discovery_policy:
+        web_source_ids = {
+            str(source.get("id", "")).strip()
+            for source in sources
+            if isinstance(source, Mapping)
+            and source.get("source_type") == "web"
+        }
+        for index, discovery in enumerate(
+            discoveries
+        ):
+            if not isinstance(
+                discovery,
+                Mapping,
+            ):
+                continue
+            references = discovery.get(
+                "source_references",
+                [],
+            )
+            reference_set = {
+                str(value)
+                for value in references
+            } if isinstance(references, list) else set()
+            unknown = sorted(
+                reference_set - source_id_set
+            )
+            if unknown:
+                errors.append(
+                    _issue(
+                        "UNKNOWN_SOURCE_REFERENCE",
+                        "外部发现引用了未知来源："
+                        + ",".join(unknown),
+                        path=(
+                            "$.external_discoveries"
+                            f"[{index}].source_references"
+                        ),
+                    )
+                )
+            if (
+                discovery_policy.get(
+                    "require_primary_web_source"
+                )
+                is True
+                and not (
+                    reference_set
+                    & web_source_ids
+                )
+            ):
+                errors.append(
+                    _issue(
+                        "EXTERNAL_DISCOVERY_WEB_SOURCE_MISSING",
+                        "外部发现必须引用可核验的web来源",
+                        path=(
+                            "$.external_discoveries"
+                            f"[{index}].source_references"
+                        ),
+                    )
+                )
 
     generated = _parse_datetime(
         payload.get("generated_at")

@@ -10,7 +10,11 @@ from v2.codex.validation import (
     validate_coarse_output,
 )
 from v2.config import load_config
-from v2.models.coarse import build_coarse_input
+from v2.models.coarse import (
+    CoarseOutput,
+    build_coarse_input,
+)
+from v2.runtime import load_json_object
 from tests.v2.support import (
     prepare_stage_c_project,
     valid_coarse_output,
@@ -256,6 +260,110 @@ class CoarseValidationTests(unittest.TestCase):
                 schema=schema,
             )
             self.assertTrue(result.valid)
+
+    def test_version_four_web_supplements_and_discoveries(
+        self,
+    ) -> None:
+        with tempfile.TemporaryDirectory() as temp:
+            root = Path(temp)
+            prepare_stage_c_project(
+                root,
+                stock_count=110,
+            )
+            release_root = (
+                root
+                / "strategies"
+                / "core_long"
+                / "1.4.0"
+            )
+            policy = load_json_object(
+                release_root
+                / "config"
+                / "coarse_policy.json"
+            )
+            input_payload = build_coarse_input(
+                config=load_config(
+                    project_root=root
+                ),
+                run_date="2026-07-23",
+                base_snapshot={
+                    "market_phase": (
+                        "regular_session"
+                    ),
+                    "positions": [],
+                    "open_orders": [],
+                    "assets": [],
+                },
+                strategy_version="1.4.0",
+                coarse_policy=policy,
+            ).payload
+            output = valid_coarse_output(
+                input_payload,
+                status="success",
+            )
+            schema = load_coarse_schema(
+                release_root
+                / "schemas"
+                / "coarse_output.schema.json"
+            )
+            result = validate_coarse_output(
+                output,
+                input_payload=input_payload,
+                schema=schema,
+            )
+            self.assertTrue(
+                result.valid,
+                result.errors,
+            )
+            self.assertEqual(
+                CoarseOutput.from_dict(
+                    output
+                ).to_dict(),
+                output,
+            )
+            self.assertEqual(
+                sum(
+                    item["selection_origin"]
+                    == "codex_supplement"
+                    for item in output[
+                        "selections"
+                    ]
+                ),
+                3,
+            )
+            self.assertEqual(
+                {
+                    item["asset_type"]
+                    for item in output[
+                        "external_discoveries"
+                    ]
+                },
+                {"stock", "etf"},
+            )
+
+            broken = copy.deepcopy(output)
+            supplement = next(
+                item
+                for item in broken["selections"]
+                if item["selection_origin"]
+                == "codex_supplement"
+            )
+            supplement[
+                "selection_origin"
+            ] = "python_shortlist"
+            invalid = validate_coarse_output(
+                broken,
+                input_payload=input_payload,
+                schema=schema,
+            )
+            self.assertFalse(invalid.valid)
+            self.assertIn(
+                "PYTHON_SHORTLIST_ORIGIN_MISMATCH",
+                {
+                    item["code"]
+                    for item in invalid.errors
+                },
+            )
 
 
 if __name__ == "__main__":
