@@ -14,6 +14,12 @@
   "schedule": {
     "timezone": "America/New_York",
     "first_run_after_open_minutes": 15,
+    "first_run_after_open_minutes_changes": [
+      {
+        "effective_session_date": "2026-07-29",
+        "minutes": 30
+      }
+    ],
     "interval_minutes": 60,
     "last_run_before_close_minutes": 15,
     "close_check_after_minutes": 15,

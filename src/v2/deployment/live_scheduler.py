@@ -24,9 +24,37 @@ TERMINAL_SLOT_STATUSES = frozenset(
 
 
 @dataclass(frozen=True)
+class FirstRunOffsetChange:
+    """按交易日生效的首个盘中槽位偏移变更。"""
+
+    effective_session_date: date
+    minutes: int
+
+    @classmethod
+    def from_mapping(
+        cls,
+        payload: Mapping[str, Any],
+    ) -> "FirstRunOffsetChange":
+        change = cls(
+            effective_session_date=_parse_date(
+                payload["effective_session_date"]
+            ),
+            minutes=int(payload["minutes"]),
+        )
+        if change.minutes <= 0:
+            raise ValueError(
+                "Live首个运行偏移变更必须为正数"
+            )
+        return change
+
+
+@dataclass(frozen=True)
 class LiveScheduleSettings:
     timezone: str = "America/New_York"
     first_run_after_open_minutes: int = 15
+    first_run_after_open_minutes_changes: (
+        tuple[FirstRunOffsetChange, ...]
+    ) = ()
     interval_minutes: int = 60
     last_run_before_close_minutes: int = 15
     close_check_after_minutes: int = 15
@@ -41,6 +69,35 @@ class LiveScheduleSettings:
         payload: Mapping[str, Any] | None,
     ) -> "LiveScheduleSettings":
         source = payload or {}
+        raw_changes = source.get(
+            "first_run_after_open_minutes_changes",
+            (),
+        )
+        if (
+            not isinstance(raw_changes, Sequence)
+            or isinstance(raw_changes, (str, bytes))
+        ):
+            raise ValueError(
+                "Live首个运行偏移变更必须是数组"
+            )
+        changes = tuple(
+            sorted(
+                (
+                    FirstRunOffsetChange.from_mapping(
+                        item
+                    )
+                    for item in raw_changes
+                    if isinstance(item, Mapping)
+                ),
+                key=lambda item: (
+                    item.effective_session_date
+                ),
+            )
+        )
+        if len(changes) != len(raw_changes):
+            raise ValueError(
+                "Live首个运行偏移变更项必须是对象"
+            )
         settings = cls(
             timezone=str(
                 source.get("timezone", cls.timezone)
@@ -51,6 +108,7 @@ class LiveScheduleSettings:
                     cls.first_run_after_open_minutes,
                 )
             ),
+            first_run_after_open_minutes_changes=changes,
             interval_minutes=int(
                 source.get(
                     "interval_minutes",
@@ -117,6 +175,34 @@ class LiveScheduleSettings:
             raise ValueError(
                 "Live调度宽限必须小于盘中运行间隔"
             )
+        effective_dates = [
+            change.effective_session_date
+            for change in (
+                self.first_run_after_open_minutes_changes
+            )
+        ]
+        if len(effective_dates) != len(
+            set(effective_dates)
+        ):
+            raise ValueError(
+                "Live首个运行偏移变更生效日不得重复"
+            )
+
+    def first_run_minutes_for(
+        self,
+        session_date: date,
+    ) -> int:
+        minutes = self.first_run_after_open_minutes
+        for change in (
+            self.first_run_after_open_minutes_changes
+        ):
+            if (
+                session_date
+                < change.effective_session_date
+            ):
+                break
+            minutes = change.minutes
+        return minutes
 
 
 @dataclass(frozen=True)
@@ -269,7 +355,9 @@ def build_session_slots(
     session.validate()
     slots: list[ScheduleSlot] = []
     scheduled_at = session.open_at + timedelta(
-        minutes=settings.first_run_after_open_minutes
+        minutes=settings.first_run_minutes_for(
+            session.session_date
+        )
     )
     final_intraday = session.close_at - timedelta(
         minutes=settings.last_run_before_close_minutes
@@ -430,4 +518,3 @@ def next_schedule_slot(
         ):
             return slot
     return None
-

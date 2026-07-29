@@ -100,6 +100,88 @@ class LiveSchedulerTests(unittest.TestCase):
         )
         self.assertEqual(slots[-1].kind, "close")
 
+    def test_first_run_offset_change_starts_on_effective_session(
+        self,
+    ) -> None:
+        settings = LiveScheduleSettings.from_mapping(
+            {
+                "first_run_after_open_minutes": 15,
+                "first_run_after_open_minutes_changes": [
+                    {
+                        "effective_session_date": (
+                            "2026-07-29"
+                        ),
+                        "minutes": 30,
+                    }
+                ],
+            }
+        )
+        before = build_session_slots(
+            session(day=date(2026, 7, 28)),
+            settings,
+        )
+        effective = build_session_slots(
+            session(day=date(2026, 7, 29)),
+            settings,
+        )
+        self.assertEqual(
+            [
+                slot.scheduled_at.strftime("%H:%M")
+                for slot in before
+            ],
+            [
+                "09:45",
+                "10:45",
+                "11:45",
+                "12:45",
+                "13:45",
+                "14:45",
+                "15:45",
+                "16:15",
+            ],
+        )
+        self.assertEqual(
+            [
+                slot.scheduled_at.strftime("%H:%M")
+                for slot in effective
+            ],
+            [
+                "10:00",
+                "11:00",
+                "12:00",
+                "13:00",
+                "14:00",
+                "15:00",
+                "16:15",
+            ],
+        )
+
+    def test_first_run_offset_change_rejects_duplicate_date(
+        self,
+    ) -> None:
+        with self.assertRaisesRegex(
+            ValueError,
+            "生效日不得重复",
+        ):
+            LiveScheduleSettings.from_mapping(
+                {
+                    "first_run_after_open_minutes_changes": [
+                        {
+                            "effective_session_date": (
+                                "2026-07-29"
+                            ),
+                            "minutes": 30,
+                        },
+                        {
+                            "effective_session_date": (
+                                "2026-07-29"
+                            ),
+                            "minutes": 45,
+                        },
+                    ]
+                }
+            )
+
     def test_broker_calendar_normalizes_dst(
         self,
     ) -> None:
