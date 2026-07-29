@@ -1,0 +1,50 @@
+{
+  "schema_version": "1.0",
+  "stage": "coarse_selection",
+  "selection_count": 20,
+  "research_input_maximum": 120,
+  "research_feature_version": "v2",
+  "python_shortlist_count": {
+    "stock": 90,
+    "etf": 15
+  },
+  "codex_supplement_pool_count": {
+    "stock": 12,
+    "etf": 3
+  },
+  "codex_supplement_selection": {
+    "minimum_when_web_available": 3,
+    "maximum": 5,
+    "must_be_outside_python_shortlist": true,
+    "must_remain_in_python_eligible_universe": true
+  },
+  "external_discovery": {
+    "minimum_when_web_available": 2,
+    "maximum": 5,
+    "research_only": true,
+    "require_primary_web_source": true,
+    "score_stocks_and_etfs_separately": true,
+    "allowed_asset_types": [
+      "stock",
+      "etf"
+    ],
+    "allowed_candidate_types": [
+      "satellite",
+      "emerging_compounder",
+      "contrarian",
+      "turnaround",
+      "special_situation",
+      "broad_or_factor_etf",
+      "thematic_etf",
+      "diversifier_etf"
+    ]
+  },
+  "initial_guidance_semantics": "preference_not_trade_mandate",
+  "forbidden_decision_fields": [
+    "new_position_allowed",
+    "target_weight",
+    "order",
+    "orders",
+    "quantity"
+  ]
+}

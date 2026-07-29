@@ -250,19 +250,52 @@ def validate_coarse_output(
     selections = payload.get("selections")
     if not isinstance(selections, list):
         selections = []
-    if payload.get("selection_count") != 60:
+    input_policy = input_payload.get(
+        "policy",
+        {},
+    )
+    input_policy = (
+        input_policy
+        if isinstance(input_policy, Mapping)
+        else {}
+    )
+    required_selection_count = int(
+        input_policy.get(
+            "required_selection_count",
+            60,
+        )
+    )
+    if (
+        payload.get("selection_count")
+        != required_selection_count
+    ):
         errors.append(
             _issue(
-                "SELECTION_COUNT_NOT_60",
-                "selection_count必须恰好为60",
+                (
+                    "SELECTION_COUNT_NOT_60"
+                    if required_selection_count
+                    == 60
+                    else "SELECTION_COUNT_MISMATCH"
+                ),
+                "selection_count必须恰好为"
+                f"{required_selection_count}",
                 path="$.selection_count",
             )
         )
-    if len(selections) != 60:
+    if (
+        len(selections)
+        != required_selection_count
+    ):
         errors.append(
             _issue(
-                "SELECTION_LIST_NOT_60",
-                "selections必须恰好包含60项",
+                (
+                    "SELECTION_LIST_NOT_60"
+                    if required_selection_count
+                    == 60
+                    else "SELECTION_LIST_COUNT_MISMATCH"
+                ),
+                "selections必须恰好包含"
+                f"{required_selection_count}项",
                 path="$.selections",
             )
         )
@@ -379,15 +412,6 @@ def validate_coarse_output(
                 )
             )
 
-    input_policy = input_payload.get(
-        "policy",
-        {},
-    )
-    input_policy = (
-        input_policy
-        if isinstance(input_policy, Mapping)
-        else {}
-    )
     supplement_policy = input_policy.get(
         "codex_supplement_selection",
         {},
@@ -543,7 +567,7 @@ def validate_coarse_output(
                 errors.append(
                     _issue(
                         "EXTERNAL_DISCOVERY_ALREADY_SELECTED",
-                        f"{symbol}已在60只粗选中",
+                        f"{symbol}已在粗选结果中",
                         path=(
                             "$.external_discoveries"
                             f"[{index}].symbol"
@@ -640,11 +664,17 @@ def validate_coarse_output(
                 path="$.selections",
             )
         )
-    if sorted(ranks) != list(range(1, 61)):
+    if sorted(ranks) != list(
+        range(
+            1,
+            required_selection_count + 1,
+        )
+    ):
         errors.append(
             _issue(
                 "INVALID_SELECTION_RANKS",
-                "rank必须无重复覆盖1到60",
+                "rank必须无重复覆盖1到"
+                f"{required_selection_count}",
                 path="$.selections",
             )
         )
@@ -964,7 +994,7 @@ def validate_coarse_output(
         warnings.append(
             _issue(
                 "HELD_SYMBOL_NOT_SELECTED",
-                "持仓未进入60只候选："
+                "持仓未进入最终粗选候选："
                 + ",".join(omitted_held),
                 path="$.selections",
             )
@@ -973,7 +1003,7 @@ def validate_coarse_output(
         warnings.append(
             _issue(
                 "OPEN_ORDER_SYMBOL_NOT_SELECTED",
-                "挂单标的未进入60只候选："
+                "挂单标的未进入最终粗选候选："
                 + ",".join(omitted_open),
                 path="$.selections",
             )

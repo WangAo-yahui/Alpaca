@@ -691,11 +691,7 @@ def build_order_plan(
         sector = str(
             metadata.get("sector", "unknown")
         ) or "unknown"
-        sector_key = (
-            sector
-            if sector != "unknown"
-            else f"unknown:{symbol}"
-        )
+        sector_key = sector
         sector_potential[sector_key] = (
             sector_potential.get(
                 sector_key,
@@ -778,11 +774,7 @@ def build_order_plan(
         sector = str(
             metadata.get("sector", "unknown")
         ) or "unknown"
-        sector_key = (
-            sector
-            if sector != "unknown"
-            else f"unknown:{symbol}"
-        )
+        sector_key = sector
         try:
             priority = int(
                 metadata.get("priority", 999999)

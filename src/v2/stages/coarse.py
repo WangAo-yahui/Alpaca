@@ -365,7 +365,15 @@ def execute_coarse_selection(
         previous_output,
     )
     required = int(
-        config.stages["coarse_candidate_count"]
+        input_result.payload.get(
+            "policy",
+            {},
+        ).get(
+            "required_selection_count",
+            config.stages[
+                "coarse_candidate_count"
+            ],
+        )
     )
     if len(input_result.candidate_symbols) < required:
         validation = CoarseValidationResult(
@@ -378,7 +386,8 @@ def execute_coarse_selection(
                         "COARSE_UNIVERSE_TOO_SMALL"
                     ),
                     "message": (
-                        "Python粗筛后的候选不足60只"
+                        "Python粗筛后的候选不足"
+                        f"{required}只"
                     ),
                     "path": "$.universe",
                 },
@@ -404,7 +413,8 @@ def execute_coarse_selection(
             daily_state,
         )
         raise TemporaryDataError(
-            "Python粗筛后的候选不足60只，"
+            "Python粗筛后的候选不足"
+            f"{required}只，"
             "未调用Codex",
             code="COARSE_UNIVERSE_TOO_SMALL",
             details={

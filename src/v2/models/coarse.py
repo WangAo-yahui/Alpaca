@@ -52,6 +52,9 @@ class CoarseUniverseItem:
     data_quality: dict[str, Any]
     research_eligible: bool
     screen_new_position_eligible: bool
+    research_features: dict[str, Any] = field(
+        default_factory=dict
+    )
 
     def validate(self) -> None:
         if not self.symbol.strip():
@@ -83,6 +86,7 @@ class CoarseUniverseItem:
             "asset_status",
             "daily_summary",
             "data_quality",
+            "research_features",
         ):
             if not isinstance(
                 getattr(self, field_name),
@@ -122,6 +126,9 @@ class CoarseUniverseItem:
             ),
             "data_quality": dict(
                 self.data_quality
+            ),
+            "research_features": dict(
+                self.research_features
             ),
         }
 
@@ -174,6 +181,12 @@ class CoarseUniverseItem:
             ),
             data_quality=dict(
                 payload.get("data_quality", {})
+            ),
+            research_features=dict(
+                payload.get(
+                    "research_features",
+                    {},
+                )
             ),
         )
         item.validate()
@@ -441,9 +454,9 @@ class CoarseSelection:
     selection_origin: str | None = None
 
     def validate(self) -> None:
-        if not 1 <= self.rank <= 60:
+        if not 1 <= self.rank <= 120:
             raise ValueError(
-                "CoarseSelection.rank必须在1到60"
+                "CoarseSelection.rank必须在1到120"
             )
         if (
             not self.symbol.strip()
@@ -605,8 +618,9 @@ class CoarseOutput:
         if (
             self.schema_version != "1.0"
             or self.stage != "coarse_selection"
-            or self.selection_count != 60
-            or len(self.selections) != 60
+            or self.selection_count <= 0
+            or len(self.selections)
+            != self.selection_count
         ):
             raise ValueError(
                 "CoarseOutput结构或数量错误"
@@ -620,9 +634,15 @@ class CoarseOutput:
             for item in self.selections
         ]
         if (
-            len(set(symbols)) != 60
+            len(set(symbols))
+            != self.selection_count
             or sorted(ranks)
-            != list(range(1, 61))
+            != list(
+                range(
+                    1,
+                    self.selection_count + 1,
+                )
+            )
         ):
             raise ValueError(
                 "CoarseOutput symbol或rank错误"
@@ -1173,7 +1193,12 @@ def _asset_status(
 
 def _common_research_readiness(
     candidate: Mapping[str, Any],
-) -> tuple[float, list[str], Mapping[str, Any]]:
+) -> tuple[
+    float,
+    list[str],
+    Mapping[str, Any],
+    dict[str, float],
+]:
     """Score shared data readiness, not investment attractiveness."""
 
     summary = candidate.get("daily_summary")
@@ -1188,18 +1213,41 @@ def _common_research_readiness(
         if isinstance(quality, Mapping)
         else {}
     )
-    score = 0.0
+    contributions = {
+        "eligibility": (
+            20.0
+            if candidate.get(
+                "research_eligible"
+            )
+            is True
+            else 0.0
+        ),
+        "metadata": (
+            5.0
+            if quality.get(
+                "asset_metadata_available"
+            )
+            is True
+            else 0.0
+        ),
+        "history": 0.0,
+        "liquidity": 0.0,
+        "market_data_completeness": 0.0,
+        "market_setup": 0.0,
+    }
+    score = (
+        contributions["eligibility"]
+        + contributions["metadata"]
+    )
     tags: list[str] = []
-    if candidate.get("research_eligible") is True:
-        score += 20.0
-    if quality.get(
-        "asset_metadata_available"
-    ) is True:
-        score += 5.0
     bars_available = int(
         summary.get("bars_available") or 0
     )
-    score += min(bars_available / 252.0, 1.0) * 15.0
+    contributions["history"] = (
+        min(bars_available / 252.0, 1.0)
+        * 15.0
+    )
+    score += contributions["history"]
     if bars_available >= 252:
         tags.append("full_year_history")
     average_dollar_volume = summary.get(
@@ -1224,7 +1272,10 @@ def _common_research_readiness(
                 1.0,
             ),
         )
-        score += liquidity_score * 15.0
+        contributions["liquidity"] = (
+            liquidity_score * 15.0
+        )
+        score += contributions["liquidity"]
         if average_dollar_volume >= 100_000_000:
             tags.append("high_liquidity")
     signal_fields = (
@@ -1240,38 +1291,49 @@ def _common_research_readiness(
         summary.get(field) is not None
         for field in signal_fields
     )
-    score += signal_count / len(signal_fields) * 10.0
-    return score, tags, summary
+    contributions[
+        "market_data_completeness"
+    ] = (
+        signal_count / len(signal_fields) * 10.0
+    )
+    score += contributions[
+        "market_data_completeness"
+    ]
+    return score, tags, summary, contributions
 
 
 def _stock_research_priority(
     candidate: Mapping[str, Any],
-) -> tuple[float, list[str]]:
+) -> tuple[float, list[str], dict[str, float]]:
     """Rank stock research readiness and observable company-price setups."""
 
-    score, tags, summary = (
+    score, tags, summary, contributions = (
         _common_research_readiness(candidate)
     )
+    market_setup = 0.0
     drawdown = summary.get(
         "drawdown_from_52w_high"
     )
     if isinstance(drawdown, (int, float)):
         if drawdown <= -0.15:
             tags.append("material_drawdown")
-            score += 3.0
+            market_setup += 3.0
         if drawdown <= -0.35:
             tags.append("extreme_drawdown")
-            score += 2.0
+            market_setup += 2.0
     annual_return = summary.get("return_252d")
     if (
         isinstance(annual_return, (int, float))
         and annual_return > 0
     ):
         tags.append("positive_252d_return")
-        score += min(float(annual_return), 1.0) * 8.0
+        market_setup += (
+            min(float(annual_return), 1.0)
+            * 8.0
+        )
     medium_return = summary.get("return_60d")
     if isinstance(medium_return, (int, float)):
-        score += max(
+        market_setup += max(
             -3.0,
             min(float(medium_return), 0.5) * 6.0,
         )
@@ -1281,23 +1343,25 @@ def _stock_research_priority(
         and volatility >= 0.60
     ):
         tags.append("high_volatility")
-    if candidate.get("must_include") is True:
-        score += 100.0
-        tags.append("must_include")
-    return score, tags
+    contributions["market_setup"] = (
+        market_setup
+    )
+    score += market_setup
+    return score, tags, contributions
 
 
 def _etf_research_priority(
     candidate: Mapping[str, Any],
-) -> tuple[float, list[str]]:
+) -> tuple[float, list[str], dict[str, float]]:
     """Rank ETFs independently on implementation and time-series readiness."""
 
-    score, tags, summary = (
+    score, tags, summary, contributions = (
         _common_research_readiness(candidate)
     )
+    market_setup = 0.0
     volatility = summary.get("volatility_60d")
     if isinstance(volatility, (int, float)):
-        score += max(
+        market_setup += max(
             0.0,
             12.0 - min(float(volatility), 1.0) * 12.0,
         )
@@ -1305,7 +1369,7 @@ def _etf_research_priority(
             tags.append("moderate_or_low_volatility")
     annual_return = summary.get("return_252d")
     if isinstance(annual_return, (int, float)):
-        score += max(
+        market_setup += max(
             -2.0,
             min(float(annual_return), 0.5) * 6.0,
         )
@@ -1317,10 +1381,175 @@ def _etf_research_priority(
         and drawdown <= -0.15
     ):
         tags.append("material_drawdown")
-    if candidate.get("must_include") is True:
+    contributions["market_setup"] = (
+        market_setup
+    )
+    score += market_setup
+    return score, tags, contributions
+
+
+def _research_feature_record(
+    candidate: Mapping[str, Any],
+    *,
+    model_generation: str = "v1",
+) -> dict[str, Any]:
+    """Expose the exact objective inputs used by Python without claiming fundamentals."""
+
+    asset_type = str(
+        candidate.get("asset_type", "")
+    )
+    score, tags, contributions = (
+        _stock_research_priority(candidate)
+        if asset_type == "stock"
+        else _etf_research_priority(candidate)
+    )
+    if (
+        model_generation == "v1"
+        and candidate.get("must_include")
+        is True
+    ):
         score += 100.0
         tags.append("must_include")
-    return score, tags
+    summary = candidate.get("daily_summary")
+    summary = (
+        summary
+        if isinstance(summary, Mapping)
+        else {}
+    )
+    quality = candidate.get("data_quality")
+    quality = (
+        quality
+        if isinstance(quality, Mapping)
+        else {}
+    )
+    missing_fields = [
+        field_name
+        for field_name in (
+            "return_20d",
+            "return_60d",
+            "return_252d",
+            "volatility_60d",
+            "drawdown_from_52w_high",
+            "distance_from_sma_200",
+            "rsi_14",
+        )
+        if summary.get(field_name) is None
+    ]
+    if asset_type == "stock":
+        missing_fields.extend(
+            [
+                "quality_fundamentals",
+                "survival_fundamentals",
+                "valuation_fundamentals",
+                "growth_fundamentals",
+            ]
+        )
+    else:
+        missing_fields.extend(
+            [
+                "expense_ratio",
+                "tracking_error",
+                "fund_size",
+                "holdings_concentration",
+                "underlying_valuation",
+            ]
+        )
+    signal_available = 7 - sum(
+        field_name in missing_fields
+        for field_name in (
+            "return_20d",
+            "return_60d",
+            "return_252d",
+            "volatility_60d",
+            "drawdown_from_52w_high",
+            "distance_from_sma_200",
+            "rsi_14",
+        )
+    )
+    confidence = (
+        0.15
+        + (
+            0.20
+            if quality.get(
+                "asset_metadata_available"
+            )
+            is True
+            else 0.0
+        )
+        + min(
+            int(
+                summary.get(
+                    "bars_available"
+                )
+                or 0
+            )
+            / 252.0,
+            1.0,
+        )
+        * 0.35
+        + signal_available / 7.0 * 0.30
+    )
+    return {
+        "model_version": (
+            f"{asset_type}_research_priority_"
+            f"{model_generation}"
+        ),
+        "data_as_of": summary.get(
+            "last_bar_date"
+        ),
+        "data_confidence": format(
+            min(max(confidence, 0.0), 1.0),
+            ".4f",
+        ),
+        "research_priority_score": format(
+            score,
+            ".6f",
+        ),
+        "missing_fields": sorted(
+            set(missing_fields)
+        ),
+        "factor_contributions": {
+            key: format(value, ".6f")
+            for key, value in contributions.items()
+        },
+        "signal_tags": tags,
+        "source_status": {
+            "daily_bars": {
+                "source": "shared_daily_bar_store",
+                "as_of": summary.get(
+                    "last_bar_date"
+                ),
+                "status": (
+                    "available"
+                    if int(
+                        summary.get(
+                            "bars_available"
+                        )
+                        or 0
+                    )
+                    > 0
+                    else "missing"
+                ),
+            },
+            "asset_metadata": {
+                "source": (
+                    "alpaca_asset_snapshot"
+                ),
+                "as_of": None,
+                "status": (
+                    "available"
+                    if quality.get(
+                        "asset_metadata_available"
+                    )
+                    is True
+                    else "missing"
+                ),
+            },
+        },
+        "python_scope": (
+            "objective_screen_only_not_trade_conclusion"
+        ),
+    }
 
 
 def _build_python_shortlist(
@@ -1338,16 +1567,20 @@ def _build_python_shortlist(
             is not True
             and candidate.get("must_include")
             is not True
-            and candidate.get("currently_held")
-            is not True
-            and candidate.get("has_open_order")
-            is not True
         ):
             continue
-        score, tags = (
-            _stock_research_priority(candidate)
-            if asset_type == "stock"
-            else _etf_research_priority(candidate)
+        features = candidate.get(
+            "research_features",
+            {},
+        )
+        score = float(
+            features.get(
+                "research_priority_score",
+                0,
+            )
+        )
+        tags = list(
+            features.get("signal_tags", [])
         )
         ranked.append(
             (
@@ -1361,19 +1594,78 @@ def _build_python_shortlist(
                         format(score, ".6f")
                     ),
                     "score_model": (
-                        f"{asset_type}_research_priority_v1"
+                        str(
+                            features.get(
+                                "model_version",
+                                (
+                                    f"{asset_type}_"
+                                    "research_priority_v1"
+                                ),
+                            )
+                        )
                     ),
                     "signal_tags": tags,
+                    "data_as_of": features.get(
+                        "data_as_of"
+                    ),
+                    "data_confidence": (
+                        features.get(
+                            "data_confidence"
+                        )
+                    ),
+                    "missing_fields": list(
+                        features.get(
+                            "missing_fields",
+                            [],
+                        )
+                    ),
+                    "factor_contributions": dict(
+                        features.get(
+                            "factor_contributions",
+                            {},
+                        )
+                    ),
                 },
             )
         )
     ranked.sort(
         key=lambda item: (item[0], item[1])
     )
-    selected = [
+    required_symbols = {
+        str(candidate.get("symbol", ""))
+        for candidate in candidates
+        if candidate.get("asset_type")
+        == asset_type
+        and candidate.get("must_include")
+        is True
+    }
+    required = [
         item[2]
-        for item in ranked[: max(0, count)]
+        for item in ranked
+        if item[2]["symbol"]
+        in required_symbols
     ]
+    remaining_capacity = max(
+        0,
+        count - len(required),
+    )
+    selected = [
+        *required,
+        *[
+            item[2]
+            for item in ranked
+            if item[2]["symbol"]
+            not in required_symbols
+        ][:remaining_capacity],
+    ]
+    selected.sort(
+        key=lambda item: (
+            -float(
+                item["research_priority_score"]
+            ),
+            item["symbol"],
+        )
+    )
     for rank, item in enumerate(
         selected,
         start=1,
@@ -1657,6 +1949,27 @@ def build_coarse_input(
             }
         )
 
+    strategy_policy = (
+        coarse_policy
+        if isinstance(coarse_policy, Mapping)
+        else {}
+    )
+    research_feature_generation = str(
+        strategy_policy.get(
+            "research_feature_version",
+            "v1",
+        )
+    )
+    for candidate in candidates:
+        candidate["research_features"] = (
+            _research_feature_record(
+                candidate,
+                model_generation=(
+                    research_feature_generation
+                ),
+            )
+        )
+
     latest_daily_date = (
         max(latest_dates)
         if latest_dates
@@ -1678,11 +1991,6 @@ def build_coarse_input(
                 "execution",
             ],
         }
-    )
-    strategy_policy = (
-        coarse_policy
-        if isinstance(coarse_policy, Mapping)
-        else {}
     )
     signature_payload = {
         "run_date": run_date,
@@ -1735,6 +2043,11 @@ def build_coarse_input(
                 ),
                 "data_quality": (
                     candidate["data_quality"]
+                ),
+                "research_features": (
+                    candidate[
+                        "research_features"
+                    ]
                 ),
             }
             for candidate in candidates
@@ -1830,6 +2143,109 @@ def build_coarse_input(
         )
         for asset_type in ("stock", "etf")
     }
+    shortlist_symbols = {
+        str(item["symbol"])
+        for items in python_shortlists.values()
+        for item in items
+    }
+    raw_supplement_pool_counts = (
+        strategy_policy.get(
+            "codex_supplement_pool_count",
+            {},
+        )
+    )
+    supplement_pool_counts = (
+        {
+            "stock": int(
+                raw_supplement_pool_counts.get(
+                    "stock",
+                    0,
+                )
+            ),
+            "etf": int(
+                raw_supplement_pool_counts.get(
+                    "etf",
+                    0,
+                )
+            ),
+        }
+        if isinstance(
+            raw_supplement_pool_counts,
+            Mapping,
+        )
+        else {"stock": 0, "etf": 0}
+    )
+    supplement_pool_symbols: set[str] = set()
+    for asset_type in ("stock", "etf"):
+        remaining = sorted(
+            (
+                candidate
+                for candidate in candidates
+                if candidate["asset_type"]
+                == asset_type
+                and candidate["symbol"]
+                not in shortlist_symbols
+                and candidate[
+                    "research_eligible"
+                ]
+                is True
+            ),
+            key=lambda candidate: (
+                -float(
+                    candidate[
+                        "research_features"
+                    ][
+                        "research_priority_score"
+                    ]
+                ),
+                candidate["symbol"],
+            ),
+        )
+        supplement_pool_symbols.update(
+            candidate["symbol"]
+            for candidate in remaining[
+                : supplement_pool_counts[
+                    asset_type
+                ]
+            ]
+        )
+    research_input_maximum = int(
+        strategy_policy.get(
+            "research_input_maximum",
+            0,
+        )
+        or 0
+    )
+    research_symbols = (
+        shortlist_symbols
+        | supplement_pool_symbols
+    )
+    research_candidates = (
+        [
+            candidate
+            for candidate in candidates
+            if candidate["symbol"]
+            in research_symbols
+        ]
+        if research_input_maximum > 0
+        else candidates
+    )
+    if (
+        research_input_maximum > 0
+        and len(research_candidates)
+        > research_input_maximum
+    ):
+        raise ValueError(
+            "策略研究输入超过research_input_maximum"
+        )
+    required_selection_count = int(
+        strategy_policy.get(
+            "selection_count",
+            config.stages[
+                "coarse_candidate_count"
+            ],
+        )
+    )
     payload: dict[str, Any] = {
         "schema_version": (
             COARSE_INPUT_SCHEMA_VERSION
@@ -1874,13 +2290,21 @@ def build_coarse_input(
                 "research_preference_not_trade_mandate"
             ),
         },
-        "universe": candidates,
+        "universe": research_candidates,
         "python_shortlists": python_shortlists,
         "screening_summary": {
             "input_count": (
                 len(entries_to_process)
             ),
             "eligible_count": len(candidates),
+            "research_input_count": len(
+                research_candidates
+            ),
+            "research_input_maximum": (
+                research_input_maximum
+                if research_input_maximum > 0
+                else None
+            ),
             "excluded_count": len(
                 excluded_records
             ),
@@ -1922,20 +2346,14 @@ def build_coarse_input(
         },
         "data_quality": {
             "candidate_count_sufficient": (
-                len(candidates)
-                >= int(
-                    config.stages[
-                        "coarse_candidate_count"
-                    ]
-                )
+                len(research_candidates)
+                >= required_selection_count
             ),
             "warnings": top_warnings,
         },
         "policy": {
             "required_selection_count": int(
-                config.stages[
-                    "coarse_candidate_count"
-                ]
+                required_selection_count
             ),
             "must_include_all": True,
             "unique_symbols_required": True,
@@ -1961,6 +2379,18 @@ def build_coarse_input(
             "python_shortlist_count": {
                 asset_type: len(
                     python_shortlists[asset_type]
+                )
+                for asset_type in ("stock", "etf")
+            },
+            "codex_supplement_pool_count": {
+                asset_type: sum(
+                    candidate[
+                        "asset_type"
+                    ]
+                    == asset_type
+                    and candidate["symbol"]
+                    in supplement_pool_symbols
+                    for candidate in candidates
                 )
                 for asset_type in ("stock", "etf")
             },
@@ -2000,7 +2430,7 @@ def build_coarse_input(
         input_signature=input_signature,
         candidate_symbols=frozenset(
             candidate["symbol"]
-            for candidate in candidates
+            for candidate in research_candidates
         ),
         latest_daily_date=latest_daily_date,
     )

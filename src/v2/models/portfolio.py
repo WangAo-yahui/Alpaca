@@ -703,11 +703,7 @@ def build_portfolio_input(
             holding["symbol"],
             "Unknown",
         )
-        sector_key = (
-            sector
-            if sector != "Unknown"
-            else f"Unknown:{holding['symbol']}"
-        )
+        sector_key = sector
         sector_exposure[sector_key] = (
             sector_exposure.get(sector_key, ZERO)
             + _decimal_or_zero(
@@ -1214,6 +1210,382 @@ def validate_portfolio_output(
         if isinstance(decisions, list)
         else []
     )
+    competition_requirements = policy.get(
+        "capital_competition_requirements",
+        {},
+    )
+    competition_requirements = (
+        competition_requirements
+        if isinstance(
+            competition_requirements,
+            Mapping,
+        )
+        else {}
+    )
+    if (
+        competition_requirements.get(
+            "enabled"
+        )
+        is True
+    ):
+        competition = payload.get(
+            "capital_competition",
+            {},
+        )
+        competition = (
+            competition
+            if isinstance(competition, Mapping)
+            else {}
+        )
+        ranked_uses = competition.get(
+            "ranked_uses",
+            [],
+        )
+        ranked_uses = (
+            ranked_uses
+            if isinstance(ranked_uses, list)
+            else []
+        )
+        ranks = [
+            item.get("rank")
+            for item in ranked_uses
+            if isinstance(item, Mapping)
+        ]
+        if ranks and (
+            len(ranks) != len(set(ranks))
+            or sorted(ranks)
+            != list(range(1, len(ranks) + 1))
+        ):
+            errors.append(
+                _issue(
+                    "CAPITAL_COMPETITION_RANKS_INVALID",
+                    "资本竞争排名必须连续且无重复",
+                    "$.capital_competition.ranked_uses",
+                )
+            )
+        cash_count = sum(
+            isinstance(item, Mapping)
+            and item.get("comparator_type")
+            == "cash"
+            for item in ranked_uses
+        )
+        if (
+            competition_requirements.get(
+                "require_cash_comparator"
+            )
+            is True
+            and cash_count != 1
+        ):
+            errors.append(
+                _issue(
+                    "CASH_COMPARATOR_REQUIRED",
+                    "资本竞争必须恰好包含一个现金比较项",
+                    "$.capital_competition.ranked_uses",
+                )
+            )
+        available_non_held = sum(
+            symbol not in holding_by_symbol
+            for symbol in candidate_by_symbol
+        )
+        minimum_non_held = min(
+            int(
+                competition_requirements.get(
+                    "minimum_non_held_comparators",
+                    0,
+                )
+            ),
+            available_non_held,
+        )
+        non_held_count = sum(
+            isinstance(item, Mapping)
+            and item.get("comparator_type")
+            == "non_held_candidate"
+            for item in ranked_uses
+        )
+        if non_held_count < minimum_non_held:
+            errors.append(
+                _issue(
+                    "NON_HELD_COMPARATORS_INSUFFICIENT",
+                    "资本竞争缺少足够的非持仓候选",
+                    "$.capital_competition.ranked_uses",
+                )
+            )
+        ranked_symbols = {
+            str(item.get("symbol", "")).upper()
+            for item in ranked_uses
+            if isinstance(item, Mapping)
+            and item.get("symbol")
+        }
+        for index, item in enumerate(
+            ranked_uses
+        ):
+            if not isinstance(item, Mapping):
+                continue
+            symbol = str(
+                item.get("symbol", "")
+            ).upper()
+            comparator_type = item.get(
+                "comparator_type"
+            )
+            current_position = item.get(
+                "current_position"
+            )
+            if comparator_type == "current_holding":
+                identity_matches = (
+                    symbol in holding_by_symbol
+                    and current_position is True
+                )
+            elif (
+                comparator_type
+                == "non_held_candidate"
+            ):
+                identity_matches = (
+                    symbol in candidate_by_symbol
+                    and symbol
+                    not in holding_by_symbol
+                    and current_position is False
+                )
+            else:
+                identity_matches = (
+                    comparator_type == "cash"
+                    and current_position is False
+                )
+            if not identity_matches:
+                errors.append(
+                    _issue(
+                        "CAPITAL_COMPARATOR_IDENTITY_MISMATCH",
+                        f"{symbol or '<empty>'}资本比较身份与输入不一致",
+                        (
+                            "$.capital_competition"
+                            ".ranked_uses"
+                            f"[{index}]"
+                        ),
+                    )
+                )
+        if (
+            competition_requirements.get(
+                "require_top_ranked_non_held"
+            )
+            is True
+        ):
+            top_non_held = [
+                symbol
+                for symbol in candidate_by_symbol
+                if symbol
+                not in holding_by_symbol
+            ][:minimum_non_held]
+            missing_top_non_held = [
+                symbol
+                for symbol in top_non_held
+                if symbol not in ranked_symbols
+            ]
+            if missing_top_non_held:
+                errors.append(
+                    _issue(
+                        "TOP_NON_HELD_COMPARATORS_MISSING",
+                        "缺少排名最高的非持仓比较项："
+                        + ",".join(
+                            missing_top_non_held
+                        ),
+                        "$.capital_competition.ranked_uses",
+                    )
+                )
+        if (
+            competition_requirements.get(
+                "require_all_holdings_as_comparators"
+            )
+            is True
+        ):
+            missing_holding_uses = sorted(
+                set(holding_by_symbol)
+                - ranked_symbols
+            )
+            if missing_holding_uses:
+                errors.append(
+                    _issue(
+                        "HOLDING_COMPARATORS_MISSING",
+                        "资本竞争缺少现有持仓："
+                        + ",".join(
+                            missing_holding_uses
+                        ),
+                        "$.capital_competition.ranked_uses",
+                    )
+                )
+        counterfactuals = competition.get(
+            "holding_counterfactuals",
+            [],
+        )
+        counterfactuals = (
+            counterfactuals
+            if isinstance(
+                counterfactuals,
+                list,
+            )
+            else []
+        )
+        counterfactual_symbols = [
+            str(
+                item.get("symbol", "")
+            ).upper()
+            for item in counterfactuals
+            if isinstance(item, Mapping)
+        ]
+        counterfactual_by_symbol = {
+            str(
+                item.get("symbol", "")
+            ).upper(): item
+            for item in counterfactuals
+            if isinstance(item, Mapping)
+            and item.get("symbol")
+        }
+        if len(counterfactual_symbols) != len(
+            set(counterfactual_symbols)
+        ):
+            errors.append(
+                _issue(
+                    "DUPLICATE_HOLDING_COUNTERFACTUAL",
+                    "持仓反事实不能重复",
+                    "$.capital_competition.holding_counterfactuals",
+                )
+            )
+        if (
+            competition_requirements.get(
+                "require_counterfactual_for_each_holding"
+            )
+            is True
+        ):
+            missing_counterfactuals = sorted(
+                set(holding_by_symbol)
+                - set(counterfactual_by_symbol)
+            )
+            if missing_counterfactuals:
+                errors.append(
+                    _issue(
+                        "HOLDING_COUNTERFACTUAL_MISSING",
+                        "缺少持仓反事实："
+                        + ",".join(
+                            missing_counterfactuals
+                        ),
+                        "$.capital_competition.holding_counterfactuals",
+                    )
+                )
+        if (
+            competition_requirements.get(
+                "increase_requires_would_buy_if_not_held"
+            )
+            is True
+        ):
+            for index, decision in enumerate(
+                decisions
+            ):
+                if (
+                    isinstance(
+                        decision,
+                        Mapping,
+                    )
+                    and decision.get("action")
+                    == "increase"
+                ):
+                    symbol = str(
+                        decision.get(
+                            "symbol",
+                            "",
+                        )
+                    ).upper()
+                    counterfactual = (
+                        counterfactual_by_symbol.get(
+                            symbol,
+                            {},
+                        )
+                    )
+                    if (
+                        counterfactual.get(
+                            "would_buy_if_not_held"
+                        )
+                        is not True
+                    ):
+                        errors.append(
+                            _issue(
+                                "INCREASE_COUNTERFACTUAL_MISMATCH",
+                                f"{symbol} increase要求未持有时仍会买入",
+                                (
+                                    "$.decisions"
+                                    f"[{index}].action"
+                                ),
+                            )
+                        )
+
+    if (
+        competition_requirements.get(
+            "require_etf_lookthrough_for_held_or_positive"
+        )
+        is True
+    ):
+        positive_symbols = {
+            str(
+                decision.get("symbol", "")
+            ).upper()
+            for decision in decisions
+            if isinstance(decision, Mapping)
+            and _decimal_or_zero(
+                decision.get("target_weight")
+            )
+            > ZERO
+        }
+        required_etfs = {
+            symbol
+            for symbol, candidate
+            in candidate_by_symbol.items()
+            if candidate.get("asset_type")
+            == "etf"
+            and (
+                symbol in holding_by_symbol
+                or symbol in positive_symbols
+            )
+        }
+        lookthrough = payload.get(
+            "etf_lookthrough",
+            {},
+        )
+        lookthrough = (
+            lookthrough
+            if isinstance(lookthrough, Mapping)
+            else {}
+        )
+        assessments = lookthrough.get(
+            "assessments",
+            [],
+        )
+        assessed_symbols = {
+            str(
+                item.get("symbol", "")
+            ).upper()
+            for item in (
+                assessments
+                if isinstance(
+                    assessments,
+                    list,
+                )
+                else []
+            )
+            if isinstance(item, Mapping)
+        }
+        missing_etfs = sorted(
+            required_etfs - assessed_symbols
+        )
+        if (
+            missing_etfs
+            and lookthrough.get("status")
+            != "unavailable"
+        ):
+            errors.append(
+                _issue(
+                    "ETF_LOOKTHROUGH_MISSING",
+                    "缺少ETF穿透研究："
+                    + ",".join(missing_etfs),
+                    "$.etf_lookthrough.assessments",
+                )
+            )
     symbols: list[str] = []
     positive_total = ZERO
     sector_totals: dict[str, Decimal] = {}
@@ -1318,11 +1690,7 @@ def validate_portfolio_output(
                 candidate.get("sector")
                 or "Unknown"
             )
-            sector_key = (
-                sector
-                if sector != "Unknown"
-                else f"Unknown:{symbol}"
-            )
+            sector_key = sector
             sector_totals[sector_key] = (
                 sector_totals.get(sector_key, ZERO)
                 + target
@@ -1331,7 +1699,7 @@ def validate_portfolio_output(
                 warnings.append(
                     _issue(
                         "SECTOR_UNKNOWN",
-                        f"{symbol}缺少行业分类，按标的单独计算上限",
+                        f"{symbol}缺少行业分类，与其他未知行业合并计算上限",
                         f"{decision_path}.target_weight",
                     )
                 )

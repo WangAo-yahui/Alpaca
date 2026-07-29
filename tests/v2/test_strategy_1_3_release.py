@@ -25,7 +25,7 @@ class StrategyOneThreeReleaseTests(unittest.TestCase):
         )
         self.assertEqual(
             load_profile("live1").strategy_version,
-            "1.4.0",
+            "1.5.0",
         )
         self.assertEqual(
             load_profile("paper1").strategy_version,

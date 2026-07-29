@@ -178,9 +178,27 @@ def prepare_coarse_workspace(
             "schema_version": "1.0",
             "stage": "coarse_selection",
             "required_selection_count": int(
-                config.stages[
-                    "coarse_candidate_count"
-                ]
+                (
+                    input_payload.get(
+                        "policy",
+                        {},
+                    ).get(
+                        "required_selection_count",
+                        config.stages[
+                            "coarse_candidate_count"
+                        ],
+                    )
+                    if isinstance(
+                        input_payload.get(
+                            "policy",
+                            {},
+                        ),
+                        Mapping,
+                    )
+                    else config.stages[
+                        "coarse_candidate_count"
+                    ]
+                )
             ),
             "stage_version": (
                 config.stages[

@@ -1,0 +1,7 @@
+{
+  "_comment": "作用：把 core_long 1.5.0 的 Codex 模型、推理强度和输出详细度锁入策略 release。重要性：避免 CLI 默认模型漂移，并让三级研究漏斗能在 Live 单次运行时限内完成。",
+  "schema_version": "1.0",
+  "model": "gpt-5.6-sol",
+  "reasoning_effort": "medium",
+  "verbosity": "low"
+}

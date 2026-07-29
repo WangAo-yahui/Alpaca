@@ -203,6 +203,14 @@ def valid_coarse_output(
         for item in items
     }
     policy = input_payload.get("policy", {})
+    required_selection_count = int(
+        policy.get(
+            "required_selection_count",
+            60,
+        )
+        if isinstance(policy, dict)
+        else 60
+    )
     version_four_contract = bool(
         isinstance(policy, dict)
         and policy.get(
@@ -256,7 +264,9 @@ def valid_coarse_output(
         for item in ordinary_pool
         if item["symbol"] not in set(required)
     )
-    selected = selected[:60]
+    selected = selected[
+        :required_selection_count
+    ]
     local_only = status == "success_local_only"
     if version_four_contract and not local_only:
         selected_symbols = {
@@ -275,7 +285,10 @@ def valid_coarse_output(
             not in selected_symbols
         ][:3]
         selected = [
-            *selected[: 60 - len(supplements)],
+            *selected[
+                : required_selection_count
+                - len(supplements)
+            ],
             *supplements,
         ]
     output = {
@@ -310,7 +323,9 @@ def valid_coarse_output(
         "market_summary": (
             "Deterministic coarse research pool"
         ),
-        "selection_count": 60,
+        "selection_count": (
+            required_selection_count
+        ),
         "selections": [
             {
                 "rank": index,

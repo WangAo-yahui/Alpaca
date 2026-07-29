@@ -665,6 +665,22 @@ class CodexRunner:
             1,
             self.retry_count + 2,
         ):
+            output_directory = getattr(
+                workspace,
+                "output_directory",
+                None,
+            )
+            workspace_output = (
+                Path(output_directory)
+                / "coarse_output.json"
+                if output_directory is not None
+                else None
+            )
+            if (
+                workspace_output is not None
+                and workspace_output.exists()
+            ):
+                workspace_output.unlink()
             if workspace.last_message.exists():
                 workspace.last_message.unlink()
             started_at = utc_now_iso()
@@ -735,31 +751,60 @@ class CodexRunner:
                 elapsed = (
                     time.monotonic() - started
                 )
-                attempts.append(
-                    {
-                        "attempt": attempt_number,
-                        "started_at": started_at,
-                        "duration_seconds": elapsed,
-                        "return_code": None,
-                        "stdout": _truncate(
-                            _redact(
-                                str(
-                                    error.output
-                                    or ""
-                                )
+                attempt = {
+                    "attempt": attempt_number,
+                    "started_at": started_at,
+                    "duration_seconds": elapsed,
+                    "return_code": None,
+                    "stdout": _truncate(
+                        _redact(
+                            str(
+                                error.output or ""
                             )
-                        ),
-                        "stderr": _truncate(
-                            _redact(
-                                str(
-                                    error.stderr
-                                    or ""
-                                )
+                        )
+                    ),
+                    "stderr": _truncate(
+                        _redact(
+                            str(
+                                error.stderr or ""
                             )
+                        )
+                    ),
+                    "timed_out": True,
+                }
+                attempts.append(attempt)
+                try:
+                    if workspace_output is None:
+                        raise FileNotFoundError
+                    recovered = json.loads(
+                        workspace_output.read_text(
+                            encoding="utf-8"
+                        )
+                    )
+                except (
+                    FileNotFoundError,
+                    OSError,
+                    json.JSONDecodeError,
+                ):
+                    recovered = None
+                if isinstance(recovered, dict):
+                    attempt[
+                        "workspace_output_recovered"
+                    ] = True
+                    call_record = {
+                        **self.last_call_record,
+                        "status": (
+                            "completed_from_workspace_"
+                            "output_after_timeout"
                         ),
-                        "timed_out": True,
+                        "attempts": attempts,
+                        "completed_at": utc_now_iso(),
                     }
-                )
+                    self.last_call_record = call_record
+                    return CodexRunResult(
+                        payload=recovered,
+                        call_record=call_record,
+                    )
                 last_error = CodexTimeoutError(
                     f"Codex{self._label()}调用超时",
                     details={

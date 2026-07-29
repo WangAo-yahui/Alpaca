@@ -1,0 +1,27 @@
+{
+  "_comment": "作用：锁定 core_long 1.5.0 的三级研究漏斗、Codex补充发现、资本竞争、反持仓锚定及ETF穿透合同。重要性：缩小研究输入并提高深度，同时保留模型在风险与仓位上的自主判断。",
+  "schema_version": "1.0",
+  "strategy_id": "core_long",
+  "strategy_version": "1.5.0",
+  "compatible_app_version": ">=2.0.0,<3.0.0",
+  "description": "10-20 year strategy with a 535-to-120-to-20 research funnel, autonomous discoveries, capital competition and ETF lookthrough",
+  "prompt_hashes": {
+    "prompts/coarse.md": "b051f6c48269e8e7fe32e35dcda9bee63e9e774c5809349f230fa54efe60e178",
+    "prompts/coarse_AGENTS.md": "33e75d8d9d6fad77eb2706f1fb6e3f370e6f27268593aefe83369c89df7ac30e",
+    "prompts/portfolio.md": "e8f3cfa68357799784f75cc7b5a693e4cf496e01009604e8e643e2cfb179ed78",
+    "prompts/portfolio_AGENTS.md": "6a343873503851983fcff0163b569709c9aa8314e3b8f14ec28049f2bdf4c283",
+    "prompts/execution.md": "7e3a2fc4d0de703c9b4388b04d1deb7e7d426a99ea4c86b1023f05903f1f41c9",
+    "prompts/execution_AGENTS.md": "bcf9566a03bccb66cc1b4256a17c96a793c354b1106593aef9f014ef0fe6aed3"
+  },
+  "schema_hashes": {
+    "schemas/coarse_output.schema.json": "c1cead5222b5f39c3ca6437f203885de377412f1cfba5564d364adb979521b0a",
+    "schemas/portfolio_output.schema.json": "6eb497c5d8dc189edde3f5ded90f893c59293940cce2a3da972babd2d5b519a6",
+    "schemas/execution_output.schema.json": "a82858ac43162d3a8f0e1014bb378f14894ddfcaca959dde883db433b0980de8"
+  },
+  "config_hashes": {
+    "config/coarse_policy.json": "3dfaeec2410b83170ee0fedefede37ec3989b45ea43596d9539ae9f775240b75",
+    "config/portfolio_policy.json": "eb44704e9c9d021e62fc5a03c22faa89c19d8ad8377af35769cfa6b15b3fcbdf",
+    "config/execution_policy.json": "e8933a24b6f16fbe781d32be92d106b8f6db1f4f98a7c1f41aee54e1ab760935",
+    "config/codex_policy.json": "3f1227eed7bfe35ac86e1ab7b0fb6cf67d150c2f665d0dd6d6667ace8ca55692"
+  }
+}

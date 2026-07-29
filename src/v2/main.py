@@ -1441,9 +1441,9 @@ def run_stage_c(
                     coarse_result.output_path
                 ),
                 message=(
-                    "复用同日有效60只粗选候选"
+                    "复用同日有效粗选候选"
                     if coarse_result.reused
-                    else "完成并验证60只粗选候选"
+                    else "完成并验证粗选候选"
                 ),
             )
             save_cycle_state(

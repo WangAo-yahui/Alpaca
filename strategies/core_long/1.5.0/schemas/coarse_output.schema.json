@@ -1,0 +1,314 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://wa-trader.local/schemas/v2/coarse_output.schema.json",
+  "title": "WA Trader v2 coarse selection output",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "stage",
+    "run_date",
+    "generated_at",
+    "input_signature",
+    "status",
+    "network_research",
+    "market_summary",
+    "selection_count",
+    "selections",
+    "external_discoveries",
+    "warnings",
+    "source_references"
+  ],
+  "properties": {
+    "schema_version": {
+      "type": "string",
+      "const": "1.0"
+    },
+    "stage": {
+      "type": "string",
+      "const": "coarse_selection"
+    },
+    "run_date": {
+      "type": "string",
+      "minLength": 10
+    },
+    "generated_at": {
+      "type": "string",
+      "minLength": 10
+    },
+    "input_signature": {
+      "type": "string",
+      "minLength": 64,
+      "maxLength": 64
+    },
+    "status": {
+      "type": "string",
+      "enum": [
+        "success",
+        "success_local_only"
+      ]
+    },
+    "network_research": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "status",
+        "web_access",
+        "summary",
+        "warnings"
+      ],
+      "properties": {
+        "status": {
+          "type": "string",
+          "enum": [
+            "completed",
+            "unavailable",
+            "not_requested"
+          ]
+        },
+        "web_access": {
+          "type": "boolean"
+        },
+        "summary": {
+          "type": "string"
+        },
+        "warnings": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        }
+      }
+    },
+    "market_summary": {
+      "type": "string",
+      "minLength": 1
+    },
+    "selection_count": {
+      "type": "integer",
+      "const": 20
+    },
+    "selections": {
+      "type": "array",
+      "minItems": 20,
+      "maxItems": 20,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "rank",
+          "symbol",
+          "asset_type",
+          "sector",
+          "industry",
+          "research_eligible",
+          "screen_new_position_eligible",
+          "selection_origin",
+          "selection_reason",
+          "main_risks",
+          "key_factors",
+          "source_references"
+        ],
+        "properties": {
+          "rank": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 20
+          },
+          "symbol": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 15
+          },
+          "asset_type": {
+            "type": "string",
+            "enum": [
+              "stock",
+              "etf"
+            ]
+          },
+          "sector": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "industry": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "research_eligible": {
+            "type": "boolean"
+          },
+          "screen_new_position_eligible": {
+            "type": "boolean"
+          },
+          "selection_origin": {
+            "type": "string",
+            "enum": [
+              "python_shortlist",
+              "codex_supplement"
+            ]
+          },
+          "selection_reason": {
+            "type": "string",
+            "minLength": 1
+          },
+          "main_risks": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "key_factors": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "source_references": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          }
+        }
+      }
+    },
+    "external_discoveries": {
+      "type": "array",
+      "maxItems": 5,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "symbol",
+          "asset_type",
+          "candidate_type",
+          "research_only",
+          "why_python_may_miss",
+          "thesis",
+          "primary_evidence",
+          "main_risks",
+          "next_validation_steps",
+          "source_references"
+        ],
+        "properties": {
+          "symbol": {
+            "type": "string",
+            "pattern": "^[A-Z][A-Z0-9.\\-]{0,14}$"
+          },
+          "asset_type": {
+            "type": "string",
+            "enum": [
+              "stock",
+              "etf"
+            ]
+          },
+          "candidate_type": {
+            "type": "string",
+            "enum": [
+              "satellite",
+              "emerging_compounder",
+              "contrarian",
+              "turnaround",
+              "special_situation",
+              "broad_or_factor_etf",
+              "thematic_etf",
+              "diversifier_etf"
+            ]
+          },
+          "research_only": {
+            "type": "boolean",
+            "const": true
+          },
+          "why_python_may_miss": {
+            "type": "string",
+            "minLength": 1
+          },
+          "thesis": {
+            "type": "string",
+            "minLength": 1
+          },
+          "primary_evidence": {
+            "type": "array",
+            "minItems": 1,
+            "items": {
+              "type": "string"
+            }
+          },
+          "main_risks": {
+            "type": "array",
+            "minItems": 1,
+            "items": {
+              "type": "string"
+            }
+          },
+          "next_validation_steps": {
+            "type": "array",
+            "minItems": 1,
+            "items": {
+              "type": "string"
+            }
+          },
+          "source_references": {
+            "type": "array",
+            "minItems": 1,
+            "items": {
+              "type": "string"
+            }
+          }
+        }
+      }
+    },
+    "warnings": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "source_references": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "id",
+          "title",
+          "url",
+          "source_type",
+          "retrieved_at"
+        ],
+        "properties": {
+          "id": {
+            "type": "string",
+            "minLength": 1
+          },
+          "title": {
+            "type": "string",
+            "minLength": 1
+          },
+          "url": {
+            "type": "string"
+          },
+          "source_type": {
+            "type": "string",
+            "enum": [
+              "web",
+              "input",
+              "local"
+            ]
+          },
+          "retrieved_at": {
+            "type": [
+              "string",
+              "null"
+            ]
+          }
+        }
+      }
+    }
+  }
+}

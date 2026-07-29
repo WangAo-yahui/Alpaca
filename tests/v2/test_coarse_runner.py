@@ -23,11 +23,13 @@ from unittest.mock import MagicMock, patch
 from v2.codex import runner as runner_module
 from v2.codex.runner import (
     CodexRunner,
+    PortfolioCodexRunner,
     _exact_identity_instruction,
     _execute,
     _probe_codex_network,
 )
 from v2.codex.workspace import (
+    PortfolioWorkspace,
     prepare_coarse_workspace,
 )
 from v2.config import load_config
@@ -287,6 +289,145 @@ class CoarseRunnerTests(unittest.TestCase):
                 runner.last_call_record["status"],
                 "failed",
             )
+
+    def test_timeout_recovers_fresh_workspace_output_for_validation(
+        self,
+    ) -> None:
+        with tempfile.TemporaryDirectory() as temp:
+            root = Path(temp)
+            prepare_stage_c_project(root)
+            workspace = prepare_coarse_workspace(
+                build_daily_paths(
+                    "2026-07-23",
+                    project_root=root,
+                ),
+                config=load_config(
+                    project_root=root
+                ),
+                input_payload={"ok": True},
+            )
+            stale = (
+                workspace.output_directory
+                / "coarse_output.json"
+            )
+            stale.write_text(
+                json.dumps({"stale": True}),
+                encoding="utf-8",
+            )
+
+            def execute(
+                command: list[str],
+                **kwargs: object,
+            ) -> subprocess.CompletedProcess[str]:
+                del command, kwargs
+                stale.write_text(
+                    json.dumps(
+                        {
+                            "fresh": True,
+                            "requires_stage_validation": (
+                                True
+                            ),
+                        }
+                    ),
+                    encoding="utf-8",
+                )
+                raise subprocess.TimeoutExpired(
+                    ["codex"],
+                    1,
+                )
+
+            runner = CodexRunner(
+                timeout_seconds=1,
+                retry_count=0,
+                executor=execute,
+            )
+            result = runner.run(workspace)
+
+        self.assertEqual(
+            result.payload,
+            {
+                "fresh": True,
+                "requires_stage_validation": True,
+            },
+        )
+        self.assertEqual(
+            result.call_record["status"],
+            (
+                "completed_from_workspace_"
+                "output_after_timeout"
+            ),
+        )
+        self.assertTrue(
+            result.call_record["attempts"][0][
+                "workspace_output_recovered"
+            ]
+        )
+
+    def test_portfolio_runner_does_not_require_coarse_output_directory(
+        self,
+    ) -> None:
+        with tempfile.TemporaryDirectory() as temp:
+            root = Path(temp)
+            temp_directory = root / ".tmp"
+            temp_directory.mkdir()
+            workspace = PortfolioWorkspace(
+                root=root,
+                agents=root / "AGENTS.md",
+                input_file=root / "input.json",
+                policy_file=root / "policy.json",
+                risk_file=root / "risk.json",
+                prompt_file=root / "prompt.md",
+                schema_file=root / "schema.json",
+                temp_directory=temp_directory,
+                last_message=(
+                    temp_directory
+                    / "last_message.json"
+                ),
+            )
+            workspace.input_file.write_text(
+                json.dumps(
+                    {
+                        "input_signature": "a" * 64,
+                        "run_date": "2026-07-29",
+                    }
+                ),
+                encoding="utf-8",
+            )
+
+            def execute(
+                command: list[str],
+                **kwargs: object,
+            ) -> subprocess.CompletedProcess[str]:
+                del kwargs
+                output_index = (
+                    command.index(
+                        "--output-last-message"
+                    )
+                    + 1
+                )
+                Path(
+                    command[output_index]
+                ).write_text(
+                    json.dumps({"ok": True}),
+                    encoding="utf-8",
+                )
+                return subprocess.CompletedProcess(
+                    command,
+                    0,
+                    "",
+                    "",
+                )
+
+            result = PortfolioCodexRunner(
+                timeout_seconds=1,
+                retry_count=0,
+                executor=execute,
+            ).run(workspace)
+
+        self.assertEqual(
+            result.payload,
+            {"ok": True},
+        )
 
     def test_network_preflight_failure_is_fast_and_not_retried(
         self,
