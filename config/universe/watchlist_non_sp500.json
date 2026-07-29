@@ -1,0 +1,29 @@
+{
+  "schema_version": "1.0",
+  "as_of_date": "2026-07-29",
+  "description": "标普500之外、具备明确市场代表性或长期复利潜力的补充研究池。这里是候选来源，不是自动买入清单。",
+  "selection_policy": {
+    "maximum_symbols": 20,
+    "review_cadence": "monthly",
+    "deep_review_cadence": "quarterly",
+    "allowed_categories": [
+      "emerging_compounder",
+      "market_infrastructure",
+      "category_leader"
+    ],
+    "minimum_price_usd": "5",
+    "minimum_adv20_usd": "10000000",
+    "exclude_otc": true,
+    "exclude_leveraged_or_inverse": true,
+    "require_primary_source_research": true,
+    "required_evidence": [
+      "durable_revenue_or_adoption_growth",
+      "large_addressable_market_with_evidence",
+      "balance_sheet_and_cash_runway",
+      "unit_economics_or_path_to_cash_generation",
+      "governance_and_dilution_risk",
+      "valuation_and_thesis_break_conditions"
+    ]
+  },
+  "symbols": []
+}

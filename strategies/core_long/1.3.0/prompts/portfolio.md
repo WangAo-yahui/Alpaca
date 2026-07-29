@@ -59,6 +59,14 @@ long-run return; volatility, drawdown or excitement alone is not an edge.
 12. For open orders, return only keep/review/cancel/replace strategic assessment.
     Do not create or modify an actual broker order.
 13. `valid_until` must use the policy validity window.
+14. Candidates whose `source` is `watchlist_non_sp500` are speculative
+    emerging-growth research candidates, not purchase mandates. Zero allocation
+    is always acceptable. Before allocating, use current primary evidence to
+    test durable revenue or adoption, addressable market, balance-sheet runway,
+    unit economics or the path to cash generation, governance and dilution,
+    valuation, and explicit thesis-break conditions. New positions must be
+    staged, each initial target must not exceed 3%, and their combined target
+    weight must not exceed 10%.
 
 Network failure requires `success_local_only` and a non-empty warning. In that
 case, do not manufacture valuation inputs; choose `no_reliable_estimate` where

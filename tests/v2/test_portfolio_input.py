@@ -37,6 +37,13 @@ class PortfolioInputTests(unittest.TestCase):
                 len(payload["candidates"]),
                 60,
             )
+            self.assertTrue(
+                all(
+                    isinstance(item.get("source"), str)
+                    and bool(item["source"])
+                    for item in payload["candidates"]
+                )
+            )
             quote_references = [
                 item["latest_quote"]
                 for item in payload["candidates"]

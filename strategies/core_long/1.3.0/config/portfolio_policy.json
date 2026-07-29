@@ -45,6 +45,14 @@
     "require_higher_evidence_for_concentration": true,
     "prefer_low_turnover": true
   },
+  "emerging_growth_watchlist": {
+    "source_name": "watchlist_non_sp500",
+    "maximum_initial_target_weight": "0.03",
+    "maximum_aggregate_target_weight": "0.10",
+    "require_staged_entry": true,
+    "require_primary_source_research": true,
+    "allow_zero_allocation": true
+  },
   "valuation_requirements": {
     "separate_price_from_value": true,
     "allow_no_reliable_estimate": true,

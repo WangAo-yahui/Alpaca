@@ -1,10 +1,11 @@
 {
   "schema_version": "1.0",
   "config_version": "2026-07-23-stage-b-v1",
-  "stock_pool_version": "sp500-2026-07-21",
+  "stock_pool_version": "sp500-2026-07-21+watchlist-2026-07-29",
   "etf_pool_version": "etfs-v1",
   "stock_pool_files": [
-    "config/universe/sp500.json"
+    "config/universe/sp500.json",
+    "config/universe/watchlist_non_sp500.json"
   ],
   "etf_pool_files": [
     "config/universe/etfs.json"

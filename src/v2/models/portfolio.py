@@ -573,6 +573,15 @@ def build_portfolio_input(
             {
                 **dict(selection),
                 "symbol": symbol,
+                "source": str(
+                    universe_item.get(
+                        "source",
+                        selection.get(
+                            "source",
+                            "",
+                        ),
+                    )
+                ),
                 "daily_summary": daily_summary,
                 "intraday_summary": {
                     "status": "no_data"
@@ -1215,6 +1224,40 @@ def validate_portfolio_output(
             "0",
         )
     )
+    emerging_policy = policy.get(
+        "emerging_growth_watchlist"
+    )
+    emerging_policy = (
+        emerging_policy
+        if isinstance(
+            emerging_policy,
+            Mapping,
+        )
+        else {}
+    )
+    emerging_source = str(
+        emerging_policy.get(
+            "source_name",
+            "watchlist_non_sp500",
+        )
+    )
+    emerging_initial_maximum = (
+        _decimal_or_zero(
+            emerging_policy.get(
+                "maximum_initial_target_weight",
+                "0",
+            )
+        )
+    )
+    emerging_aggregate_maximum = (
+        _decimal_or_zero(
+            emerging_policy.get(
+                "maximum_aggregate_target_weight",
+                "0",
+            )
+        )
+    )
+    emerging_positive_total = ZERO
     for index, raw_decision in enumerate(decisions):
         if not isinstance(raw_decision, Mapping):
             continue
@@ -1294,6 +1337,37 @@ def validate_portfolio_output(
                 )
         holding = holding_by_symbol.get(symbol)
         candidate = candidate_by_symbol.get(symbol)
+        is_emerging_watchlist = (
+            isinstance(candidate, Mapping)
+            and str(
+                candidate.get("source", "")
+            )
+            == emerging_source
+        )
+        if (
+            is_emerging_watchlist
+            and target > ZERO
+        ):
+            emerging_positive_total += target
+            if (
+                holding is None
+                and emerging_initial_maximum > ZERO
+                and target
+                > emerging_initial_maximum
+            ):
+                errors.append(
+                    _issue(
+                        "EMERGING_INITIAL_WEIGHT_LIMIT_BREACHED",
+                        (
+                            f"{symbol}潜力成长观察池"
+                            "初始目标权重超过策略上限"
+                        ),
+                        (
+                            f"{decision_path}"
+                            ".target_weight"
+                        ),
+                    )
+                )
         if raw_decision.get(
             "current_position"
         ) is not (holding is not None):
@@ -1602,6 +1676,29 @@ def validate_portfolio_output(
                 )
         style = str(accumulation.get("style", ""))
         if (
+            is_emerging_watchlist
+            and target > ZERO
+            and holding is None
+            and emerging_policy.get(
+                "require_staged_entry"
+            )
+            is True
+            and style != "staged"
+        ):
+            errors.append(
+                _issue(
+                    "EMERGING_STAGED_ENTRY_REQUIRED",
+                    (
+                        f"{symbol}潜力成长观察池"
+                        "新配置必须分批建仓"
+                    ),
+                    (
+                        f"{decision_path}."
+                        "accumulation_plan.style"
+                    ),
+                )
+            )
+        if (
             planned_fraction < ZERO
             or planned_fraction > ONE
             or tranche_total != planned_fraction
@@ -1620,6 +1717,18 @@ def validate_portfolio_output(
                     f"{decision_path}.accumulation_plan",
                 )
             )
+    if (
+        emerging_aggregate_maximum > ZERO
+        and emerging_positive_total
+        > emerging_aggregate_maximum
+    ):
+        errors.append(
+            _issue(
+                "EMERGING_AGGREGATE_WEIGHT_LIMIT_BREACHED",
+                "潜力成长观察池总目标权重超过策略上限",
+                "$.decisions",
+            )
+        )
     if len(symbols) != len(set(symbols)):
         errors.append(
             _issue(

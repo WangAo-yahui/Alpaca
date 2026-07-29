@@ -24,6 +24,111 @@ from tests.v2.support import (
 
 
 class PortfolioValidationTests(unittest.TestCase):
+    def test_emerging_watchlist_weight_limits(
+        self,
+    ) -> None:
+        generated = datetime.now(timezone.utc)
+        input_payload = {
+            "profile": {"profile_id": "live1"},
+            "release": {
+                "strategy_id": "core_long",
+                "strategy_version": "1.3.0",
+            },
+            "run_date": "2026-07-29",
+            "cycle_id": "20260729T120000",
+            "input_signature": "b" * 64,
+            "policy": {
+                "maximum_sector_weight": "1",
+                "minimum_target_weight": "0.01",
+                "target_holdings": {
+                    "minimum": 0,
+                    "maximum": 20,
+                },
+                "risk_profile": {
+                    "maximum_single_position_weight": "1",
+                    "minimum_cash_weight": "0",
+                },
+                "emerging_growth_watchlist": {
+                    "source_name": "watchlist_non_sp500",
+                    "maximum_initial_target_weight": "0.03",
+                    "maximum_aggregate_target_weight": "0.03",
+                    "require_staged_entry": True,
+                },
+            },
+            "positions": [],
+            "candidates": [
+                {
+                    "symbol": "EARLY",
+                    "sector": "Technology",
+                    "source": "watchlist_non_sp500",
+                    "screen_new_position_eligible": True,
+                }
+            ],
+            "open_orders": [],
+        }
+        payload = {
+            "stage": "portfolio_decision",
+            "profile_id": "live1",
+            "strategy_id": "core_long",
+            "strategy_version": "1.3.0",
+            "run_date": "2026-07-29",
+            "cycle_id": "20260729T120000",
+            "input_signature": "b" * 64,
+            "status": "success",
+            "generated_at": generated.isoformat(),
+            "valid_until": (
+                generated + timedelta(hours=1)
+            ).isoformat(),
+            "allocation": {
+                "target_cash_weight": "0.96",
+                "target_invested_weight": "0.04",
+                "target_position_count": 1,
+                "maximum_single_symbol_weight": "1",
+                "maximum_sector_weight": "1",
+            },
+            "decisions": [
+                {
+                    "symbol": "EARLY",
+                    "current_position": False,
+                    "in_current_coarse": True,
+                    "action": "open",
+                    "target_weight": "0.04",
+                    "maximum_weight": "0.04",
+                    "valuation": {
+                        "status": "no_reliable_estimate",
+                        "market_price": None,
+                        "value_range_low": None,
+                        "value_range_high": None,
+                        "margin_of_safety_fraction": None,
+                    },
+                    "accumulation_plan": {
+                        "style": "staged",
+                        "planned_total_fraction": "1",
+                        "tranches": [],
+                    },
+                }
+            ],
+        }
+        result = validate_portfolio_output(
+            payload,
+            input_payload=input_payload,
+            schema={"type": "object"},
+        )
+        self.assertIn(
+            "EMERGING_INITIAL_WEIGHT_LIMIT_BREACHED",
+            {
+                item["code"]
+                for item in result.errors
+            },
+        )
+        self.assertIn(
+            "EMERGING_AGGREGATE_WEIGHT_LIMIT_BREACHED",
+            {
+                item["code"]
+                for item in result.errors
+            },
+        )
+
     def test_unreliable_value_can_keep_known_market_price(
         self,
     ) -> None:

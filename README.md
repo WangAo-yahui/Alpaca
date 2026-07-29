@@ -680,6 +680,7 @@ Alpaca/
 | 文件 | 作用 |
 | --- | --- |
 | `config/universe/sp500.json` | S&P 500 静态股票池 |
+| `config/universe/watchlist_non_sp500.json` | 低频维护的标普 500 外补充关注池 |
 | `config/universe/etfs.json` | ETF、行业和风险观察标的 |
 | `config/universe/core_symbols.json` | 必须持续关注的核心标的 |
 
