@@ -69,8 +69,55 @@ class DailyReportTests(unittest.TestCase):
             )
             self.assertTrue(created)
             text = path.read_text(encoding="utf-8")
-            self.assertIn("Submission policy", text)
+            self.assertIn("提交策略", text)
             self.assertIn("## 对账", text)
+            self.assertNotIn("## Initial guidance", text)
+            self.assertNotIn("Buying power", text)
+
+    def test_english_model_summary_is_not_copied_to_report(
+        self,
+    ) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            path = Path(temporary) / "daily.md"
+            validated, submission, reconciliation = (
+                self.documents()
+            )
+            update_daily_report(
+                path,
+                state=state("20260724T140000"),
+                validated=validated,
+                submission=submission,
+                reconciliation=reconciliation,
+                context={
+                    "coarse": {
+                        "status": "success",
+                        "selection_count": 60,
+                        "market_summary": (
+                            "English market summary."
+                        ),
+                    },
+                    "execution": {
+                        "market_assessment": {
+                            "summary": (
+                                "English execution summary."
+                            )
+                        }
+                    },
+                },
+            )
+            text = path.read_text(encoding="utf-8")
+            self.assertNotIn(
+                "English market summary",
+                text,
+            )
+            self.assertNotIn(
+                "English execution summary",
+                text,
+            )
+            self.assertIn(
+                "模型未返回中文摘要",
+                text,
+            )
 
     def test_later_cycle_appends_and_same_cycle_is_idempotent(
         self,

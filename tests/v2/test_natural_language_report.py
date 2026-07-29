@@ -15,6 +15,7 @@ from unittest.mock import patch
 
 from v2.exceptions import TemporaryDataError
 from v2.reports.natural_language_report import (
+    _report_prompt,
     legacy_natural_report_path,
     update_natural_language_report,
     write_fallback_natural_language_report,
@@ -98,6 +99,19 @@ def _state(cycle_id: str) -> SimpleNamespace:
 
 
 class NaturalLanguageReportTests(unittest.TestCase):
+    def test_prompt_requires_chinese_prose(
+        self,
+    ) -> None:
+        prompt = _report_prompt(initial=True)
+        self.assertIn(
+            "不得输出英文句子",
+            prompt,
+        )
+        self.assertIn(
+            "金融术语全部使用中文",
+            prompt,
+        )
+
     def _fake_execute(
         self,
         narrative: str,
