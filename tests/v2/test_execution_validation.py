@@ -133,6 +133,59 @@ class ExecutionValidationTests(unittest.TestCase):
                 codes,
             )
 
+    def test_filled_open_may_transition_to_increase(
+        self,
+    ) -> None:
+        with tempfile.TemporaryDirectory() as temp:
+            root = Path(temp)
+            result = stage_e_fixture(root)
+            assert result.execution is not None
+            source = copy.deepcopy(
+                result.execution.input_result.payload
+            )
+            source["execution_snapshot"][
+                "market_phase"
+            ] = "regular_session"
+            symbol = source["portfolio"][
+                "decisions"
+            ][0]["symbol"]
+            source["execution_snapshot"][
+                "positions"
+            ].append(
+                {
+                    "symbol": symbol,
+                    "side": "long",
+                    "quantity": "0.123081",
+                    "available_quantity": "0.123081",
+                    "average_entry_price": "396.68",
+                    "current_price": "397.00",
+                    "market_value": "48.86",
+                }
+            )
+            payload = valid_execution_output(source)
+            payload["decisions"][0][
+                "portfolio_action"
+            ] = "increase"
+
+            release = load_strategy_release(
+                "core_long",
+                "1.2.0",
+                project_root=root,
+            )
+            schema = load_json_object(
+                release.root
+                / "schemas/execution_output.schema.json"
+            )
+            validation = validate_execution_output(
+                payload,
+                input_payload=source,
+                schema=schema,
+            )
+            self.assertTrue(
+                validation.valid,
+                validation.errors,
+            )
+
     def test_none_protection_has_no_fractional_tif_requirement(
         self,
     ) -> None:
