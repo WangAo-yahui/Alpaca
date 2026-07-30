@@ -15,6 +15,12 @@
 3. 对每个组合标的选择 approve、modify、defer、reject 或 no_action。
 4. 可以在策略范围内调整 target weight 与 execution fraction；超范围时设置 replan 并 defer。
    把 portfolio 的 accumulation plan 视为当前可执行上限，而不是必须买入的配额。
+   除下述已成交 `open` 的兼容情形外，每个标的的 `portfolio_action` 必须逐字复制
+   portfolio decision 的 `action`，它表示上游组合意图，不是本轮是否执行的结论。
+   若最新持仓、当日成交或剩余权重表明不应再次执行原有 `reduce`、`close`、
+   `increase` 或其他动作，必须保留原 `portfolio_action`，并用
+   `execution_decision="no_action"`（或适用的 defer/reject）表达本轮不下单；
+   不得把原动作改写成 `hold`。
    如果 portfolio action 为 `open`，但最新执行快照已经显示该标的持仓大于 0，
    说明首次建仓已经成交：后续加仓使用 `portfolio_action="increase"`，不执行则可用
    `portfolio_action="hold"`；不得继续把已有持仓表示为新的 `open`。

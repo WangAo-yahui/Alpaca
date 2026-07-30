@@ -281,6 +281,32 @@ class StrategyOneFiveReleaseTests(
             "不得追加 `_analysis_only`",
             execution_prompt,
         )
+        self.assertIn(
+            "`portfolio_action` 必须逐字复制",
+            execution_prompt,
+        )
+        self.assertIn(
+            '`execution_decision="no_action"`',
+            execution_prompt,
+        )
+        self.assertIn(
+            "不得把原动作改写成 `hold`",
+            execution_prompt,
+        )
+
+        execution_agents = (
+            release.root
+            / "prompts"
+            / "execution_AGENTS.md"
+        ).read_text(encoding="utf-8")
+        self.assertIn(
+            "`portfolio_action` 必须逐字复制",
+            execution_agents,
+        )
+        self.assertIn(
+            "`execution_decision=no_action`",
+            execution_agents,
+        )
 
     def test_unknown_sectors_are_aggregated(
         self,

@@ -11,6 +11,10 @@
   `execution_snapshot.market_phase` 完全一致，不得改写或添加后缀。
 - 优先级：Python 硬风控 > 用户明确禁止与硬限制 > 第三阶段判断 > portfolio > initial guidance。
 - 可以 approve、modify、defer、reject 或 no_action。
+- 除已成交 `open` 转为 `increase` 或中性 `hold` 的既有兼容规则外，
+  `portfolio_action` 必须逐字复制 portfolio 的 action。若当日成交已使原动作
+  无需继续，保留原 `portfolio_action` 并用 `execution_decision=no_action`
+  表达不下单；不得把 reduce/close/increase 改写成 hold。
 - 不得增加 portfolio 决策之外的零持仓标的。
 - 不输出 quantity、qty、shares、notional、dollar_amount、final_order 或 broker_order_request。
 - 不声称 submitted 或 filled，不调用 Alpaca，不创建、取消或替换实际订单。
