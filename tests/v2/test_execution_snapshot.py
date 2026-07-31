@@ -21,6 +21,47 @@ from tests.v2.support import stage_d_clients
 
 
 class ExecutionSnapshotTests(unittest.TestCase):
+    def test_future_portfolio_timestamp_does_not_age_quotes(
+        self,
+    ) -> None:
+        with tempfile.TemporaryDirectory() as temp:
+            paths = build_cycle_paths(
+                run_date="2026-07-23",
+                cycle_id="20260723T100000",
+                project_root=Path(temp),
+                profile_id="paper1",
+                strategy_id="core_long",
+                strategy_version="1.2.0",
+            )
+            current = datetime(
+                2026,
+                7,
+                23,
+                14,
+                47,
+                12,
+                tzinfo=timezone.utc,
+            )
+            result = create_execution_snapshot(
+                paths,
+                stage_d_clients(),
+                portfolio_output={
+                    "generated_at": (
+                        "2026-07-23T14:48:00+00:00"
+                    ),
+                    "decisions": [
+                        {"symbol": "S000"}
+                    ],
+                },
+                now=current,
+                is_market_holiday=False,
+            )
+
+        self.assertEqual(
+            result.payload["retrieved_at"],
+            current.isoformat(),
+        )
+
     def test_snapshot_is_later_and_contains_execution_facts(
         self,
     ) -> None:

@@ -246,6 +246,11 @@ def _strictly_after(
         )
     parsed = parsed.astimezone(timezone.utc)
     current_utc = current.astimezone(timezone.utc)
+    # A model-produced portfolio timestamp can accidentally be a little ahead
+    # of the actual clock.  Waiting for or adopting that future time would make
+    # freshly fetched broker quotes appear stale before Stage E even starts.
+    if parsed > current_utc:
+        return current_utc
     if current_utc <= parsed:
         return parsed + timedelta(
             microseconds=1

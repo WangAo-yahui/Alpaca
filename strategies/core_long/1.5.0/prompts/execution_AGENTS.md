@@ -7,6 +7,10 @@
 
 - 只执行第三阶段 `execution_decision`。
 - 以 `data/execution_input.json` 中的最新执行快照为事实来源。
+- 报价年龄以快照中的 `quote_age_seconds` 为准，不得把 Codex 分析耗时再次计入；
+  实际提交前由 Python pretrade snapshot 重新取价并复核全部执行门禁。
+- portfolio 已完成的逐标的联网研究可以继承；Stage E 未独立联网不得单独作为
+  defer/reject 理由，本阶段重点是券商快照、分批条件和执行质量。
 - `market_assessment.market_phase` 必须与
   `execution_snapshot.market_phase` 完全一致，不得改写或添加后缀。
 - 优先级：Python 硬风控 > 用户明确禁止与硬限制 > 第三阶段判断 > portfolio > initial guidance。

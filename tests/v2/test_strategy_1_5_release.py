@@ -301,6 +301,14 @@ class StrategyOneFiveReleaseTests(
             "不得把原动作改写成 `hold`",
             execution_prompt,
         )
+        self.assertIn(
+            "不得因为 Codex 自身分析耗时而再次增加报价年龄",
+            execution_prompt,
+        )
+        self.assertIn(
+            "Stage E 没有独立联网本身不得成为 defer/reject",
+            execution_prompt,
+        )
 
         execution_agents = (
             release.root
@@ -313,6 +321,10 @@ class StrategyOneFiveReleaseTests(
         )
         self.assertIn(
             "`execution_decision=no_action`",
+            execution_agents,
+        )
+        self.assertIn(
+            "报价年龄以快照中的 `quote_age_seconds` 为准",
             execution_agents,
         )
 

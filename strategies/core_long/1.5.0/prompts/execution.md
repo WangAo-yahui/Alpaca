@@ -10,7 +10,10 @@
 1. 逐项核对 portfolio decision 与最新持仓、挂单、报价、成交和资产能力。
    `market_assessment.market_phase` 必须逐字复制
    `execution_snapshot.market_phase`，不得追加 `_analysis_only` 等解释性后缀；
-   分析限制写入 summary 或 key_risks。
+   分析限制写入 summary 或 key_risks。报价新鲜度使用
+   `execution_snapshot.quotes[].quote_age_seconds`，它已经按执行快照采集时点计算；
+   不得因为 Codex 自身分析耗时而再次增加报价年龄。Python 会在实际提交前重新获取
+   pretrade snapshot 并再次校验报价、价差、持仓、资金和挂单。
 2. 处理 initial guidance 与 user review；正向交易请求可以拒绝，明确禁止必须遵守。
 3. 对每个组合标的选择 approve、modify、defer、reject 或 no_action。
 4. 可以在策略范围内调整 target weight 与 execution fraction；超范围时设置 replan 并 defer。
@@ -57,7 +60,11 @@
     只在 regular session 触发。扩展时段风险必须写入 reason，不能声称全天保护。
 14. 多头保护价格关系必须满足：止盈高于当前/成本，止损低于当前价；
     Stop-Limit 的 sell limit 不得高于 stop。覆盖比例必须在 0–1。
-15. 网络不可用时使用 `success_local_only` 并写 warning。
+15. 网络不可用时使用 `success_local_only` 并写 warning。若 portfolio 已是
+    `status=success`、`network_research.status=completed` 且包含逐标的网页来源，
+    这些来源是本轮可继承的投资论据；Stage E 的职责是用券商快照判断执行时机，
+    不必机械重复完整基本面研究。Stage E 没有独立联网本身不得成为 defer/reject
+    的唯一理由，只有组合论据缺失、出现可识别的新重大事件或执行事实不合格时才延后。
 16. 不计算最终股数或 notional，不生成 Alpaca OrderRequest，不声称已提交或成交。
 17. `defer`、`reject`、`no_action` 是完全非执行决定，必须同时使用：
     `side="none"`、`execution_fraction="0"`、`urgency="none"`；
