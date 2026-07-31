@@ -50,6 +50,18 @@ def natural_report_path(
     )
 
 
+def natural_report_output_path(
+    daily_report_path: Path,
+) -> Path:
+    """Return the date-scoped raw Codex narrative output path."""
+
+    return (
+        daily_report_path.parent
+        / "natural_language_report_output"
+        / f"{daily_report_path.stem}.md"
+    )
+
+
 def natural_report_state_path(
     daily_report_path: Path,
 ) -> Path:
@@ -881,8 +893,11 @@ def update_natural_language_report(
         workspace / "instructions.md",
         _report_prompt(initial=initial),
     )
-    output = workspace / "natural_language_report_output.md"
+    output = natural_report_output_path(
+        daily_report_path
+    )
     candidate = workspace / "natural_language_report.md"
+    output.parent.mkdir(parents=True, exist_ok=True)
     output.unlink(missing_ok=True)
     candidate.unlink(missing_ok=True)
     command = [

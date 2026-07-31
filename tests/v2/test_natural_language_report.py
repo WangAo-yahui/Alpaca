@@ -18,6 +18,7 @@ from v2.reports.natural_language_report import (
     _report_prompt,
     legacy_natural_report_path,
     natural_report_error_path,
+    natural_report_output_path,
     natural_report_path,
     natural_report_state_path,
     update_natural_language_report,
@@ -109,6 +110,7 @@ class NaturalLanguageReportTests(unittest.TestCase):
             "/tmp/reports/daily/2026-07-27.md"
         )
         report = natural_report_path(daily)
+        raw_output = natural_report_output_path(daily)
         latest = legacy_natural_report_path(daily)
         state = natural_report_state_path(daily)
         error = natural_report_error_path(daily)
@@ -122,6 +124,19 @@ class NaturalLanguageReportTests(unittest.TestCase):
         self.assertEqual(
             latest.parent,
             report.parent,
+        )
+        self.assertEqual(
+            raw_output,
+            Path(
+                "/tmp/reports/daily/"
+                "natural_language_report_output/"
+                "2026-07-27.md"
+            ),
+        )
+        self.assertEqual(raw_output.suffix, ".md")
+        self.assertNotEqual(
+            raw_output.parent,
+            state.parent,
         )
         self.assertEqual(latest.suffix, ".md")
         self.assertEqual(
@@ -452,8 +467,14 @@ class NaturalLanguageReportTests(unittest.TestCase):
                     "(.natural_language_report/report.md)",
                     encoding="utf-8",
                 )
+                workspace = Path(
+                    command[
+                        command.index("--cd")
+                        + 1
+                    ]
+                )
                 (
-                    output.parent
+                    workspace
                     / "natural_language_report.md"
                 ).write_text(
                     INITIAL_NARRATIVE,

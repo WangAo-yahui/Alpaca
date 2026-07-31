@@ -395,10 +395,13 @@ var/shared/reports/accounts/live1/strategies/core_long/1.2.0/daily/
   natural_language/
     YYYY-MM-DD.md
     latest.md
+  natural_language_report_output/
+    YYYY-MM-DD.md
 ```
 
-自然语言正文目录只保存 Markdown；调用状态、错误与工作文件保存在同级隐藏目录
-`.natural_language_report/`，不再与给用户阅读的报告混放。
+`natural_language/` 保存合并后的用户日报，`natural_language_report_output/`
+单独保存 Codex 每次调用的当日原始 Markdown 输出；调用状态、错误、事实 JSON、Prompt
+与其他工作文件保存在同级隐藏目录 `.natural_language_report/`，三类内容不再混放。
 
 当天第一次是完整自然语言日报，包含前序日报/账户变化、持仓分析、订单解读、联网
 新闻、资金风险和未来策略指导。后续每小时调用只追加有意义的变化；若没有实质变化，
