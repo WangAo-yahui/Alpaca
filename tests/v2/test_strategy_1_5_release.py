@@ -267,6 +267,14 @@ class StrategyOneFiveReleaseTests(
             "`valuation.evidence_quality` exactly to `insufficient`",
             prompt,
         )
+        self.assertIn(
+            "Missing fields in the supplied Python screen are a research task",
+            prompt,
+        )
+        self.assertIn(
+            "after an actual web-search attempt fails technically",
+            prompt,
+        )
 
         execution_prompt = (
             release.root

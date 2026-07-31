@@ -17,6 +17,9 @@ from v2.exceptions import TemporaryDataError
 from v2.reports.natural_language_report import (
     _report_prompt,
     legacy_natural_report_path,
+    natural_report_error_path,
+    natural_report_path,
+    natural_report_state_path,
     update_natural_language_report,
     write_fallback_natural_language_report,
 )
@@ -99,6 +102,93 @@ def _state(cycle_id: str) -> SimpleNamespace:
 
 
 class NaturalLanguageReportTests(unittest.TestCase):
+    def test_report_and_json_state_use_separate_directories(
+        self,
+    ) -> None:
+        daily = Path(
+            "/tmp/reports/daily/2026-07-27.md"
+        )
+        report = natural_report_path(daily)
+        latest = legacy_natural_report_path(daily)
+        state = natural_report_state_path(daily)
+        error = natural_report_error_path(daily)
+
+        self.assertEqual(
+            report,
+            Path(
+                "/tmp/reports/daily/natural_language/2026-07-27.md"
+            ),
+        )
+        self.assertEqual(
+            latest.parent,
+            report.parent,
+        )
+        self.assertEqual(latest.suffix, ".md")
+        self.assertEqual(
+            state.parent.name,
+            "state",
+        )
+        self.assertEqual(
+            error.parent.name,
+            "errors",
+        )
+        self.assertNotEqual(
+            report.parent,
+            state.parent,
+        )
+
+    def test_mixed_layout_is_migrated_without_rewriting_it(
+        self,
+    ) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            daily = (
+                Path(temporary)
+                / "daily"
+                / "2026-07-27.md"
+            )
+            daily.parent.mkdir(parents=True)
+            daily.write_text(
+                "# deterministic\n",
+                encoding="utf-8",
+            )
+            mixed_report = daily.with_name(
+                "2026-07-27.natural.md"
+            )
+            mixed_report.write_text(
+                INITIAL_NARRATIVE,
+                encoding="utf-8",
+            )
+
+            with patch(
+                "v2.reports.natural_language_report._execute",
+                self._fake_execute(
+                    MAINTENANCE_NARRATIVE
+                ),
+            ):
+                result = update_natural_language_report(
+                    daily,
+                    state=_state("20260727T100000"),
+                    validated={},
+                    submission={},
+                    reconciliation={},
+                    context={},
+                )
+
+            self.assertTrue(result.updated)
+            self.assertTrue(
+                result.path.read_text(
+                    encoding="utf-8"
+                ).startswith(
+                    INITIAL_NARRATIVE.rstrip()
+                )
+            )
+            self.assertEqual(
+                mixed_report.read_text(
+                    encoding="utf-8"
+                ),
+                INITIAL_NARRATIVE,
+            )
+
     def test_prompt_requires_chinese_prose(
         self,
     ) -> None:

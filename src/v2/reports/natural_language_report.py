@@ -43,8 +43,10 @@ def natural_report_path(
 ) -> Path:
     """Return the date-scoped narrative path."""
 
-    return daily_report_path.with_name(
-        f"{daily_report_path.stem}.natural.md"
+    return (
+        daily_report_path.parent
+        / "natural_language"
+        / f"{daily_report_path.stem}.md"
     )
 
 
@@ -53,8 +55,11 @@ def natural_report_state_path(
 ) -> Path:
     """Return the date-scoped narrative state path."""
 
-    return daily_report_path.with_name(
-        f"{daily_report_path.stem}.natural.state.json"
+    return (
+        daily_report_path.parent
+        / ".natural_language_report"
+        / "state"
+        / f"{daily_report_path.stem}.json"
     )
 
 
@@ -63,19 +68,86 @@ def natural_report_error_path(
 ) -> Path:
     """Return the date-scoped optional-call error path."""
 
-    return daily_report_path.with_name(
-        f"{daily_report_path.stem}.natural.error.json"
+    return (
+        daily_report_path.parent
+        / ".natural_language_report"
+        / "errors"
+        / f"{daily_report_path.stem}.json"
     )
 
 
 def legacy_natural_report_path(
     daily_report_path: Path,
 ) -> Path:
-    """Return the compatibility path printed by older releases."""
+    """Return the stable latest-narrative path."""
+
+    return (
+        daily_report_path.parent
+        / "natural_language"
+        / "latest.md"
+    )
+
+
+def _mixed_report_path(
+    daily_report_path: Path,
+) -> Path:
+    """Return the pre-separation date-scoped report path."""
 
     return daily_report_path.with_name(
-        "natural_language_report.md"
+        f"{daily_report_path.stem}.natural.md"
     )
+
+
+def _mixed_report_state_path(
+    daily_report_path: Path,
+) -> Path:
+    """Return the pre-separation state path."""
+
+    return daily_report_path.with_name(
+        f"{daily_report_path.stem}.natural.state.json"
+    )
+
+
+def _migrate_mixed_report_artifacts(
+    daily_report_path: Path,
+) -> None:
+    """Copy older mixed-layout artifacts into the separated layout once."""
+
+    report_path = natural_report_path(
+        daily_report_path
+    )
+    if not report_path.is_file():
+        for candidate in (
+            _mixed_report_path(daily_report_path),
+            daily_report_path.with_name(
+                "natural_language_report.md"
+            ),
+        ):
+            if candidate.is_file():
+                atomic_write_text(
+                    report_path,
+                    candidate.read_text(
+                        encoding="utf-8"
+                    ),
+                )
+                break
+
+    state_path = natural_report_state_path(
+        daily_report_path
+    )
+    mixed_state_path = _mixed_report_state_path(
+        daily_report_path
+    )
+    if (
+        not state_path.is_file()
+        and mixed_state_path.is_file()
+    ):
+        atomic_write_text(
+            state_path,
+            mixed_state_path.read_text(
+                encoding="utf-8"
+            ),
+        )
 
 
 def _canonical_hash(payload: Mapping[str, Any]) -> str:
@@ -389,6 +461,7 @@ def _report_prompt(*, initial: bool) -> str:
 16. 不得写入每月固定入金金额或频率；用户只会不定期投入不确定金额。只有 facts.json 已显示可用 USD 后才属于可部署资金；若检测到 USDT，先说明其兑换 USD 及券商确认状态。
 17. 不得强制防守、满仓或分散；100% 现金、接近满仓、平衡、集中以及可论证的中等回撤都可以是模型结果，但必须写清机会成本、永久损失风险和改变结论的条件。
 18. `protection mode=none` 必须表述为“没有生效的券商自动保护”，并列出替代的 thesis/估值/集中度复查条件。
+19. 若 portfolio 为 `success_local_only` 或多个标的共享同一个上游证据缺口，先用一段话说明决策时点的共同原因，不要把同一句“证据不足”机械复制到每个标的。只补充各标的特有缺口。自然语言日报本次联网取得的新资料属于报告时点背景，不能倒写成 portfolio 决策时已经掌握的证据；应明确说明需在下一次完整组合研究中重新评估。
 
 第一份完整报告结构：
 # WA Trader v2 自然语言日报 — 日期
@@ -422,6 +495,9 @@ def write_fallback_natural_language_report(
 ) -> NaturalReportResult:
     """Write a factual narrative when Codex/news connectivity is unavailable."""
 
+    _migrate_mixed_report_artifacts(
+        daily_report_path
+    )
     report_path = natural_report_path(
         daily_report_path
     )
@@ -718,6 +794,9 @@ def update_natural_language_report(
 ) -> NaturalReportResult:
     """Call Codex once and atomically create or maintain the daily narrative."""
 
+    _migrate_mixed_report_artifacts(
+        daily_report_path
+    )
     report_path = natural_report_path(
         daily_report_path
     )

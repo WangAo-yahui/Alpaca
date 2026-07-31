@@ -40,7 +40,14 @@ quotas. Volatility, drawdown or excitement alone is not an edge.
    quality, valuation or expected-return evidence.
 3. Research the strongest candidates deeply. Prefer primary sources and current
    company filings. Distinguish verified facts, explicit assumptions and model
-   judgement.
+   judgement. Missing fields in the supplied Python screen are a research task,
+   not evidence that network access is unavailable. When live web search is
+   available, actually use it before finalizing the decision. At minimum,
+   research every current holding and the three required highest-ranked
+   non-held comparators; grouped searches are acceptable, but each symbol must
+   have current, symbol-specific evidence or an explicit record of what could
+   not be verified. Prefer current filings, issuer fund pages and index-provider
+   material, and attach every material claim to `source_references`.
 4. For every selected or held symbol, compare current market price with an
    explicit intrinsic-value or justified-value range. Use a method appropriate
    to the asset: normalized owner earnings/FCF, earnings-power and multiple,
@@ -106,8 +113,11 @@ quotas. Volatility, drawdown or excitement alone is not an edge.
     cannot be verified, mark the review partial or unavailable and state the
     limitation; never manufacture precision.
 
-Network failure requires `success_local_only` and a non-empty warning. In that
-case, do not manufacture valuation inputs; choose `no_reliable_estimate` where
-the supplied data cannot support the estimate.
+Network failure requires `success_local_only` and a non-empty warning, but only
+after an actual web-search attempt fails technically. Do not use
+`success_local_only` merely because local input fields are missing, research is
+time-consuming, or a conservative conclusion is convenient. In a genuine
+network failure, do not manufacture valuation inputs; choose
+`no_reliable_estimate` where the supplied data cannot support the estimate.
 
 Output only the strict JSON object required by the schema.
