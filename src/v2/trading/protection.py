@@ -1077,7 +1077,7 @@ def apply_protection_plans(
                 and item.protection_role == "none"
             )
         ]
-        if incremental_buys and not existing:
+        if incremental_buys and not existing and desired:
             buy_plan_ids = {
                 item.plan_id
                 for item in incremental_buys

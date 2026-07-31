@@ -371,6 +371,48 @@ class ProtectiveOrderTests(unittest.TestCase):
             proposed.warnings,
         )
 
+    def test_none_protection_does_not_block_incremental_buy(
+        self,
+    ) -> None:
+        plan = _plan(
+            "none",
+            apply_to="both",
+        )
+        plan["coverage_fraction"] = "0"
+        proposed, validated = self._build(
+            plan,
+            current_snapshot=snapshot(
+                positions=[_position()]
+            ),
+            decision=execution_decision(),
+            allow_trade=True,
+        )
+        buy = next(
+            item
+            for item in validated.orders
+            if item.order.side == "buy"
+        )
+
+        self.assertEqual(
+            buy.status,
+            OrderStatus.APPROVED,
+        )
+        self.assertNotIn(
+            "existing_position_protection_precedes_incremental_buy",
+            buy.order.reason_codes,
+        )
+        self.assertFalse(
+            any(
+                item.order.protection_role
+                != "none"
+                for item in validated.orders
+            )
+        )
+        self.assertNotIn(
+            "MU:incremental_buy_deferred_until_existing_position_protected",
+            proposed.warnings,
+        )
+
     def test_incremental_buy_cancels_matching_protection_before_submit(
         self,
     ) -> None:
