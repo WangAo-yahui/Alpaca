@@ -25,6 +25,9 @@ ZH_VALUES = {
     "unknown": "未知",
     "success": "成功",
     "success_local_only": "本地成功（联网资料不可用）",
+    "complete": "完整",
+    "partial": "部分可用",
+    "unavailable": "不可用",
     "skipped_by_flag": "按参数跳过",
     "before_market_open": "开盘前",
     "regular_session": "常规交易时段",
@@ -84,6 +87,15 @@ def _chinese_summary(value: object) -> str:
 def _count(document: Mapping[str, Any], key: str) -> Any:
     summary = document.get("summary", {})
     return summary.get(key, 0) if isinstance(summary, Mapping) else 0
+
+
+def _percent(value: object) -> str:
+    if value is None:
+        return "不可用"
+    try:
+        return f"{float(str(value)) * 100:.4f}%"
+    except (TypeError, ValueError):
+        return "不可用"
 
 
 def _detailed_report(
@@ -148,6 +160,10 @@ def _detailed_report(
         capital_plan
         if isinstance(capital_plan, Mapping)
         else {}
+    )
+    performance = context.get("performance", {})
+    performance = (
+        performance if isinstance(performance, Mapping) else {}
     )
     portfolio_decisions = [
         item
@@ -289,6 +305,17 @@ def _detailed_report(
         f"- 现金：{capital.get('cash')}\n"
         f"- 购买力：{capital.get('buying_power')}\n"
         f"- 组合价值：{capital.get('portfolio_value')}\n\n"
+        "## 账户绩效（净入金校正）\n\n"
+        f"- 计算状态：{_zh(performance.get('status', 'unavailable'))}\n"
+        f"- 当前权益：{performance.get('current_equity')}\n"
+        f"- 累计净入金：{performance.get('net_contributions_total')}\n"
+        f"- 净入金后盈亏：{performance.get('net_profit_after_contributions')}\n"
+        f"- 本日时间加权收益：{_percent(performance.get('daily_twr'))}\n"
+        f"- 累计时间加权收益：{_percent(performance.get('cumulative_twr'))}\n"
+        "- 方法：按日链接收益，并在每个已识别外部现金流发生日按日初现金流校正；"
+        "若现金流发生在盘中则标记为近似，不使用券商原始收益替代。\n"
+        f"- 计算警告/错误：{len(performance.get('warnings', []))}/"
+        f"{len(performance.get('errors', []))}\n\n"
         "### 当前持仓\n\n"
         f"{position_lines}\n\n"
         "## 风险与后续事项\n\n"
@@ -304,6 +331,7 @@ def _incremental_update(
     state: Any,
     submission: Mapping[str, Any],
     reconciliation: Mapping[str, Any],
+    context: Mapping[str, Any],
 ) -> str:
     now = datetime.now(NEW_YORK_TZ).strftime("%H:%M ET")
     capital = reconciliation.get("capital", {})
@@ -317,6 +345,10 @@ def _incremental_update(
     tracked_count = len(
         reconciliation.get("tracked_orders", [])
     )
+    performance = context.get("performance", {})
+    performance = (
+        performance if isinstance(performance, Mapping) else {}
+    )
     return (
         f"\n\n## {now} 更新\n\n"
         f"- 轮次：{state.cycle_id}\n"
@@ -328,6 +360,12 @@ def _incremental_update(
         f"- 拒绝/取消：{_count(reconciliation, 'rejected')}/"
         f"{_count(reconciliation, 'canceled')}\n"
         f"- 购买力：{capital.get('buying_power')}\n"
+        f"- 本日/累计时间加权收益："
+        f"{_percent(performance.get('daily_twr'))}/"
+        f"{_percent(performance.get('cumulative_twr'))}\n"
+        f"- 累计净入金/净入金后盈亏："
+        f"{performance.get('net_contributions_total')}/"
+        f"{performance.get('net_profit_after_contributions')}\n"
         f"- 当前持仓变化：{', '.join(positions) or '无持仓'}\n"
         f"- 下一轮建议：{', '.join(str(x) for x in reconciliation.get('reasons', [])) or '常规执行刷新'}\n"
     )
@@ -362,6 +400,7 @@ def update_daily_report(
                 state=state,
                 submission=submission,
                 reconciliation=reconciliation,
+                context=context or {},
             ),
         )
         return False

@@ -1,4 +1,4 @@
-"""验证 live1 profile、独立凭据和100%资金配置。
+"""验证 live1 profile、独立凭据和最低必要硬风控。
 
 作用：离线证明 Live 客户端使用 paper=False 且所有版本化 policy 环境一致。
 重要性：测试不得读取真实 .env_live，也不得访问或写入 Alpaca。
@@ -90,7 +90,7 @@ class LiveProfileTests(unittest.TestCase):
         )
         self.assertEqual(
             limits["max_single_symbol_weight"],
-            "1.00",
+            "0.40",
         )
         self.assertEqual(
             limits["minimum_cash_weight"],

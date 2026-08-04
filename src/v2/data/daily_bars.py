@@ -297,6 +297,7 @@ def update_daily_bars(
     config: V2Config,
     store: DailyBarStore | None = None,
     now: datetime | None = None,
+    batch_size: int = 1,
 ) -> dict[str, Any]:
     current = now or utc_now()
     if current.tzinfo is None:
@@ -334,135 +335,173 @@ def update_daily_bars(
         ).lower()
     ]
 
-    results: dict[str, Any] = {}
-    for symbol in sorted(
+    normalized_symbols = sorted(
         {
             normalized_symbol(value)
             for value in symbols
             if normalized_symbol(value)
         }
-    ):
-        existing: list[object] = []
-        try:
-            existing = bar_store.bars(symbol)
-            last_timestamp = (
-                as_utc_datetime(
-                    existing[-1].get(
-                        "timestamp"
-                    )
+    )
+    results: dict[str, Any] = {}
+
+    if batch_size > 1:
+        for offset in range(0, len(normalized_symbols), batch_size):
+            batch = normalized_symbols[offset : offset + batch_size]
+            existing_by_symbol = {
+                symbol: bar_store.bars(symbol)
+                for symbol in batch
+            }
+            starts: list[datetime] = []
+            for existing in existing_by_symbol.values():
+                last_timestamp = (
+                    as_utc_datetime(existing[-1].get("timestamp"))
+                    if existing
+                    and isinstance(existing[-1], dict)
+                    else None
                 )
-                if existing
-                and isinstance(
-                    existing[-1],
-                    dict,
+                starts.append(
+                    last_timestamp
+                    - timedelta(days=max(overlap * 3, 7))
+                    if last_timestamp is not None
+                    else current - timedelta(days=lookback)
                 )
-                else None
-            )
-            start = (
-                last_timestamp
-                - timedelta(
-                    days=max(overlap * 3, 7)
+            try:
+                response = call_api(
+                    "get_stock_daily_bars_batch",
+                    clients.stock_data.get_stock_bars,
+                    StockBarsRequest(
+                        symbol_or_symbols=batch,
+                        timeframe=TimeFrame.Day,
+                        start=min(starts),
+                        end=current,
+                        adjustment=adjustment,
+                        feed=feed,
+                    ),
                 )
-                if last_timestamp is not None
-                else current
-                - timedelta(days=lookback)
-            )
-            response = call_api(
-                "get_stock_daily_bars",
-                clients.stock_data.get_stock_bars,
-                StockBarsRequest(
-                    symbol_or_symbols=symbol,
-                    timeframe=TimeFrame.Day,
-                    start=start,
-                    end=current,
-                    adjustment=adjustment,
-                    feed=feed,
-                ),
-            )
-            incoming = _response_bars(
-                response,
-                symbol,
-            )
-            merged, invalid_count = (
-                merge_daily_bars(
+            except Exception:
+                fallback = update_daily_bars(
+                    clients,
+                    batch,
+                    config=config,
+                    store=bar_store,
+                    now=current,
+                    batch_size=1,
+                )
+                results.update(fallback["symbols"])
+                continue
+
+            for symbol in batch:
+                existing = existing_by_symbol[symbol]
+                incoming = _response_bars(response, symbol)
+                merged, invalid_count = merge_daily_bars(
                     existing,
                     incoming,
                     retain=retain,
                 )
-            )
-            status = (
-                "success"
-                if merged
-                else "no_data"
-            )
-            payload = _snapshot_payload(
-                symbol=symbol,
-                status=status,
-                bars=merged,
-                previous_count=len(existing),
-                fetched_count=len(incoming),
-                invalid_count=invalid_count,
-                minimum_bars=minimum,
-                generated_at=current,
-            )
-        except Exception as error:
-            if isinstance(error, V2Error):
-                disposition = (
-                    error.disposition()
+                status = "success" if merged else "no_data"
+                payload = _snapshot_payload(
+                    symbol=symbol,
+                    status=status,
+                    bars=merged,
+                    previous_count=len(existing),
+                    fetched_count=len(incoming),
+                    invalid_count=invalid_count,
+                    minimum_bars=minimum,
+                    generated_at=current,
                 )
-                error_payload = {
-                    "code": disposition.code,
-                    "message": (
-                        disposition.message
-                    ),
+                path = bar_store.save(symbol, payload)
+                results[symbol] = {
+                    "status": payload["status"],
+                    "path": str(path),
+                    "bar_count": payload["data"]["bar_count"],
+                    "history_sufficient": payload["data"][
+                        "history_sufficient"
+                    ],
+                    "warnings": payload["warnings"],
+                    "errors": payload["errors"],
                 }
-            else:
-                error_payload = {
-                    "code": (
-                        "DAILY_BAR_UPDATE_FAILED"
-                    ),
-                    "message": (
-                        "单标的日线更新失败"
-                    ),
-                    "exception_type": (
-                        error.__class__.__name__
-                    ),
-                }
-            merged, invalid_count = (
-                merge_daily_bars(
-                    existing,
-                    [],
-                    retain=retain,
+    else:
+        for symbol in normalized_symbols:
+            existing: list[object] = []
+            try:
+                existing = bar_store.bars(symbol)
+                last_timestamp = (
+                    as_utc_datetime(existing[-1].get("timestamp"))
+                    if existing and isinstance(existing[-1], dict)
+                    else None
                 )
-            )
-            payload = _snapshot_payload(
-                symbol=symbol,
-                status="failed",
-                bars=merged,
-                previous_count=len(existing),
-                fetched_count=0,
-                invalid_count=invalid_count,
-                minimum_bars=minimum,
-                generated_at=current,
-                error=error_payload,
-            )
+                start = (
+                    last_timestamp
+                    - timedelta(days=max(overlap * 3, 7))
+                    if last_timestamp is not None
+                    else current - timedelta(days=lookback)
+                )
+                response = call_api(
+                    "get_stock_daily_bars",
+                    clients.stock_data.get_stock_bars,
+                    StockBarsRequest(
+                        symbol_or_symbols=symbol,
+                        timeframe=TimeFrame.Day,
+                        start=start,
+                        end=current,
+                        adjustment=adjustment,
+                        feed=feed,
+                    ),
+                )
+                incoming = _response_bars(response, symbol)
+                merged, invalid_count = merge_daily_bars(
+                    existing, incoming, retain=retain
+                )
+                status = "success" if merged else "no_data"
+                payload = _snapshot_payload(
+                    symbol=symbol,
+                    status=status,
+                    bars=merged,
+                    previous_count=len(existing),
+                    fetched_count=len(incoming),
+                    invalid_count=invalid_count,
+                    minimum_bars=minimum,
+                    generated_at=current,
+                )
+            except Exception as error:
+                if isinstance(error, V2Error):
+                    disposition = error.disposition()
+                    error_payload = {
+                        "code": disposition.code,
+                        "message": disposition.message,
+                    }
+                else:
+                    error_payload = {
+                        "code": "DAILY_BAR_UPDATE_FAILED",
+                        "message": "单标的日线更新失败",
+                        "exception_type": error.__class__.__name__,
+                    }
+                merged, invalid_count = merge_daily_bars(
+                    existing, [], retain=retain
+                )
+                payload = _snapshot_payload(
+                    symbol=symbol,
+                    status="failed",
+                    bars=merged,
+                    previous_count=len(existing),
+                    fetched_count=0,
+                    invalid_count=invalid_count,
+                    minimum_bars=minimum,
+                    generated_at=current,
+                    error=error_payload,
+                )
 
-        path = bar_store.save(
-            symbol,
-            payload,
-        )
-        results[symbol] = {
-            "status": payload["status"],
-            "path": str(path),
-            "bar_count": payload["data"][
-                "bar_count"
-            ],
-            "history_sufficient": payload[
-                "data"
-            ]["history_sufficient"],
-            "warnings": payload["warnings"],
-            "errors": payload["errors"],
-        }
+            path = bar_store.save(symbol, payload)
+            results[symbol] = {
+                "status": payload["status"],
+                "path": str(path),
+                "bar_count": payload["data"]["bar_count"],
+                "history_sufficient": payload["data"][
+                    "history_sufficient"
+                ],
+                "warnings": payload["warnings"],
+                "errors": payload["errors"],
+            }
 
     return {
         "generated_at": iso_timestamp(current),

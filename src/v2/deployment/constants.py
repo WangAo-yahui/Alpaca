@@ -23,7 +23,7 @@ class ExitCode(IntEnum):
 SERVICE_LABEL = "com.wa.trader.live1"
 PROFILE_ID = "live1"
 STRATEGY_ID = "core_long"
-STRATEGY_VERSION = "1.5.0"
+STRATEGY_VERSION = "1.6.0"
 SERVICE_INTERVAL_SECONDS = 60
 
 

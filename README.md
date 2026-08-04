@@ -18,8 +18,8 @@ WA Trader v2 当前是只运行 `live1` 的美股组合决策、订单规划、�
 | --- | --- |
 | Profile | `live1` |
 | Broker 环境 | Alpaca Live |
-| 策略 | `core_long@1.5.0` |
-| 风险配置 | `live_full@1.1.0` |
+| 策略 | `core_long@1.6.0` |
+| 风险配置 | `live_full@1.2.0` |
 | 订单配置 | `live_equity@1.0.0` |
 | 提交配置 | `alpaca_live@1.0.0` |
 | macOS 服务 | `com.wa.trader.live1` |
@@ -158,24 +158,30 @@ LaunchAgent 与 `./wa start/restart` 始终使用最后一次部署的不可变 
 4. 所有计划、写入前状态、响应和对账都先后落盘；
 5. 不允许模型、命令行参数或部署选项绕过风控。
 
-## 4. `core_long@1.5.0` 整体策略
+## 4. `core_long@1.6.0` 整体策略
 
 ### 4.1 Coarse 候选筛选
 
 - 从静态股票池和客观市场数据形成候选输入；
-- 目标候选数量为 60；
+- Python 先缩减到股票 100、ETF 20，再由 Coarse 输出 20 个深度研究候选；
+- 每日完整轮次先从 Alpaca IEX 批量增量刷新日线，避免用陈旧收盘价做估值；
 - 用户 guidance 只能作为偏好，不能成为强制交易指令；
 - Coarse 输出禁止包含数量、订单、目标权重和强制开仓字段；
 - 数据缺失或质量告警必须保留，不能静默删除问题标的。
 
 ### 4.2 Portfolio 组合构建
 
-- 目标持仓数 3–20；
+- 目标持仓数 0–20；
 - 允许空组合，因此没有合格机会时可以全部持有现金；
 - 组合建议有效期 1440 分钟；
 - 权重容差和最小目标权重均为 0.01；
 - 策略允许模型在充分证据下选择集中、分散、满仓或全现金；
 - 所有持仓必须与现金及至少 3 个未持有候选按同一口径竞争；
+- 可靠估值必须至少记录 2 个可复算输入和对应来源；只有尝试至少 2 种合适方法仍失败，才允许 `no_reliable_estimate`；
+- 开仓和加仓要求估值证据质量及预期回报置信度至少为中等；低置信度只能观察、持有、减仓或退出；
+- 不会从零重新买入的既有持仓必须量化换仓成本、列出待解决证据、设定最长 30 天复核期，并说明证据仍缺失时是否减仓或退出；
+- 目标现金达到 25% 时必须列出至少 2 个部署触发器并在 14 天内复核；最低现金仍可为 0%；
+- 每个标的都有最多 30 天的复核日期和至少 2 个估值、基本面、集中度、事件或时间触发器；
 - 新兴成长观察池初始单标的上限 3%、合计上限 10%，且必须分批进入；
 - 不允许在 Coarse 候选集之外增加仓位；
 - 资金绝对变化 100 美元或相对变化 1% 时视为需要重新判断。
@@ -194,15 +200,15 @@ LaunchAgent 与 `./wa start/restart` 始终使用最后一次部署的不可变 
 
 ### 4.4 Python 硬风控
 
-当前 `live_full@1.1.0`：
+当前 `live_full@1.2.0`：
 
 | 风控项 | 限制 |
 | --- | --- |
 | 最大总敞口 | 100% |
-| 最大单一仓位 | 100% |
-| 最大行业权重 | 100% |
+| 最大单一仓位 | 40% |
+| 最大行业权重 | 65% |
 | 最低现金 | 0% |
-| 每轮最大新增资金 | 100% |
+| 每轮最大新增资金 | 35% |
 | 每轮最大订单数 | 20 |
 | 最小订单价值 | 1 美元 |
 | 做空 | 禁止 |
@@ -312,7 +318,7 @@ Live 首次运行：
 ./wa run --live --bind-account --allow-trade --force-full
 ```
 
-账户 hash 已绑定后的同日每小时运行：
+账户 hash 已绑定后的同日计划运行：
 
 ```bash
 ./wa run --live --allow-trade
@@ -329,8 +335,8 @@ Live 首次运行：
 - overnight、盘前和盘后允许调仓或建仓，必须使用新鲜报价和扩展时段限价单；
 - 周末/节假日允许保守排队：开仓/加仓最多 25% 执行差额，减仓/平仓最多
   100%，只使用 `limit + day`，等待下一交易日；
-- Live 的 `live_full@1.1.0` 允许使用 100% 账户权益、最低现金 0、单轮新增资金
-  100%；策略自身的分散持仓和 Python 订单检查仍然有效；
+- Live 的 `live_full@1.2.0` 允许使用 100% 账户权益、最低现金 0；单标的、行业和
+  单轮新增资本分别受 40%、65% 和 35% 的最低必要硬边界约束；
 - regular session 内策略可在 0–100% 权益之间自由决定现金和资金使用，
   不强制留现金，也不强制满仓；
 - 不启用做空，也不主动使用超过账户权益的额外杠杆。
@@ -344,9 +350,8 @@ Live 自动交易日服务：
 ```
 
 Live LaunchAgent 每分钟只执行一次轻量调度检查，真正的交易轮次按
-`America/New_York` 和 Alpaca 交易日历触发。普通交易日为
-`09:45、10:45、11:45、12:45、13:45、14:45、15:45`；提前收盘日自动减少
-盘中轮次。实际收盘后 15 分钟只运行 `maintenance-only` 完成对账和日报，并在
+`America/New_York` 和 Alpaca 交易日历触发。首轮为开盘后 30 分钟，常规维护间隔
+为 120 分钟，并保留收盘前检查；提前收盘日自动减少盘中轮次。实际收盘后 15 分钟只运行 `maintenance-only` 完成对账和日报，并在
 没有不确定写入或活跃运行时关闭显示器。每个时点使用持久化槽位认领，服务重启
 不会重复执行；可重试错误最多按 profile 配置重试两次，写入不确定绝不自动重提。
 
@@ -356,7 +361,7 @@ Paper 服务、凭据、账户绑定、runtime、reports 和部署指针均已�
 每个 Live cycle 仍生成确定性日报，同时额外调用一次 Codex 维护：
 
 ```text
-var/shared/reports/accounts/live1/strategies/core_long/1.5.0/daily/
+var/shared/reports/accounts/live1/strategies/core_long/1.6.0/daily/
   YYYY-MM-DD.md
   natural_language/
     YYYY-MM-DD.md
@@ -370,10 +375,11 @@ var/shared/reports/accounts/live1/strategies/core_long/1.5.0/daily/
 与其他工作文件保存在同级隐藏目录 `.natural_language_report/`，三类内容不再混放。
 
 当天第一次是完整自然语言日报，包含前序日报/账户变化、持仓分析、订单解读、联网
-新闻、资金风险和未来策略指导。后续每小时调用只追加有意义的变化；若没有实质变化，
-Codex 返回 `NO_MATERIAL_UPDATE`，文件不会被重复追加，也不会强行建议交易。
+新闻、资金风险、净入金校正后的每日/累计时间加权收益和未来策略指导。后续轮次只有
+账户、持仓、订单、保护计划或组合判断发生实质变化时才调用 Codex；无变化时直接跳过，
+文件不会被重复追加，也不会强行建议交易。确定性日报每轮仍更新绩效数字。
 如果第四次 Codex/新闻调用临时断网，交易主流程不会被回滚：程序立即写入完整的
-事实降级版，明确标注“没有联网新闻”，后续每小时轮次自动重试；恢复后只追加
+事实降级版，明确标注“没有联网新闻”，后续计划轮次自动重试；恢复后只追加
 可核验新闻和实质变化。
 
 #### 6.1.1 自动止盈止损与 Codex 执行权限
@@ -400,7 +406,7 @@ Python 再决定合法的 Alpaca 请求形态：
 ./wa run --live --allow-trade
 ```
 
-第一条用于当天需要重做完整策略时；后续每小时通常只需第二条。`--allow-trade`
+第一条用于当天需要重做完整策略时；后续计划维护通常只需第二条。`--allow-trade`
 同时授权经过硬校验的普通订单和保护单，最终写前仍要求 Live submission policy 的
 `protective_order_submission_enabled=true`。不带 `--allow-trade` 时只生成和校验计划，
 不会提交。
@@ -417,7 +423,7 @@ Python 再决定合法的 Alpaca 请求形态：
   可能被券商拒绝的高级组合更可靠。
 - stop 或 trailing 触发后通常成为 market order，成交价可能滑点；stop-limit 可以控制
   最差限价，但快速跳空时可能不成交。两类风险都会写入日报。
-- 每小时策略和价格未变化时保留既有保护单，不撤单重挂；只有策略、价格或覆盖数量
+- 后续轮次策略和价格未变化时保留既有保护单，不撤单重挂；只有策略、价格或覆盖数量
   变化时，才先取消旧保护、刷新持仓和可用数量，再提交替代保护。
 - Codex 只输出保护策略，不能直接调用 Alpaca。数量、覆盖上限、价格精度、账户身份、
   幂等 ID、取消确认和真正提交全部由 Python 唯一写路径控制。
@@ -684,7 +690,8 @@ Alpaca/
 | --- | --- |
 | `config/v2/risk_profiles/live_conservative-1.0.0.json` | 历史 Live 占位风险 |
 | `config/v2/risk_profiles/live_full-1.0.0.json` | Live 可使用100%账户权益的硬风控 |
-| `config/v2/risk_profiles/live_full-1.1.0.json` | 当前 live1 硬风控 |
+| `config/v2/risk_profiles/live_full-1.1.0.json` | 历史 live1 全放开边界 |
+| `config/v2/risk_profiles/live_full-1.2.0.json` | 当前 live1 最低必要硬风控 |
 | `config/v2/order_policies/live_equity-1.0.0.json` | Alpaca Live 美股订单能力合同 |
 | `config/v2/submission_policies/alpaca_live-1.0.0.json` | Live 提交、取消、幂等和对账合同 |
 
@@ -706,7 +713,8 @@ Alpaca/
 | `1.2.0` | 首个 Coarse + Portfolio + Execution 完整策略 |
 | `1.3.0` | 中性持仓动作与执行合同修订 |
 | `1.4.0` | Live 长周期策略过渡版本 |
-| `1.5.0` | 当前 Live 策略；强化候选竞争、分批建仓与证据合同 |
+| `1.5.0` | 历史 Live 策略；强化候选竞争、分批建仓与证据合同 |
+| `1.6.0` | 当前 Live 策略；刷新日线、可复算估值、限时迟滞、现金触发器与净入金校正绩效 |
 
 每个版本中的文件类型：
 
@@ -839,9 +847,11 @@ var/
 典型轮次目录：
 
 ```text
-var/shared/runtime/accounts/live1/strategies/core_long/1.5.0/
+var/shared/runtime/accounts/live1/strategies/core_long/1.6.0/
 └── YYYY-MM-DD/
-    ├── daily_state.json
+        ├── daily_state.json
+        ├── market_data_refresh.json
+        ├── performance.json
     └── cycles/<CYCLE_ID>/
         ├── initial_guidance.json
         ├── user_review.json
@@ -1052,5 +1062,5 @@ find var/deployment/live1/history -type f -maxdepth 1 -print
   `completed_no_action`；
 - Sunday overnight 市场阶段、下一交易日日历和 overnight feed 已覆盖；
 - `live1` 是唯一生产凭据、账户绑定、policy、运行锁和服务身份；
-- Live 手工运行支持首轮完整决策和同日每小时 execution refresh；
+- Live 手工运行支持首轮完整决策和同日计划 execution refresh；
 - Live 自然语言日报支持联网新闻、持仓/订单解释及无变化时不追加。

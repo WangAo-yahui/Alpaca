@@ -20,7 +20,7 @@ class ConfigTests(unittest.TestCase):
             self.assertEqual(len(first.documents), 6)
             self.assertEqual(
                 first.config_version,
-                "2026-07-23-stage-b-v1",
+                "2026-08-04-daily-refresh-v2",
             )
             self.assertEqual(
                 first.signature,

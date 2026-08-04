@@ -282,11 +282,8 @@ class NaturalLanguageReportTests(unittest.TestCase):
             )
 
             with patch(
-                "v2.reports.natural_language_report._execute",
-                self._fake_execute(
-                    "NO_MATERIAL_UPDATE"
-                ),
-            ):
+                "v2.reports.natural_language_report._execute"
+            ) as execute:
                 second = update_natural_language_report(
                     daily,
                     state=_state("20260727T110000"),
@@ -296,6 +293,11 @@ class NaturalLanguageReportTests(unittest.TestCase):
                     context={},
                 )
             self.assertFalse(second.updated)
+            self.assertEqual(
+                second.status,
+                "skipped_no_material_change",
+            )
+            execute.assert_not_called()
             text = first.path.read_text(
                 encoding="utf-8"
             )

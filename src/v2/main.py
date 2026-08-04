@@ -46,7 +46,9 @@ from v2.data.snapshots import (  # noqa: E402
 )
 from v2.data.daily_bars import (  # noqa: E402
     DailyBarStore,
+    update_daily_bars,
 )
+from v2.data.universe import load_universe  # noqa: E402
 from v2.data.execution_snapshot import (  # noqa: E402
     ExecutionSnapshotResult,
     create_execution_snapshot,
@@ -54,6 +56,9 @@ from v2.data.execution_snapshot import (  # noqa: E402
 from v2.data.pretrade_snapshot import (  # noqa: E402
     PreTradeSnapshotResult,
     create_pretrade_snapshot,
+)
+from v2.data.performance import (  # noqa: E402
+    safe_performance_summary,
 )
 from v2.exceptions import (  # noqa: E402
     ConfigurationError,
@@ -197,7 +202,7 @@ from v2.reports.natural_language_report import (  # noqa: E402
 )
 
 
-SCRIPT_VERSION = "2026-07-27-v2-natural-report-sync-v4"
+SCRIPT_VERSION = "2026-08-04-v2-strategy-performance-v1"
 
 
 @dataclass(frozen=True)
@@ -222,6 +227,7 @@ class StageBRunResult:
     snapshot: BaseSnapshotResult | None
     data_refreshed: bool
     stopped_at: StepName | None
+    clients: AlpacaClients | None
 
 
 @dataclass(frozen=True)
@@ -1304,6 +1310,7 @@ def run_stage_b(
     paths = resolution.paths
     snapshot: BaseSnapshotResult | None = None
     data_refreshed = False
+    active_clients = clients
 
     while True:
         pending = next_step(state)
@@ -1326,11 +1333,6 @@ def run_stage_b(
         if pending == StepName.REFRESH_BASE_DATA:
             begin_next_step(state)
             try:
-                active_clients = (
-                    clients
-                    if clients is not None
-                    else None
-                )
                 if active_clients is None:
                     profile = load_profile(
                         paths.profile_id,
@@ -1441,6 +1443,7 @@ def run_stage_b(
             snapshot=snapshot,
             data_refreshed=data_refreshed,
             stopped_at=pending,
+            clients=active_clients,
         )
 
 
@@ -1500,6 +1503,37 @@ def run_stage_c(
         try:
             config = load_config(
                 project_root=project_root,
+            )
+            active_clients = base_result.clients
+            if active_clients is None:
+                raise TemporaryDataError(
+                    "粗选前缺少已绑定的Alpaca只读客户端",
+                    code="DAILY_BAR_CLIENT_UNAVAILABLE",
+                )
+            universe = load_universe(config)
+            symbols = list(universe.get("symbols", []))
+            snapshot_payload = (
+                base_result.snapshot.payload
+                if base_result.snapshot is not None
+                else _load_optional_object(paths.base_snapshot)
+            )
+            positions = snapshot_payload.get("positions", [])
+            if isinstance(positions, list):
+                symbols.extend(
+                    str(item.get("symbol", ""))
+                    for item in positions
+                    if isinstance(item, Mapping)
+                )
+            refresh = update_daily_bars(
+                active_clients,
+                symbols,
+                config=config,
+                store=bar_store,
+                batch_size=100,
+            )
+            atomic_write_json(
+                paths.day_directory / "market_data_refresh.json",
+                refresh,
             )
             coarse_result = (
                 execute_coarse_selection(
@@ -3123,6 +3157,32 @@ def _load_optional_object(path: Path) -> dict[str, Any]:
     return load_json_object(path) if path.is_file() else {}
 
 
+def _performance_report_context(
+    *,
+    paths: CyclePaths,
+    clients: AlpacaClients,
+    reconciliation: Mapping[str, Any],
+) -> dict[str, Any]:
+    account = reconciliation.get("account", {})
+    account = account if isinstance(account, Mapping) else {}
+    capital = reconciliation.get("capital", {})
+    capital = capital if isinstance(capital, Mapping) else {}
+    equity = account.get(
+        "equity",
+        capital.get("equity", capital.get("portfolio_value")),
+    )
+    performance = safe_performance_summary(
+        clients=clients,
+        run_date=paths.run_date,
+        current_equity=equity,
+    )
+    atomic_write_json(
+        paths.day_directory / "performance.json",
+        performance,
+    )
+    return performance
+
+
 def _maintain_natural_report(
     *,
     paths: CyclePaths,
@@ -3324,7 +3384,12 @@ def _run_stage_g_maintenance_only(
         report_context = {
             "initial_guidance": _load_optional_object(
                 paths.initial_guidance
-            )
+            ),
+            "performance": _performance_report_context(
+                paths=paths,
+                clients=clients,
+                reconciliation=reconciliation_document,
+            ),
         }
         update_daily_report(
             paths.daily_report,
@@ -3894,6 +3959,11 @@ def run_stage_g(
             ),
             "execution": _load_optional_object(
                 paths.execution_output
+            ),
+            "performance": _performance_report_context(
+                paths=paths,
+                clients=clients,
+                reconciliation=reconciliation_document,
             ),
         }
         report_created = update_daily_report(

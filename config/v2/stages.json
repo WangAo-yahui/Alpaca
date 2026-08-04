@@ -1,6 +1,6 @@
 {
   "schema_version": "1.0",
-  "config_version": "2026-07-23-stage-b-v1",
+  "config_version": "2026-08-04-daily-refresh-v2",
   "coarse_candidate_count": 60,
   "coarse_stage_version": "2026-07-23-stage-c-v1",
   "coarse_screening_version": "2026-07-23-screening-v1",

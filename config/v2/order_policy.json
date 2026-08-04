@@ -1,6 +1,6 @@
 {
   "schema_version": "1.0",
-  "config_version": "2026-07-23-stage-b-v1",
+  "config_version": "2026-08-04-daily-refresh-v2",
   "paper_only": false,
   "allowed_order_types": [
     "market",

@@ -1,7 +1,7 @@
-"""使用额外一次 Codex 调用生成并维护自然语言交易日报。
+"""按实质变化使用额外 Codex 调用生成并维护自然语言交易日报。
 
 作用：把确定性日报、持仓、当日订单、组合与执行结论交给 Codex，联网补充有来源的新闻并给出未来策略指导。
-重要性：账户与成交事实只能来自本地落盘数据；同日后续运行只维护真实变化，禁止为了每小时调用而强行改变策略。
+重要性：账户与成交事实只能来自本地落盘数据；同日后续运行只维护真实变化，禁止为了定时调用而强行改变策略。
 """
 
 from __future__ import annotations
@@ -326,6 +326,25 @@ def _account_material_hash(
             item.get("symbol", "")
         ),
     )
+    portfolio = context.get("portfolio")
+    portfolio = (
+        portfolio if isinstance(portfolio, Mapping) else {}
+    )
+    normalized_portfolio = {
+        "allocation": portfolio.get("allocation", {}),
+        "cash_management": portfolio.get("cash_management", {}),
+        "decisions": sorted(
+            (
+                dict(item)
+                for item in portfolio.get("decisions", [])
+                if isinstance(item, Mapping)
+            ),
+            key=lambda item: str(item.get("symbol", "")),
+        ),
+        "requires_rebalance_next_cycle": portfolio.get(
+            "requires_rebalance_next_cycle"
+        ),
+    }
     return _canonical_hash(
         {
             "positions": normalized_positions,
@@ -337,6 +356,7 @@ def _account_material_hash(
             "protection_plans": (
                 normalized_protection_plans
             ),
+            "portfolio": normalized_portfolio,
         }
     )
 
@@ -465,7 +485,7 @@ def _report_prompt(*, initial: bool) -> str:
 6. 分析前面日报和当前持仓，包括集中度、现金、未实现盈亏、订单对风险暴露的影响。
 7. 解读当日每一笔订单；没有订单时说明为什么保持不变可能是合理结果。
 8. 给出未来策略指导，包括继续持有、观察、减仓、加仓或等待的触发条件；建议不是已执行事实。
-9. 允许明确结论“维持当前策略，无需调整”。不得把每小时运行理解为每小时必须交易。
+9. 允许明确结论“维持当前策略，无需调整”。不得把定时运行理解为每次必须交易。
 10. 不披露或猜测 account id、API key、secret。
 11. 直接把完整报告正文或维护正文作为最终回答返回；不得创建或修改文件，不得只返回文件路径、链接或“已完成”说明。
 12. 本轮只要存在新提交、成交、部分成交、拒绝、取消、挂单状态变化，或持仓/现金发生变化，就属于实质变化，绝不能输出 {NO_UPDATE_MARKER}。
@@ -476,6 +496,7 @@ def _report_prompt(*, initial: bool) -> str:
 17. 不得强制防守、满仓或分散；100% 现金、接近满仓、平衡、集中以及可论证的中等回撤都可以是模型结果，但必须写清机会成本、永久损失风险和改变结论的条件。
 18. `protection mode=none` 必须表述为“没有生效的券商自动保护”，并列出替代的 thesis/估值/集中度复查条件。
 19. 若 portfolio 为 `success_local_only` 或多个标的共享同一个上游证据缺口，先用一段话说明决策时点的共同原因，不要把同一句“证据不足”机械复制到每个标的。只补充各标的特有缺口。自然语言日报本次联网取得的新资料属于报告时点背景，不能倒写成 portfolio 决策时已经掌握的证据；应明确说明需在下一次完整组合研究中重新评估。
+20. 净入金、净入金后盈亏、每日和累计时间加权收益只能原样使用 `facts.json` 的 `context.performance`；不得自行从券商原始盈亏重算。必须明确区分券商原始组合盈亏与外部现金流校正后的时间加权收益。`status=partial` 或 `unavailable` 时说明近似或缺失，不能补造数字。
 
 第一份完整报告结构：
 # WA Trader v2 自然语言日报 — 日期
@@ -486,7 +507,7 @@ def _report_prompt(*, initial: bool) -> str:
 ## 市场与持仓相关新闻
 ## 风险与资金使用
 ## 未来策略指导
-## 下次每小时维护关注项
+## 下次计划维护关注项
 
 同日维护有变化时结构：
 ## HH:MM ET 自然语言维护
@@ -552,6 +573,12 @@ def write_fallback_natural_language_report(
     execution = (
         execution
         if isinstance(execution, Mapping)
+        else {}
+    )
+    performance = context.get("performance", {})
+    performance = (
+        performance
+        if isinstance(performance, Mapping)
         else {}
     )
     market = execution.get(
@@ -652,7 +679,7 @@ def write_fallback_natural_language_report(
         action_guidance = (
             "- 本轮没有拟定或校验订单；在下一轮获得新账户、持仓、订单和"
             "行情事实前维持本轮策略。没有订单可以是合格决策，"
-            "每小时调用不等于每小时必须换仓。\n"
+            "定时调用不等于每次必须换仓。\n"
         )
     initial_text = (
         f"# WA Trader v2 自然语言日报 — {state.run_date}\n\n"
@@ -667,6 +694,13 @@ def write_fallback_natural_language_report(
         f"- Buying power：{capital.get('buying_power')}\n"
         f"- 目标现金权重：{allocation.get('target_cash_weight')}\n"
         f"- 目标持仓数：{allocation.get('target_position_count')}\n\n"
+        "### 净入金校正绩效\n\n"
+        f"- 状态：{performance.get('status', 'unavailable')}\n"
+        f"- 累计净入金：{performance.get('net_contributions_total')}\n"
+        f"- 净入金后盈亏：{performance.get('net_profit_after_contributions')}\n"
+        f"- 本日时间加权收益：{performance.get('daily_twr')}\n"
+        f"- 累计时间加权收益：{performance.get('cumulative_twr')}\n"
+        "- 上述收益只来自程序的外部现金流校正结果；不可用或部分可用时不补算。\n\n"
         "## 当前持仓分析\n\n"
         f"{position_lines}\n\n"
         "当前持仓事实来自 Alpaca 对账；本降级报告不推断缺失成本、"
@@ -679,7 +713,7 @@ def write_fallback_natural_language_report(
         f"- 不确定：{submission.get('uncertain_count', 0)}\n\n"
         "## 市场与持仓相关新闻\n\n"
         "- Codex/新闻网络当前不可用，本报告没有联网新闻，"
-        "也没有用旧闻或猜测填充。后续每小时运行会自动重试并仅追加"
+        "也没有用旧闻或猜测填充。后续计划运行会自动重试并仅追加"
         "可核验的新闻变化。\n\n"
         "## 风险与资金使用\n\n"
         "- Live 配置允许使用全部账户权益，但本轮仍受组合策略、"
@@ -695,7 +729,7 @@ def write_fallback_natural_language_report(
         "下一轮重新计算执行与风险暴露。\n"
         "- 新闻策略指导将在 Codex 网络恢复后追加；当前不以未核验新闻"
         "改变仓位。\n\n"
-        "## 下次每小时维护关注项\n\n"
+        "## 下次计划维护关注项\n\n"
         "- 持仓数量与市值；现金和 buying power；挂单状态；"
         "成交/拒绝；行情阶段；与持仓相关的当日新闻。\n"
     )
@@ -719,6 +753,10 @@ def write_fallback_natural_language_report(
         f"- 账户权益：{capital.get('equity')}；"
         f"现金：{capital.get('cash')}；"
         f"Buying power：{capital.get('buying_power')}。\n"
+        f"- 净入金后盈亏：{performance.get('net_profit_after_contributions')}；"
+        f"本日/累计时间加权收益：{performance.get('daily_twr')}/"
+        f"{performance.get('cumulative_twr')}；"
+        f"状态：{performance.get('status', 'unavailable')}。\n"
         f"{position_lines}\n\n"
         "### 订单/持仓影响\n\n"
         f"{order_lines}\n\n"
@@ -879,6 +917,31 @@ def update_natural_language_report(
     )
 
     initial = not report_path.is_file()
+    if not initial and not material_changed:
+        _sync_legacy_report_alias(
+            daily_report_path,
+            report_path,
+        )
+        atomic_write_json(
+            state_path,
+            {
+                "schema_version": "1.0",
+                "profile_id": state.profile_id,
+                "environment": facts["environment"],
+                "run_date": state.run_date,
+                "last_cycle_id": state.cycle_id,
+                "last_facts_hash": facts_hash,
+                "last_account_material_hash": account_material_hash,
+                "last_material_event": False,
+                "last_status": "no_material_update",
+                "updated_at": utc_now_iso(),
+            },
+        )
+        return NaturalReportResult(
+            path=report_path,
+            updated=False,
+            status="skipped_no_material_change",
+        )
     atomic_write_json(
         workspace / "facts.json",
         facts,

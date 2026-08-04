@@ -1,6 +1,6 @@
 {
   "schema_version": "1.0",
-  "config_version": "2026-07-23-stage-b-v1",
+  "config_version": "2026-08-04-daily-refresh-v2",
   "stock_pool_version": "sp500-2026-07-21+watchlist-2026-07-29",
   "etf_pool_version": "etfs-v1",
   "stock_pool_files": [

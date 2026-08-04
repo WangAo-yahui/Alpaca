@@ -1,0 +1,27 @@
+{
+  "_comment": "作用：锁定 core_long 1.6.0 的三级研究漏斗、可复算估值、限时持仓迟滞、现金部署触发器及ETF穿透合同。重要性：减少无效重复调用，同时让低置信度结论具有可追踪的补证和复核路径。",
+  "schema_version": "1.0",
+  "strategy_id": "core_long",
+  "strategy_version": "1.6.0",
+  "compatible_app_version": ">=2.0.0,<3.0.0",
+  "description": "10-20 year strategy with refreshed daily bars, auditable valuation inputs, bounded holding hysteresis, cash triggers and ETF lookthrough",
+  "prompt_hashes": {
+    "prompts/coarse.md": "b051f6c48269e8e7fe32e35dcda9bee63e9e774c5809349f230fa54efe60e178",
+    "prompts/coarse_AGENTS.md": "33e75d8d9d6fad77eb2706f1fb6e3f370e6f27268593aefe83369c89df7ac30e",
+    "prompts/portfolio.md": "0e4e6f2d3f012828281599233ac6d51f43cda3f8aeef4ae2e3a828fbbeebaf86",
+    "prompts/portfolio_AGENTS.md": "eec8a9e1a147328496527bc6b8b5e390b3b24d86905c5e5cb3b13e9dec8643d4",
+    "prompts/execution.md": "bac552bbfdb792955750c64ccb14caa16ff5d4658e8226e6be37be46f963ec5b",
+    "prompts/execution_AGENTS.md": "4d93d8609ae76236c976c2d9f22ceb2bc461c40d4d680cc466e326b9622a3688"
+  },
+  "schema_hashes": {
+    "schemas/coarse_output.schema.json": "c1cead5222b5f39c3ca6437f203885de377412f1cfba5564d364adb979521b0a",
+    "schemas/portfolio_output.schema.json": "674aecdd89509fcf7df94d3c916151955b1db21b4641cd5bfb24addfd7f48f85",
+    "schemas/execution_output.schema.json": "a82858ac43162d3a8f0e1014bb378f14894ddfcaca959dde883db433b0980de8"
+  },
+  "config_hashes": {
+    "config/coarse_policy.json": "3dfaeec2410b83170ee0fedefede37ec3989b45ea43596d9539ae9f775240b75",
+    "config/portfolio_policy.json": "7f4d114eee1635d04470a3706c69cf3a16ef17fae6357c5899cb45d5347c6cb7",
+    "config/execution_policy.json": "e8933a24b6f16fbe781d32be92d106b8f6db1f4f98a7c1f41aee54e1ab760935",
+    "config/codex_policy.json": "4e2c1757861d7ee835a691ba7d3d92369410012b15478b0a5a9ae816c5e0a9d9"
+  }
+}

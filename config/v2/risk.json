@@ -1,6 +1,6 @@
 {
   "schema_version": "1.0",
-  "config_version": "2026-07-23-stage-b-v1",
+  "config_version": "2026-08-04-daily-refresh-v2",
   "max_single_symbol_weight": 0.15,
   "max_sector_weight": 0.35,
   "minimum_cash_weight": 0.1,

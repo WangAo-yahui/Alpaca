@@ -1,0 +1,26 @@
+{
+  "_comment": "作用：定义 live1 的最低必要硬风控；现金可为0%，但禁止杠杆和做空，并保留单标的、行业与单轮新增资本上限。重要性：模型可以主动配置资本，券商事实、报价、账户、幂等和提交门禁仍然失败关闭。",
+  "schema_version": "1.0",
+  "risk_profile_id": "live_full",
+  "risk_profile_version": "1.2.0",
+  "environment": "live",
+  "settings": {
+    "maximum_gross_exposure": "1.00",
+    "maximum_single_position_weight": "0.40",
+    "maximum_sector_weight": "0.65",
+    "minimum_cash_weight": "0.00",
+    "maximum_new_capital_per_cycle_weight": "0.35",
+    "maximum_order_count": 20,
+    "minimum_order_value": "1.00",
+    "allow_short_positions": false,
+    "quote_max_age_seconds": "15",
+    "closed_session_quote_max_age_seconds": "345600",
+    "regular_spread_limit_bps": "50",
+    "extended_spread_limit_bps": "50",
+    "regular_equity_data_feed": "iex",
+    "spread_recheck_enabled": true,
+    "spread_recheck_window_seconds": "6.5",
+    "spread_recheck_interval_seconds": "0.5",
+    "spread_recheck_required_consecutive_passes": 3
+  }
+}

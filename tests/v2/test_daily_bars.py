@@ -181,6 +181,36 @@ class DailyBarTests(unittest.TestCase):
                 1,
             )
 
+    def test_batch_refresh_uses_one_request(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            copy_v2_config(root)
+            start = datetime(2025, 1, 1, tzinfo=UTC)
+            bars = {
+                symbol: [
+                    daily_bar(start + timedelta(days=index), 100 + index)
+                    for index in range(300)
+                ]
+                for symbol in ("A", "B")
+            }
+            stock_data = FakeStockDataClient(bars=bars)
+            result = update_daily_bars(
+                AlpacaClients(
+                    trading=FakeTradingClient(),
+                    stock_data=stock_data,
+                ),
+                ["A", "B"],
+                config=load_config(project_root=root),
+                now=datetime(2026, 7, 23, tzinfo=UTC),
+                batch_size=100,
+            )
+            self.assertEqual(result["success_count"], 2)
+            self.assertEqual(len(stock_data.bar_requests), 1)
+            requested = getattr(
+                stock_data.bar_requests[0], "symbol_or_symbols"
+            )
+            self.assertEqual(list(requested), ["A", "B"])
+
 
 if __name__ == "__main__":
     unittest.main()

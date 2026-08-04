@@ -1,6 +1,6 @@
 {
   "schema_version": "1.0",
-  "config_version": "2026-07-23-stage-b-v1",
+  "config_version": "2026-08-04-daily-refresh-v2",
   "minimum_daily_bars": 300,
   "retained_daily_bars": 300,
   "initial_daily_lookback_days": 500,
@@ -17,5 +17,5 @@
   ],
   "new_position_session_policy": "broker_capability_when_allow_trade",
   "daily_adjustment": "all",
-  "daily_feed": "sip"
+  "daily_feed": "iex"
 }

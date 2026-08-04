@@ -11,7 +11,7 @@ from __future__ import annotations
 import hashlib
 import json
 from dataclasses import dataclass
-from datetime import datetime, timezone
+from datetime import date, datetime, timedelta, timezone
 from decimal import Decimal, InvalidOperation
 from typing import Any, Literal, Mapping
 
@@ -87,6 +87,15 @@ def _parse_datetime(value: object) -> datetime | None:
     if result.tzinfo is None:
         result = result.replace(tzinfo=timezone.utc)
     return result.astimezone(timezone.utc)
+
+
+def _parse_date(value: object) -> date | None:
+    if not isinstance(value, str):
+        return None
+    try:
+        return date.fromisoformat(value.strip())
+    except ValueError:
+        return None
 
 
 def _issue(
@@ -1146,6 +1155,60 @@ def validate_portfolio_output(
                 "$.allocation.target_cash_weight",
             )
         )
+
+    run_day = _parse_date(input_payload.get("run_date"))
+    cash_policy = policy.get("cash_management", {})
+    cash_policy = (
+        cash_policy
+        if isinstance(cash_policy, Mapping)
+        else {}
+    )
+    high_cash_threshold = _decimal_or_zero(
+        cash_policy.get("high_cash_weight_threshold", "1")
+    )
+    if cash_policy and cash_weight >= high_cash_threshold:
+        cash_management = payload.get("cash_management", {})
+        cash_management = (
+            cash_management
+            if isinstance(cash_management, Mapping)
+            else {}
+        )
+        deployment_triggers = cash_management.get(
+            "deployment_triggers", []
+        )
+        if not isinstance(deployment_triggers, list):
+            deployment_triggers = []
+        minimum_triggers = int(
+            cash_policy.get("minimum_deployment_triggers", 0)
+        )
+        if len(deployment_triggers) < minimum_triggers:
+            errors.append(
+                _issue(
+                    "HIGH_CASH_DEPLOYMENT_TRIGGERS_INSUFFICIENT",
+                    "高现金配置必须给出足够的可执行部署触发器",
+                    "$.cash_management.deployment_triggers",
+                )
+            )
+        review_day = _parse_date(
+            cash_management.get("review_by")
+        )
+        maximum_review_days = int(
+            cash_policy.get("maximum_review_days", 0)
+        )
+        if (
+            run_day is None
+            or review_day is None
+            or review_day < run_day
+            or review_day
+            > run_day + timedelta(days=maximum_review_days)
+        ):
+            errors.append(
+                _issue(
+                    "HIGH_CASH_REVIEW_DATE_INVALID",
+                    "高现金配置必须在策略期限内复核",
+                    "$.cash_management.review_by",
+                )
+            )
     if (
         maximum_gross > ZERO
         and invested_weight > maximum_gross
@@ -1522,6 +1585,86 @@ def validate_portfolio_output(
                             )
                         )
 
+        hysteresis_policy = policy.get(
+            "holding_hysteresis", {}
+        )
+        hysteresis_policy = (
+            hysteresis_policy
+            if isinstance(hysteresis_policy, Mapping)
+            else {}
+        )
+        maximum_review_days = int(
+            hysteresis_policy.get("maximum_review_days", 0)
+        )
+        for index, counterfactual in enumerate(counterfactuals):
+            if not isinstance(counterfactual, Mapping):
+                continue
+            if not hysteresis_policy:
+                continue
+            path = (
+                "$.capital_competition."
+                f"holding_counterfactuals[{index}]"
+            )
+            switching_cost = _decimal_or_zero(
+                counterfactual.get(
+                    "estimated_switching_cost_fraction"
+                )
+            )
+            if switching_cost < ZERO or switching_cost > ONE:
+                errors.append(
+                    _issue(
+                        "SWITCHING_COST_INVALID",
+                        "换仓成本比例必须在0到1之间",
+                        f"{path}.estimated_switching_cost_fraction",
+                    )
+                )
+            review_day = _parse_date(
+                counterfactual.get("review_by")
+            )
+            if (
+                run_day is None
+                or review_day is None
+                or review_day < run_day
+                or review_day
+                > run_day + timedelta(days=maximum_review_days)
+            ):
+                errors.append(
+                    _issue(
+                        "HOLDING_REVIEW_DATE_INVALID",
+                        "持仓反事实复核日期超过策略期限",
+                        f"{path}.review_by",
+                    )
+                )
+            if counterfactual.get("would_buy_if_not_held") is False:
+                unresolved = counterfactual.get(
+                    "unresolved_evidence", []
+                )
+                if not isinstance(unresolved, list) or not unresolved:
+                    errors.append(
+                        _issue(
+                            "HOLDING_UNRESOLVED_EVIDENCE_REQUIRED",
+                            "不会重新买入的持仓必须列出待解决证据",
+                            f"{path}.unresolved_evidence",
+                        )
+                    )
+                if (
+                    hysteresis_policy.get(
+                        "require_exit_or_reduce_if_evidence_unresolved"
+                    )
+                    is True
+                    and counterfactual.get(
+                        "exit_or_reduce_if_unresolved"
+                    )
+                    is not True
+                ):
+                    errors.append(
+                        _issue(
+                            "HOLDING_UNRESOLVED_ACTION_REQUIRED",
+                            "待解决证据到期仍缺失时必须承诺减仓或退出",
+                            f"{path}.exit_or_reduce_if_unresolved",
+                        )
+                    )
+
     if (
         competition_requirements.get(
             "require_etf_lookthrough_for_held_or_positive"
@@ -1850,6 +1993,38 @@ def validate_portfolio_output(
                 "margin_of_safety_fraction",
             )
         }
+        valuation_research = policy.get(
+            "valuation_research", {}
+        )
+        valuation_research = (
+            valuation_research
+            if isinstance(valuation_research, Mapping)
+            else {}
+        )
+        attempted_methods = valuation.get(
+            "attempted_methods", []
+        )
+        attempted_methods = (
+            attempted_methods
+            if isinstance(attempted_methods, list)
+            else []
+        )
+        calculation_inputs = valuation.get(
+            "calculation_inputs", []
+        )
+        calculation_inputs = (
+            calculation_inputs
+            if isinstance(calculation_inputs, list)
+            else []
+        )
+        valuation_sources = valuation.get(
+            "source_references", []
+        )
+        valuation_sources = (
+            valuation_sources
+            if isinstance(valuation_sources, list)
+            else []
+        )
         if valuation_status == "no_reliable_estimate":
             estimate_numbers = (
                 valuation_numbers[
@@ -1904,6 +2079,29 @@ def validate_portfolio_output(
                         ),
                     )
                 )
+            if valuation_research and len(attempted_methods) < int(
+                valuation_research.get(
+                    "minimum_attempted_methods_before_no_estimate",
+                    0,
+                )
+            ):
+                errors.append(
+                    _issue(
+                        "UNRELIABLE_VALUATION_METHODS_INSUFFICIENT",
+                        f"{symbol}必须尝试足够的估值方法后才能无可靠估值",
+                        f"{decision_path}.valuation.attempted_methods",
+                    )
+                )
+            if valuation_research and not str(
+                valuation.get("no_estimate_reason") or ""
+            ).strip():
+                errors.append(
+                    _issue(
+                        "UNRELIABLE_VALUATION_REASON_MISSING",
+                        f"{symbol}无可靠估值必须说明具体缺失事实",
+                        f"{decision_path}.valuation.no_estimate_reason",
+                    )
+                )
         elif valuation_status:
             market_price = valuation_numbers[
                 "market_price"
@@ -1927,6 +2125,69 @@ def validate_portfolio_output(
                         "VALUATION_RANGE_INVALID",
                         f"{symbol}估值价格或价值区间无效",
                         f"{decision_path}.valuation",
+                    )
+                )
+            minimum_inputs = int(
+                valuation_research.get(
+                    "minimum_calculation_inputs_for_estimate",
+                    0,
+                )
+            )
+            if valuation_research and (
+                len(calculation_inputs) < minimum_inputs
+                or len(valuation_sources) < minimum_inputs
+            ):
+                errors.append(
+                    _issue(
+                        "VALUATION_EVIDENCE_INSUFFICIENT",
+                        f"{symbol}估值缺少可复算输入或来源",
+                        f"{decision_path}.valuation",
+                    )
+                )
+            if (
+                valuation_research
+                and valuation.get("evidence_quality") == "insufficient"
+            ):
+                errors.append(
+                    _issue(
+                        "ESTIMATE_EVIDENCE_QUALITY_MISMATCH",
+                        f"{symbol}已有估值区间时证据质量不能为insufficient",
+                        f"{decision_path}.valuation.evidence_quality",
+                    )
+                )
+            if (
+                valuation_research
+                and valuation.get("no_estimate_reason") is not None
+            ):
+                errors.append(
+                    _issue(
+                        "ESTIMATE_NO_REASON_MISMATCH",
+                        f"{symbol}已有估值区间时no_estimate_reason必须为null",
+                        f"{decision_path}.valuation.no_estimate_reason",
+                    )
+                )
+
+        quality_rank = {
+            "insufficient": 0,
+            "low": 1,
+            "medium": 2,
+            "high": 3,
+        }
+        if valuation_research and action in {"open", "increase"}:
+            required_quality = str(
+                valuation_research.get(
+                    "minimum_evidence_quality_for_open_or_increase",
+                    "medium",
+                )
+            )
+            if quality_rank.get(
+                str(valuation.get("evidence_quality", "")), -1
+            ) < quality_rank.get(required_quality, 2):
+                errors.append(
+                    _issue(
+                        "ACTION_VALUATION_EVIDENCE_TOO_LOW",
+                        f"{symbol}开仓或增仓的估值证据质量不足",
+                        f"{decision_path}.valuation.evidence_quality",
                     )
                 )
 
@@ -1981,6 +2242,70 @@ def validate_portfolio_output(
                         f"{decision_path}.expected_return",
                     )
                 )
+        if valuation_research and action in {"open", "increase"}:
+            required_confidence = str(
+                valuation_research.get(
+                    "minimum_return_confidence_for_open_or_increase",
+                    "medium",
+                )
+            )
+            if quality_rank.get(
+                str(expected_return.get("confidence", "")), -1
+            ) < quality_rank.get(required_confidence, 2):
+                errors.append(
+                    _issue(
+                        "ACTION_RETURN_CONFIDENCE_TOO_LOW",
+                        f"{symbol}开仓或增仓的预期回报置信度不足",
+                        f"{decision_path}.expected_return.confidence",
+                    )
+                )
+
+        monitoring_policy = policy.get(
+            "thesis_monitoring", {}
+        )
+        monitoring_policy = (
+            monitoring_policy
+            if isinstance(monitoring_policy, Mapping)
+            else {}
+        )
+        monitoring = raw_decision.get("monitoring_plan", {})
+        monitoring = (
+            monitoring
+            if isinstance(monitoring, Mapping)
+            else {}
+        )
+        triggers = monitoring.get("triggers", [])
+        triggers = triggers if isinstance(triggers, list) else []
+        if monitoring_policy and len(triggers) < int(
+            monitoring_policy.get("minimum_triggers_per_decision", 0)
+        ):
+            errors.append(
+                _issue(
+                    "MONITORING_TRIGGERS_INSUFFICIENT",
+                    f"{symbol}缺少足够的可衡量监控触发器",
+                    f"{decision_path}.monitoring_plan.triggers",
+                )
+            )
+        monitoring_review = _parse_date(
+            monitoring.get("review_by")
+        )
+        monitoring_days = int(
+            monitoring_policy.get("maximum_review_days", 0)
+        )
+        if monitoring_policy and (
+            run_day is None
+            or monitoring_review is None
+            or monitoring_review < run_day
+            or monitoring_review
+            > run_day + timedelta(days=monitoring_days)
+        ):
+            errors.append(
+                _issue(
+                    "MONITORING_REVIEW_DATE_INVALID",
+                    f"{symbol}监控复核日期超过策略期限",
+                    f"{decision_path}.monitoring_plan.review_by",
+                )
+            )
 
         accumulation = raw_decision.get(
             "accumulation_plan"
