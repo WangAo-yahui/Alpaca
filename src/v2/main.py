@@ -301,6 +301,63 @@ def _parse_utc_timestamp(
     return parsed.astimezone(timezone.utc)
 
 
+def _invalidate_unusable_portfolio_pointer(
+    daily_state: DailyState,
+    *,
+    now: datetime | None = None,
+) -> bool:
+    """Drop only the reuse pointer when persisted portfolio time is invalid."""
+
+    output_path = (
+        Path(daily_state.latest_valid_portfolio_output_path)
+        if daily_state.latest_valid_portfolio_output_path
+        else None
+    )
+    if output_path is None:
+        return False
+    current = now or datetime.now(timezone.utc)
+    if current.tzinfo is None:
+        current = current.replace(tzinfo=timezone.utc)
+    current = current.astimezone(timezone.utc)
+    try:
+        output = load_json_object(output_path)
+    except (OSError, ValueError):
+        output = {}
+    generated_at = _parse_utc_timestamp(
+        output.get("generated_at")
+    )
+    valid_until = _parse_utc_timestamp(
+        output.get("valid_until")
+    )
+    if (
+        generated_at is not None
+        and generated_at <= current
+        and valid_until is not None
+        and valid_until > current
+    ):
+        return False
+    daily_state.latest_valid_portfolio_cycle_id = None
+    daily_state.latest_valid_portfolio_output_path = None
+    daily_state.latest_portfolio_input_signature = None
+    daily_state.latest_portfolio_valid_until = None
+    if not any(
+        item.code == "PORTFOLIO_REUSE_POINTER_INVALIDATED"
+        for item in daily_state.warnings
+    ):
+        daily_state.warnings.append(
+            StateMessage(
+                code=(
+                    "PORTFOLIO_REUSE_POINTER_INVALIDATED"
+                ),
+                message=(
+                    "组合时间无效或工件不可读，已停止复用并要求重新决策"
+                ),
+            )
+        )
+    daily_state.updated_at = utc_now_iso()
+    return True
+
+
 def _load_portfolio_for_execution(
     paths: CyclePaths,
     state: CycleState,
@@ -1042,6 +1099,14 @@ def bootstrap_main(
             daily_state.coarse_status = CoarseStatus.INVALID
             daily_state.coarse_output_path = None
             daily_state.coarse_input_signature = None
+
+    if _invalidate_unusable_portfolio_pointer(
+        daily_state
+    ):
+        save_daily_state(
+            daily_paths.daily_state,
+            daily_state,
+        )
 
     resolution = resolve_cycle(
         run_date=run_date,

@@ -11,6 +11,11 @@ from tests.v2.fakes import (
     fake_position,
 )
 from v2.main import run_stage_d
+from v2.models.state import CycleKind
+from v2.runtime import (
+    atomic_write_json,
+    load_json_object,
+)
 from tests.v2.support import (
     FakeCoarseRunner,
     FakePortfolioRunner,
@@ -58,6 +63,41 @@ class PortfolioReuseTests(unittest.TestCase):
                 second.resolution.paths
                 .portfolio_reuse.is_file()
             )
+
+    def test_future_portfolio_pointer_forces_new_decision(
+        self,
+    ) -> None:
+        with tempfile.TemporaryDirectory() as temp:
+            root = Path(temp)
+            prepare_stage_c_project(root)
+            runner = FakePortfolioRunner()
+            first = self._first(root, runner)
+            output_path = (
+                first.resolution.paths.portfolio_output
+            )
+            output = load_json_object(output_path)
+            output["generated_at"] = (
+                "2099-01-01T00:00:00+00:00"
+            )
+            output["valid_until"] = (
+                "2099-01-02T00:00:00+00:00"
+            )
+            atomic_write_json(output_path, output)
+
+            second = run_stage_d(
+                stage_d_options("--new-cycle"),
+                project_root=root,
+                clients=stage_d_clients(),
+                coarse_runner=FakeCoarseRunner(),
+                portfolio_runner=runner,
+            )
+            self.assertEqual(runner.calls, 2)
+            self.assertNotEqual(
+                second.resolution.state.cycle_kind,
+                CycleKind.EXECUTION_REFRESH,
+            )
+            assert second.portfolio is not None
+            self.assertFalse(second.portfolio.reused)
 
     def test_position_order_capital_and_force_changes_run(
         self,
