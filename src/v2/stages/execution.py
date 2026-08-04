@@ -35,6 +35,7 @@ from v2.crypto_liquidation import (
 )
 from v2.exceptions import (
     CodexOutputValidationError,
+    ConfigurationError,
     SafetyBlockedError,
 )
 from v2.guidance import (
@@ -77,6 +78,40 @@ def _mapping(
     value: object,
 ) -> Mapping[str, Any]:
     return value if isinstance(value, Mapping) else {}
+
+
+def _normalize_model_timing(
+    payload: dict[str, Any],
+    *,
+    policy: dict[str, Any],
+    now: datetime | None = None,
+) -> tuple[dict[str, Any], dict[str, str], datetime]:
+    """Make application-owned execution timing deterministic."""
+
+    generated = now or datetime.now(timezone.utc)
+    if generated.tzinfo is None:
+        generated = generated.replace(tzinfo=timezone.utc)
+    generated = generated.astimezone(timezone.utc)
+    valid_minutes = int(policy.get("valid_minutes", 0))
+    if valid_minutes <= 0:
+        raise ConfigurationError(
+            "execution有效期配置必须大于0",
+            code="EXECUTION_VALIDITY_POLICY_INVALID",
+        )
+    normalized = dict(payload)
+    original = {
+        "generated_at": str(
+            normalized.get("generated_at", "")
+        ),
+        "valid_until": str(
+            normalized.get("valid_until", "")
+        ),
+    }
+    normalized["generated_at"] = generated.isoformat()
+    normalized["valid_until"] = (
+        generated + timedelta(minutes=valid_minutes)
+    ).isoformat()
+    return normalized, original, generated
 
 
 def _positive_decimal(
@@ -1461,6 +1496,14 @@ def execute_execution_decision(
                 input_payload=input_result.payload,
             )
         )
+        (
+            normalized_output,
+            original_timing,
+            normalized_generated_at,
+        ) = _normalize_model_timing(
+            normalized_output,
+            policy=dict(policy),
+        )
         atomic_write_json(
             paths.execution_codex_call,
             {
@@ -1494,6 +1537,22 @@ def execute_execution_decision(
                         "symbol": symbol,
                     }
                     for symbol in forced_crypto
+                ]
+                + [
+                    {
+                        "type": (
+                            "application_owned_execution_timing"
+                        ),
+                        "original": original_timing,
+                        "normalized": {
+                            "generated_at": normalized_output[
+                                "generated_at"
+                            ],
+                            "valid_until": normalized_output[
+                                "valid_until"
+                            ],
+                        },
+                    }
                 ],
             },
         )
@@ -1501,6 +1560,7 @@ def execute_execution_decision(
             normalized_output,
             input_payload=input_result.payload,
             schema=schema,
+            now=normalized_generated_at,
         )
         atomic_write_json(
             paths.execution_validation,
