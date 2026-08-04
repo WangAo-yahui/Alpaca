@@ -29,6 +29,8 @@ from v2.runtime import (
 
 NEW_YORK_TZ = ZoneInfo("America/New_York")
 NO_UPDATE_MARKER = "NO_MATERIAL_UPDATE"
+LATEST_FACTS_START = "<!-- WA_NATURAL_LATEST_FACTS_START -->"
+LATEST_FACTS_END = "<!-- WA_NATURAL_LATEST_FACTS_END -->"
 
 
 @dataclass(frozen=True)
@@ -441,6 +443,76 @@ def _sync_legacy_report_alias(
         temporary_alias.unlink(missing_ok=True)
         temporary_alias.symlink_to(report_path.name)
         temporary_alias.replace(alias)
+
+
+def _percent(value: object) -> str:
+    if value is None:
+        return "不可用"
+    try:
+        return f"{float(str(value)) * 100:.4f}%"
+    except (TypeError, ValueError):
+        return "不可用"
+
+
+def refresh_natural_report_latest_facts(
+    daily_report_path: Path,
+    *,
+    state: Any,
+    submission: Mapping[str, Any],
+    reconciliation: Mapping[str, Any],
+    context: Mapping[str, Any],
+) -> None:
+    """Upsert current facts without changing the raw Codex output file."""
+
+    report_path = natural_report_path(daily_report_path)
+    if not report_path.is_file():
+        return
+    capital = reconciliation.get("capital", {})
+    capital = capital if isinstance(capital, Mapping) else {}
+    performance = context.get("performance", {})
+    performance = (
+        performance if isinstance(performance, Mapping) else {}
+    )
+    block = (
+        f"{LATEST_FACTS_START}\n"
+        "## 最新账户与绩效事实（以此为准）\n\n"
+        f"- 提交/不确定：{submission.get('submitted_count', 0)}/"
+        f"{submission.get('uncertain_count', 0)}\n"
+        f"- 当前权益/现金：{performance.get('current_equity')}/"
+        f"{capital.get('cash')}\n"
+        f"- 累计净入金：{performance.get('net_contributions_total')}\n"
+        f"- 净入金后盈亏：{performance.get('net_profit_after_contributions')}\n"
+        f"- 本日/累计时间加权收益：{_percent(performance.get('daily_twr'))}/"
+        f"{_percent(performance.get('cumulative_twr'))}\n"
+        f"- 绩效状态：{performance.get('status', 'unavailable')}；"
+        f"警告/错误={len(performance.get('warnings', []))}/"
+        f"{len(performance.get('errors', []))}\n"
+        "- 说明：下方保留同日自然语言维护历史；如历史值与本节不同，以本节最新对账事实为准。\n"
+        f"{LATEST_FACTS_END}"
+    )
+    existing = report_path.read_text(encoding="utf-8")
+    start = existing.find(LATEST_FACTS_START)
+    end = existing.find(LATEST_FACTS_END)
+    if start >= 0 and end >= start:
+        end += len(LATEST_FACTS_END)
+        updated = existing[:start] + block + existing[end:]
+    else:
+        first_break = existing.find("\n")
+        if first_break < 0:
+            updated = existing.rstrip() + "\n\n" + block + "\n"
+        else:
+            updated = (
+                existing[:first_break].rstrip()
+                + "\n\n"
+                + block
+                + "\n"
+                + existing[first_break + 1 :].lstrip("\n")
+            )
+    atomic_write_text(report_path, updated)
+    _sync_legacy_report_alias(
+        daily_report_path,
+        report_path,
+    )
 
 
 def _bounded_text(path: Path, limit: int = 120_000) -> str:

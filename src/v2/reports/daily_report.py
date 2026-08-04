@@ -18,6 +18,8 @@ from v2.runtime import atomic_write_text
 
 NEW_YORK_TZ = ZoneInfo("America/New_York")
 CHINESE_CHARACTER = re.compile(r"[\u3400-\u9fff]")
+LATEST_SUMMARY_START = "<!-- WA_LATEST_SUMMARY_START -->"
+LATEST_SUMMARY_END = "<!-- WA_LATEST_SUMMARY_END -->"
 
 ZH_VALUES = {
     "live": "实盘",
@@ -96,6 +98,62 @@ def _percent(value: object) -> str:
         return f"{float(str(value)) * 100:.4f}%"
     except (TypeError, ValueError):
         return "不可用"
+
+
+def _latest_summary(
+    *,
+    state: Any,
+    submission: Mapping[str, Any],
+    reconciliation: Mapping[str, Any],
+    context: Mapping[str, Any],
+) -> str:
+    """Render the replaceable current-day facts above preserved history."""
+
+    capital = reconciliation.get("capital", {})
+    capital = capital if isinstance(capital, Mapping) else {}
+    performance = context.get("performance", {})
+    performance = (
+        performance if isinstance(performance, Mapping) else {}
+    )
+    return (
+        f"{LATEST_SUMMARY_START}\n"
+        "## 最新状态（以此为准）\n\n"
+        f"- 轮次类型：{_zh(state.cycle_kind.value)}\n"
+        f"- 提交/不确定：{submission.get('submitted_count', 0)}/"
+        f"{submission.get('uncertain_count', 0)}\n"
+        f"- 当前权益/现金：{performance.get('current_equity')}/"
+        f"{capital.get('cash')}\n"
+        f"- 累计净入金：{performance.get('net_contributions_total')}\n"
+        f"- 净入金后盈亏：{performance.get('net_profit_after_contributions')}\n"
+        f"- 本日时间加权收益：{_percent(performance.get('daily_twr'))}\n"
+        f"- 累计时间加权收益：{_percent(performance.get('cumulative_twr'))}\n"
+        f"- 绩效状态/警告/错误：{_zh(performance.get('status', 'unavailable'))}/"
+        f"{len(performance.get('warnings', []))}/"
+        f"{len(performance.get('errors', []))}\n"
+        "- 说明：下方保留同日各轮次历史；如历史值与本节不同，以本节最新对账事实为准。\n"
+        f"{LATEST_SUMMARY_END}"
+    )
+
+
+def _upsert_latest_summary(
+    text: str,
+    summary: str,
+) -> str:
+    start = text.find(LATEST_SUMMARY_START)
+    end = text.find(LATEST_SUMMARY_END)
+    if start >= 0 and end >= start:
+        end += len(LATEST_SUMMARY_END)
+        return text[:start] + summary + text[end:]
+    first_break = text.find("\n")
+    if first_break < 0:
+        return text.rstrip() + "\n\n" + summary + "\n"
+    return (
+        text[:first_break].rstrip()
+        + "\n\n"
+        + summary
+        + "\n"
+        + text[first_break + 1 :].lstrip("\n")
+    )
 
 
 def _detailed_report(
@@ -384,6 +442,15 @@ def update_daily_report(
 
     if path.is_file():
         existing = path.read_text(encoding="utf-8")
+        current = _upsert_latest_summary(
+            existing,
+            _latest_summary(
+                state=state,
+                submission=submission,
+                reconciliation=reconciliation,
+                context=context or {},
+            ),
+        )
         cycle_markers = (
             f"- Cycle：{state.cycle_id}\n",
             f"- 轮次：{state.cycle_id}\n",
@@ -392,10 +459,12 @@ def update_daily_report(
             marker in existing
             for marker in cycle_markers
         ):
+            if current != existing:
+                atomic_write_text(path, current)
             return False
         atomic_write_text(
             path,
-            existing
+            current
             + _incremental_update(
                 state=state,
                 submission=submission,
@@ -404,14 +473,23 @@ def update_daily_report(
             ),
         )
         return False
+    detailed = _detailed_report(
+        state=state,
+        validated=validated,
+        submission=submission,
+        reconciliation=reconciliation,
+        context=context or {},
+    )
     atomic_write_text(
         path,
-        _detailed_report(
-            state=state,
-            validated=validated,
-            submission=submission,
-            reconciliation=reconciliation,
-            context=context or {},
+        _upsert_latest_summary(
+            detailed,
+            _latest_summary(
+                state=state,
+                submission=submission,
+                reconciliation=reconciliation,
+                context=context or {},
+            ),
         ),
     )
     return True

@@ -196,6 +196,7 @@ from v2.reports.daily_report import (  # noqa: E402
 )
 from v2.reports.natural_language_report import (  # noqa: E402
     natural_report_path,
+    refresh_natural_report_latest_facts,
     update_natural_language_report,
     write_fallback_natural_language_report,
     natural_report_error_path,
@@ -3214,6 +3215,13 @@ def _maintain_natural_report(
             context=context,
             **codex_runner_settings(release),
         )
+        refresh_natural_report_latest_facts(
+            paths.daily_report,
+            state=state,
+            submission=submission,
+            reconciliation=reconciliation,
+            context=context,
+        )
         error_path.unlink(missing_ok=True)
         print(
             "自然语言日报："
@@ -3244,6 +3252,13 @@ def _maintain_natural_report(
                 reconciliation=reconciliation,
                 context=context,
             )
+        )
+        refresh_natural_report_latest_facts(
+            paths.daily_report,
+            state=state,
+            submission=submission,
+            reconciliation=reconciliation,
+            context=context,
         )
         print(
             "自然语言日报生成失败；"

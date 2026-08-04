@@ -21,6 +21,7 @@ from v2.reports.natural_language_report import (
     natural_report_output_path,
     natural_report_path,
     natural_report_state_path,
+    refresh_natural_report_latest_facts,
     update_natural_language_report,
     write_fallback_natural_language_report,
 )
@@ -103,6 +104,51 @@ def _state(cycle_id: str) -> SimpleNamespace:
 
 
 class NaturalLanguageReportTests(unittest.TestCase):
+    def test_latest_facts_replace_stale_narrative_header(
+        self,
+    ) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            daily = Path(temporary) / "daily_report.md"
+            report = natural_report_path(daily)
+            report.parent.mkdir(parents=True)
+            report.write_text(
+                "# 自然语言日报\n\n旧绩效状态：unavailable。\n",
+                encoding="utf-8",
+            )
+            refresh_natural_report_latest_facts(
+                daily,
+                state=_state("20260727T160000"),
+                submission={
+                    "submitted_count": 0,
+                    "uncertain_count": 0,
+                },
+                reconciliation={
+                    "capital": {"cash": "50"},
+                },
+                context={
+                    "performance": {
+                        "status": "complete",
+                        "current_equity": "110",
+                        "net_contributions_total": "100",
+                        "net_profit_after_contributions": "10",
+                        "daily_twr": "0.01",
+                        "cumulative_twr": "0.10",
+                        "warnings": [],
+                        "errors": [],
+                    }
+                },
+            )
+            text = report.read_text(encoding="utf-8")
+            self.assertEqual(
+                text.count("WA_NATURAL_LATEST_FACTS_START"),
+                1,
+            )
+            self.assertIn(
+                "本日/累计时间加权收益：1.0000%/10.0000%",
+                text,
+            )
+            self.assertIn("旧绩效状态：unavailable", text)
+
     def test_report_and_json_state_use_separate_directories(
         self,
     ) -> None:

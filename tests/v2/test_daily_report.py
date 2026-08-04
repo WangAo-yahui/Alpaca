@@ -152,6 +152,66 @@ class DailyReportTests(unittest.TestCase):
             )
             self.assertIn("更新", once)
 
+    def test_latest_summary_replaces_stale_performance(
+        self,
+    ) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            path = Path(temporary) / "daily.md"
+            documents = self.documents()
+            unavailable = {
+                "performance": {
+                    "status": "unavailable",
+                    "current_equity": "100",
+                    "net_contributions_total": None,
+                    "net_profit_after_contributions": None,
+                    "daily_twr": None,
+                    "cumulative_twr": None,
+                    "warnings": [],
+                    "errors": [{"code": "unavailable"}],
+                }
+            }
+            complete = {
+                "performance": {
+                    "status": "complete",
+                    "current_equity": "110",
+                    "net_contributions_total": "100",
+                    "net_profit_after_contributions": "10",
+                    "daily_twr": "0.01",
+                    "cumulative_twr": "0.10",
+                    "warnings": [],
+                    "errors": [],
+                }
+            }
+            update_daily_report(
+                path,
+                state=state("20260724T140000"),
+                validated=documents[0],
+                submission=documents[1],
+                reconciliation=documents[2],
+                context=unavailable,
+            )
+            update_daily_report(
+                path,
+                state=state("20260724T150000"),
+                validated=documents[0],
+                submission=documents[1],
+                reconciliation=documents[2],
+                context=complete,
+            )
+            text = path.read_text(encoding="utf-8")
+            self.assertEqual(
+                text.count("WA_LATEST_SUMMARY_START"),
+                1,
+            )
+            latest = text.split(
+                "<!-- WA_LATEST_SUMMARY_END -->",
+                1,
+            )[0]
+            self.assertIn("本日时间加权收益：1.0000%", latest)
+            self.assertIn("累计时间加权收益：10.0000%", latest)
+            self.assertIn("绩效状态/警告/错误：完整/0/0", latest)
+            self.assertIn("计算状态：不可用", text)
+
 
 if __name__ == "__main__":
     unittest.main()
