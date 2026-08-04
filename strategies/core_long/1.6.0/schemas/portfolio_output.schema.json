@@ -258,8 +258,7 @@
           "minLength": 1
         },
         "review_by": {
-          "type": "string",
-          "format": "date"
+          "type": "string"
         },
         "deployment_triggers": {
           "type": "array",
@@ -429,8 +428,7 @@
                 "type": "string"
               },
               "review_by": {
-                "type": "string",
-                "format": "date"
+                "type": "string"
               },
               "unresolved_evidence": {
                 "type": "array",
@@ -909,8 +907,7 @@
             ],
             "properties": {
               "review_by": {
-                "type": "string",
-                "format": "date"
+                "type": "string"
               },
               "triggers": {
                 "type": "array",

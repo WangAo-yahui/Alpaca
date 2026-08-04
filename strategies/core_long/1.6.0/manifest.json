@@ -15,7 +15,7 @@
   },
   "schema_hashes": {
     "schemas/coarse_output.schema.json": "c1cead5222b5f39c3ca6437f203885de377412f1cfba5564d364adb979521b0a",
-    "schemas/portfolio_output.schema.json": "674aecdd89509fcf7df94d3c916151955b1db21b4641cd5bfb24addfd7f48f85",
+    "schemas/portfolio_output.schema.json": "56c7d06166d82c01b80755cd292bd8d8377eec367b5b2da5fb1f9ba9a5d18253",
     "schemas/execution_output.schema.json": "a82858ac43162d3a8f0e1014bb378f14894ddfcaca959dde883db433b0980de8"
   },
   "config_hashes": {

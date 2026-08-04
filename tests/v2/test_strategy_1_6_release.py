@@ -7,6 +7,7 @@ from datetime import datetime, timezone
 
 from jsonschema import Draft202012Validator
 
+from v2.codex.validation import preflight_output_schema
 from v2.models.portfolio import validate_portfolio_output
 from v2.profiles import load_profile, load_risk_profile
 from v2.releases import load_strategy_release
@@ -36,6 +37,7 @@ class StrategyOneSixReleaseTests(unittest.TestCase):
             release.root / "schemas" / "portfolio_output.schema.json"
         )
         Draft202012Validator.check_schema(schema)
+        preflight_output_schema(schema)
         self.assertIn("cash_management", schema["required"])
         decision_required = schema["properties"]["decisions"]["items"][
             "required"
