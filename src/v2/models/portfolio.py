@@ -1025,13 +1025,12 @@ def validate_portfolio_output(
     valid_until = _parse_datetime(
         payload.get("valid_until")
     )
-    current = now
-    if current is not None:
-        if current.tzinfo is None:
-            current = current.replace(
-                tzinfo=timezone.utc
-            )
-        current = current.astimezone(timezone.utc)
+    current = now or datetime.now(timezone.utc)
+    if current.tzinfo is None:
+        current = current.replace(
+            tzinfo=timezone.utc
+        )
+    current = current.astimezone(timezone.utc)
     if (
         generated_at is None
         or valid_until is None
@@ -1044,7 +1043,15 @@ def validate_portfolio_output(
                 "$.valid_until",
             )
         )
-    elif current is not None and valid_until <= current:
+    elif generated_at > current:
+        errors.append(
+            _issue(
+                "PORTFOLIO_GENERATED_IN_FUTURE",
+                "portfolio generated_at不能晚于验证时间",
+                "$.generated_at",
+            )
+        )
+    elif valid_until <= current:
         errors.append(
             _issue(
                 "PORTFOLIO_EXPIRED",

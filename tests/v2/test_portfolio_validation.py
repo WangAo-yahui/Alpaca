@@ -328,6 +328,17 @@ class PortfolioValidationTests(unittest.TestCase):
                 "INVALID_VALIDITY_WINDOW"
             ] = expired
 
+            future = copy.deepcopy(baseline)
+            future["generated_at"] = (
+                "2099-01-01T00:00:00+00:00"
+            )
+            future["valid_until"] = (
+                "2099-01-02T00:00:00+00:00"
+            )
+            cases[
+                "PORTFOLIO_GENERATED_IN_FUTURE"
+            ] = future
+
             outside = copy.deepcopy(baseline)
             outside["decisions"][0][
                 "symbol"

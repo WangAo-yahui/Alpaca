@@ -7,7 +7,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
-from datetime import datetime
+from datetime import datetime, timedelta, timezone
 from decimal import Decimal, InvalidOperation
 from pathlib import Path
 from typing import Any, Protocol
@@ -66,6 +66,60 @@ class PortfolioRunner(Protocol):
         self,
         workspace: PortfolioWorkspace,
     ) -> CodexRunResult: ...
+
+
+def _normalize_model_timing(
+    payload: dict[str, Any],
+    *,
+    policy: dict[str, Any],
+    now: datetime | None,
+) -> tuple[dict[str, Any], dict[str, str]]:
+    """Make application-owned portfolio timing deterministic after validation."""
+
+    generated = now or datetime.now(timezone.utc)
+    if generated.tzinfo is None:
+        generated = generated.replace(tzinfo=timezone.utc)
+    generated = generated.astimezone(timezone.utc)
+    valid_minutes = int(
+        policy.get("portfolio_valid_minutes", 0)
+    )
+    if valid_minutes <= 0:
+        raise ConfigurationError(
+            "portfolio有效期配置必须大于0",
+            code="PORTFOLIO_VALIDITY_POLICY_INVALID",
+        )
+    normalized = dict(payload)
+    original = {
+        "generated_at": str(
+            normalized.get("generated_at", "")
+        ),
+        "valid_until": str(
+            normalized.get("valid_until", "")
+        ),
+    }
+    normalized["generated_at"] = generated.isoformat()
+    normalized["valid_until"] = (
+        generated + timedelta(minutes=valid_minutes)
+    ).isoformat()
+    return normalized, original
+
+
+def _model_generated_at(
+    payload: dict[str, Any],
+) -> datetime | None:
+    value = payload.get("generated_at")
+    if not isinstance(value, str):
+        return None
+    normalized = value.strip()
+    if normalized.endswith("Z"):
+        normalized = normalized[:-1] + "+00:00"
+    try:
+        generated = datetime.fromisoformat(normalized)
+    except ValueError:
+        return None
+    if generated.tzinfo is None:
+        generated = generated.replace(tzinfo=timezone.utc)
+    return generated.astimezone(timezone.utc)
 
 
 @dataclass(frozen=True)
@@ -746,6 +800,54 @@ def execute_portfolio_decision(
         run_result = active_runner.run(
             workspace
         )
+        raw_validation = validate_portfolio_output(
+            run_result.payload,
+            input_payload=input_result.payload,
+            schema=schema,
+            now=_model_generated_at(
+                dict(run_result.payload)
+            ),
+        )
+        if not raw_validation.valid:
+            atomic_write_json(
+                paths.portfolio_codex_call,
+                {
+                    **run_result.call_record,
+                    "input_signature": (
+                        input_result.input_signature
+                    ),
+                },
+            )
+            atomic_write_json(
+                paths.portfolio_validation,
+                _validation_document(
+                    raw_validation,
+                    input_signature=(
+                        input_result.input_signature
+                    ),
+                    action="run",
+                    source_cycle_id=None,
+                ),
+            )
+            raise CodexOutputValidationError(
+                "Codex组合输出未通过Schema或业务校验",
+                details={
+                    "error_codes": sorted(
+                        {
+                            str(item["code"])
+                            for item
+                            in raw_validation.errors
+                        }
+                    )
+                },
+            )
+        normalized_output, original_timing = (
+            _normalize_model_timing(
+                dict(run_result.payload),
+                policy=dict(policy),
+                now=now,
+            )
+        )
         atomic_write_json(
             paths.portfolio_codex_call,
             {
@@ -753,10 +855,26 @@ def execute_portfolio_decision(
                 "input_signature": (
                     input_result.input_signature
                 ),
+                "safe_normalizations": [
+                    {
+                        "type": (
+                            "application_owned_portfolio_timing"
+                        ),
+                        "original": original_timing,
+                        "normalized": {
+                            "generated_at": normalized_output[
+                                "generated_at"
+                            ],
+                            "valid_until": normalized_output[
+                                "valid_until"
+                            ],
+                        },
+                    }
+                ],
             },
         )
         validation = validate_portfolio_output(
-            run_result.payload,
+            normalized_output,
             input_payload=input_result.payload,
             schema=schema,
             now=now,
@@ -787,7 +905,7 @@ def execute_portfolio_decision(
             )
         atomic_write_json(
             paths.portfolio_output,
-            run_result.payload,
+            normalized_output,
         )
         daily_state.latest_valid_portfolio_cycle_id = (
             paths.cycle_id
@@ -799,7 +917,7 @@ def execute_portfolio_decision(
             input_result.input_signature
         )
         daily_state.latest_portfolio_valid_until = str(
-            run_result.payload.get(
+            normalized_output.get(
                 "valid_until",
                 "",
             )
@@ -813,7 +931,7 @@ def execute_portfolio_decision(
             source_cycle_id=None,
             paths=paths,
             input_result=input_result,
-            output=run_result.payload,
+            output=normalized_output,
             validation=validation,
         )
     except Exception as error:
