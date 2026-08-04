@@ -3962,7 +3962,7 @@ def run_stage_g(
             ),
             "performance": _performance_report_context(
                 paths=paths,
-                clients=clients,
+                clients=active_clients,
                 reconciliation=reconciliation_document,
             ),
         }

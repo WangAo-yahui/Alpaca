@@ -9,7 +9,10 @@ from __future__ import annotations
 import tempfile
 import unittest
 from dataclasses import replace
+from datetime import datetime, timezone
 from pathlib import Path
+from types import SimpleNamespace
+from unittest.mock import patch
 
 from v2.exceptions import TemporaryDataError
 from v2.main import (
@@ -17,6 +20,7 @@ from v2.main import (
     run_stage_g,
 )
 from v2.models.state import CycleStatus, StepName
+from v2.runtime import load_json_object
 from tests.v2.support import (
     FakeCoarseRunner,
     FakeExecutionRunner,
@@ -118,6 +122,60 @@ class MainStageGTests(unittest.TestCase):
                 result.broker_submission[
                     "submission_performed"
                 ]
+            )
+
+    def test_automatically_created_client_is_used_for_performance(
+        self,
+    ) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            prepare_stage_c_project(root)
+            clients = stage_d_clients()
+            clients.trading.get_portfolio_history = (
+                lambda request: SimpleNamespace(
+                    timestamp=[
+                        int(
+                            datetime(
+                                2026,
+                                7,
+                                24,
+                                tzinfo=timezone.utc,
+                            ).timestamp()
+                        )
+                    ],
+                    equity=["24900"],
+                )
+            )
+            clients.trading.get = (
+                lambda path, data: []
+            )
+            with patch(
+                "v2.main.create_alpaca_clients",
+                return_value=clients,
+            ):
+                result = run_stage_g(
+                    replace(
+                        stage_d_options(),
+                        run_date="2026-07-25",
+                        allow_trade=False,
+                    ),
+                    project_root=root,
+                    clients=None,
+                    coarse_runner=FakeCoarseRunner(),
+                    portfolio_runner=FakePortfolioRunner(),
+                    execution_runner=FakeExecutionRunner(),
+                )
+            performance = load_json_object(
+                result.resolution.paths.day_directory
+                / "performance.json"
+            )
+            self.assertEqual(
+                performance["status"],
+                "complete",
+            )
+            self.assertEqual(
+                performance["history_start"],
+                "2026-07-23",
             )
 
     def test_allow_with_natural_no_orders_is_no_action(
