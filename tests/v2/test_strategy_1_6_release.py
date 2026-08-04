@@ -49,6 +49,21 @@ class StrategyOneSixReleaseTests(unittest.TestCase):
         self.assertIn("calculation_inputs", valuation_required)
         self.assertIn("attempted_methods", valuation_required)
 
+        execution_schema = load_json_object(
+            release.root / "schemas" / "execution_output.schema.json"
+        )
+        Draft202012Validator.check_schema(execution_schema)
+        preflight_output_schema(execution_schema)
+        execution_properties = execution_schema["properties"]
+        self.assertEqual(
+            execution_properties["strategy_id"]["const"],
+            release.strategy_id,
+        )
+        self.assertEqual(
+            execution_properties["strategy_version"]["const"],
+            release.strategy_version,
+        )
+
     def test_no_estimate_and_high_cash_are_time_bounded(self) -> None:
         now = datetime.now(timezone.utc)
         fixtures = StrategyOneFiveReleaseTests
