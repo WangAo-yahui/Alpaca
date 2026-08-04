@@ -25,7 +25,10 @@ class SubmissionModelTests(unittest.TestCase):
     def test_all_documented_order_statuses_are_known(
         self,
     ) -> None:
-        self.assertEqual(len(BROKER_ORDER_STATUSES), 16)
+        self.assertEqual(len(BROKER_ORDER_STATUSES), 17)
+        self.assertIn("held", BROKER_ORDER_STATUSES)
+        self.assertIn("held", ACTIVE_ORDER_STATUSES)
+        self.assertNotIn("held", TERMINAL_ORDER_STATUSES)
         self.assertIn("pending_cancel", ACTIVE_ORDER_STATUSES)
         self.assertNotIn(
             "pending_cancel", TERMINAL_ORDER_STATUSES
