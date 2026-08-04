@@ -38,19 +38,20 @@ class StageHPathTests(unittest.TestCase):
             )
             self.assertEqual(
                 paths.releases,
-                resolved / "var/deployment/releases",
+                resolved
+                / "var/deployment/live1/releases",
             )
             self.assertEqual(
                 paths.plist,
                 home.resolve()
                 / "Library/LaunchAgents/"
-                "com.wa.trader.paper1.plist",
+                "com.wa.trader.live1.plist",
             )
             self.assertEqual(
                 paths.scheduler_state,
                 resolved
                 / "var/shared/runtime/scheduler/"
-                "paper1.json",
+                "live1.json",
             )
 
     def test_application_environment_overrides_paths(

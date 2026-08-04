@@ -44,6 +44,23 @@ def copy_v2_config(target_root: Path) -> None:
         PROJECT_ROOT / "strategies",
         target_root / "strategies",
     )
+    system_path = target / "system.json"
+    system = json.loads(
+        system_path.read_text(encoding="utf-8")
+    )
+    system["operational_profiles"] = [
+        "live1",
+        "paper1",
+    ]
+    system_path.write_text(
+        json.dumps(
+            system,
+            ensure_ascii=False,
+            indent=2,
+        )
+        + "\n",
+        encoding="utf-8",
+    )
 
 
 def prepare_stage_c_project(

@@ -145,9 +145,25 @@ def _validate_system(payload: Mapping[str, Any]) -> None:
         isinstance(default_profile, str)
         and bool(default_profile.strip())
         and default_profile != "live",
-        "system.json.default_profile必须是非live的profile名称",
+        "system.json.default_profile必须是具体profile名称",
         file_name=file_name,
         field="default_profile",
+    )
+    operational_profiles = payload.get(
+        "operational_profiles"
+    )
+    _require(
+        isinstance(operational_profiles, list)
+        and bool(operational_profiles)
+        and all(
+            isinstance(item, str)
+            and bool(item.strip())
+            for item in operational_profiles
+        )
+        and default_profile in operational_profiles,
+        "system.json.operational_profiles必须包含默认profile",
+        file_name=file_name,
+        field="operational_profiles",
     )
     _require(
         _integer(
@@ -762,8 +778,8 @@ def load_config(
         == default_profile
         and default_payload.get("enabled") is True
         and default_payload.get("environment")
-        == "paper",
-        "默认profile必须存在、启用且属于paper环境",
+        == "live",
+        "默认profile必须存在、启用且属于live环境",
         file_name="system.json",
         field="default_profile",
     )

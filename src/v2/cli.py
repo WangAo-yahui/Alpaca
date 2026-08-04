@@ -39,6 +39,8 @@ class CLIOptions:
     # Defaults keep direct programmatic Stage A-C callers compatible.  The
     # command-line parser deliberately defaults to no explicit guidance so a
     # non-interactive invocation must opt in to --no-guidance/--unattended.
+    # Direct programmatic callers keep the historical fixture default. The
+    # command-line parser reads system.json, whose production default is live1.
     profile: str = "paper1"
     guidance: str | None = None
     no_guidance: bool = True
@@ -68,7 +70,7 @@ def configured_default_profile(
     ).strip()
     if not profile or profile == "live":
         raise ValueError(
-            "default_profile必须配置为非live profile"
+            "default_profile必须配置为具体profile名称"
         )
     return profile
 
@@ -108,8 +110,8 @@ def build_parser(
 ) -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(
         description=(
-            "WA Trader v2 主流程。默认使用paper1；"
-            "Live 使用live1和独立.env_live。"
+            "WA Trader v2 主流程。当前默认使用live1"
+            "和独立.env_live。"
         )
     )
 
@@ -196,7 +198,7 @@ def build_parser(
         action="store_true",
         help=(
             "允许后续阶段提交当前profile对应的"
-            "Alpaca Paper或Live订单；仍需通过全部硬风控"
+            "Alpaca订单；仍需通过全部硬风控"
         ),
     )
 

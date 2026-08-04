@@ -992,12 +992,24 @@ def bootstrap_main(
     if options.live and options.profile != "live1":
         raise LiveTradingRejected()
 
-    identity = load_runtime_identity(
-        options,
+    config = load_config(
         project_root=project_root,
     )
+    operational_profiles = config.system.get(
+        "operational_profiles"
+    )
+    if (
+        not isinstance(operational_profiles, list)
+        or options.profile not in operational_profiles
+    ):
+        raise ConfigurationError(
+            "所选profile不属于当前运行项目",
+            code="PROFILE_NOT_OPERATIONAL",
+            details={"profile_id": options.profile},
+        )
 
-    config = load_config(
+    identity = load_runtime_identity(
+        options,
         project_root=project_root,
     )
 
@@ -1236,7 +1248,7 @@ def run_stage_b(
                 state,
                 skipped=True,
                 message=(
-                    "Stage G已在当前轮次前维护历史paper订单；"
+                    "Stage G已在当前轮次前维护历史订单；"
                     "本步骤登记维护顺序"
                 ),
             )
@@ -2195,6 +2207,16 @@ def run_stage_f(
         profile.order_policy,
         project_root=project_root,
     )
+    strategy_release = load_strategy_release(
+        profile.strategy_id,
+        profile.strategy_version,
+        project_root=project_root,
+    )
+    execution_policy = load_json_object(
+        strategy_release.root
+        / "config"
+        / "execution_policy.json"
+    )
     execution_output = load_json_object(
         paths.execution_output
     )
@@ -2305,6 +2327,7 @@ def run_stage_f(
                 pretrade_snapshot=pretrade_payload,
                 risk_profile=risk_profile,
                 order_policy=order_policy,
+                execution_policy=execution_policy,
                 expected_account_id_hash=(
                     _account_binding_hash(
                         paths.profile_id,
@@ -2721,6 +2744,16 @@ def _refresh_after_confirmed_replacements(
         profile.order_policy,
         project_root=project_root,
     )
+    strategy_release = load_strategy_release(
+        profile.strategy_id,
+        profile.strategy_version,
+        project_root=project_root,
+    )
+    execution_policy = load_json_object(
+        strategy_release.root
+        / "config"
+        / "execution_policy.json"
+    )
     refreshed = create_pretrade_snapshot(
         paths,
         clients,
@@ -2750,6 +2783,7 @@ def _refresh_after_confirmed_replacements(
         pretrade_snapshot=refreshed.payload,
         risk_profile=risk_profile,
         order_policy=order_policy,
+        execution_policy=execution_policy,
         expected_account_id_hash=_account_binding_hash(
             paths.profile_id,
             project_root=project_root,
@@ -3246,7 +3280,7 @@ def _run_stage_g_maintenance_only(
         complete_current_step(
             state,
             output_path=str(paths.daily_report),
-            message="追加paper旧订单维护日报",
+            message="追加历史订单维护日报",
         )
         save_cycle_state(paths.cycle_state, state)
     if next_step(state) == StepName.COMPLETE:
@@ -3741,7 +3775,7 @@ def run_stage_g(
         complete_current_step(
             state,
             output_path=str(paths.broker_submission),
-            message="完成paper提交阶段与即时对账",
+            message="完成券商提交阶段与即时对账",
         )
         save_cycle_state(paths.cycle_state, state)
 

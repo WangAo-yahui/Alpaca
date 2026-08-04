@@ -1411,6 +1411,79 @@ def validate_execution_output(
         if isinstance(policy, Mapping)
         else {}
     )
+    long_horizon_policy = policy.get(
+        "long_horizon_execution"
+    )
+    long_horizon_policy = (
+        long_horizon_policy
+        if isinstance(long_horizon_policy, Mapping)
+        else {}
+    )
+    minimum_material_weight_gap = (
+        _decimal_or_zero(
+            long_horizon_policy.get(
+                "minimum_material_weight_gap"
+            )
+        )
+    )
+    maximum_daily_entries = int(
+        _decimal_or_zero(
+            long_horizon_policy.get(
+                "maximum_discretionary_entries_per_symbol_per_day"
+            )
+        )
+    )
+    raw_today_orders = snapshot.get("today_orders")
+    today_orders = (
+        raw_today_orders
+        if isinstance(raw_today_orders, list)
+        else []
+    )
+    daily_buy_entries: dict[str, int] = {}
+    active_entry_statuses = {
+        "new",
+        "accepted",
+        "pending_new",
+        "partially_filled",
+        "filled",
+        "held",
+        "pending_replace",
+        "accepted_for_bidding",
+    }
+    for raw_order in today_orders:
+        if not isinstance(raw_order, Mapping):
+            continue
+        order_symbol = str(
+            raw_order.get("symbol", "")
+        ).upper()
+        order_status = str(
+            raw_order.get("status", "")
+        ).lower()
+        filled_quantity = _decimal_or_zero(
+            raw_order.get("filled_quantity")
+        )
+        if (
+            order_symbol
+            and str(raw_order.get("side", "")).lower()
+            == "buy"
+            and (
+                order_status in active_entry_statuses
+                or filled_quantity > ZERO
+            )
+        ):
+            daily_buy_entries[order_symbol] = (
+                daily_buy_entries.get(order_symbol, 0)
+                + 1
+            )
+    snapshot_account = snapshot.get("account")
+    snapshot_account = (
+        snapshot_account
+        if isinstance(snapshot_account, Mapping)
+        else {}
+    )
+    snapshot_portfolio_value = _decimal_or_zero(
+        snapshot_account.get("portfolio_value")
+    )
     profile_payload = input_payload.get("profile")
     profile_payload = (
         profile_payload
@@ -1950,6 +2023,111 @@ def validate_execution_output(
             )
         if not executable:
             continue
+        if (
+            side == "buy"
+            and portfolio_action
+            in {"open", "increase"}
+            and not automatic_crypto_liquidation
+        ):
+            accumulation = (
+                source.get("accumulation_plan")
+                if isinstance(source, Mapping)
+                else {}
+            )
+            accumulation = (
+                accumulation
+                if isinstance(accumulation, Mapping)
+                else {}
+            )
+            accumulation_style = str(
+                accumulation.get("style", "")
+            )
+            planned_fraction = _decimal_or_zero(
+                accumulation.get(
+                    "planned_total_fraction"
+                )
+            )
+            raw_tranches = accumulation.get(
+                "tranches"
+            )
+            tranches = (
+                raw_tranches
+                if isinstance(raw_tranches, list)
+                else []
+            )
+            tranche_fractions = [
+                _decimal_or_zero(
+                    item.get("fraction")
+                )
+                for item in tranches
+                if isinstance(item, Mapping)
+            ]
+            tranche_cap = (
+                max(tranche_fractions)
+                if tranche_fractions
+                else planned_fraction
+            )
+            if (
+                accumulation
+                and (
+                    accumulation_style
+                    in {"wait", "no_add"}
+                    or planned_fraction <= ZERO
+                )
+            ):
+                errors.append(
+                    _issue(
+                        "ACCUMULATION_PLAN_BLOCKS_BUY",
+                        f"{symbol}的组合分批计划不允许本轮买入",
+                        f"{path}.execution_decision",
+                    )
+                )
+            elif (
+                accumulation
+                and (
+                    fraction > planned_fraction
+                    or fraction > tranche_cap
+                )
+            ):
+                errors.append(
+                    _issue(
+                        "EXECUTION_FRACTION_EXCEEDS_ACCUMULATION_TRANCHE",
+                        f"{symbol}执行比例超过组合计划的单档分批上限",
+                        f"{path}.execution_fraction",
+                    )
+                )
+            if (
+                maximum_daily_entries > 0
+                and daily_buy_entries.get(symbol, 0)
+                >= maximum_daily_entries
+            ):
+                errors.append(
+                    _issue(
+                        "DAILY_ENTRY_LIMIT_REACHED",
+                        f"{symbol}已达到当日自主建仓或加仓次数上限",
+                        f"{path}.execution_decision",
+                    )
+                )
+            current_weight = (
+                _decimal_or_zero(
+                    position.get("market_value")
+                )
+                / snapshot_portfolio_value
+                if snapshot_portfolio_value > ZERO
+                else ZERO
+            )
+            if (
+                minimum_material_weight_gap > ZERO
+                and target - current_weight
+                < minimum_material_weight_gap
+            ):
+                errors.append(
+                    _issue(
+                        "MATERIAL_WEIGHT_GAP_NOT_MET",
+                        f"{symbol}目标与当前权重差不足以形成有意义的买入",
+                        f"{path}.target_weight",
+                    )
+                )
         is_crypto = (
             asset.get("asset_class") == "crypto"
         )

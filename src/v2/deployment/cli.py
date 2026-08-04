@@ -1,4 +1,4 @@
-"""实现顶层 ``./wa`` 的 Paper/Live Stage H 命令行合同。
+"""实现顶层 ``./wa`` 的 Live-only Stage H 命令行合同。
 
 作用：解析固定运维子命令，将管理器结果输出为人类文本或稳定 JSON。
 重要性：所有用户和 launchd 入口都必须经过同一错误映射，不能直接绕过锁或部署门禁。
@@ -25,7 +25,7 @@ def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(
         prog="wa",
         description=(
-            "WA Trader v2 macOS Paper/Live 本地部署与运行工具"
+            "WA Trader v2 macOS Live 本地部署与运行工具"
         ),
     )
     commands = parser.add_subparsers(
@@ -35,7 +35,7 @@ def build_parser() -> argparse.ArgumentParser:
     def identity(command: argparse.ArgumentParser) -> None:
         command.add_argument(
             "--profile",
-            help="运行profile；默认paper1",
+            help="运行profile；默认live1",
         )
         command.add_argument(
             "--live",
@@ -52,7 +52,7 @@ def build_parser() -> argparse.ArgumentParser:
     deploy.add_argument(
         "--enable-trading",
         action="store_true",
-        help="为所选profile启用自动交易；Paper仍要求既有提交验证",
+        help="为所选Live profile启用自动交易",
     )
     run = commands.add_parser("run")
     identity(run)
@@ -147,9 +147,29 @@ def main(
         else (
             "live1"
             if getattr(options, "live", False)
-            else "paper1"
+            else "live1"
         )
     )
+    operational_profiles = {"live1"}
+    system_path = root / "config/v2/system.json"
+    if system_path.is_file():
+        try:
+            system = json.loads(
+                system_path.read_text(encoding="utf-8")
+            )
+            configured = system.get(
+                "operational_profiles"
+            )
+            if isinstance(configured, list):
+                operational_profiles = {
+                    str(item) for item in configured
+                }
+        except (OSError, ValueError):
+            print("无法读取当前运行profile配置")
+            return int(ExitCode.CONFIGURATION_ERROR)
+    if profile_id not in operational_profiles:
+        print(f"profile不属于当前运行项目：{profile_id}")
+        return int(ExitCode.CONFIGURATION_ERROR)
     manager = DeploymentManager(
         root,
         profile_id=profile_id,

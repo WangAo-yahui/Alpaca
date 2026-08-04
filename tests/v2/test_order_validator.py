@@ -37,6 +37,7 @@ class OrderValidatorTests(unittest.TestCase):
         allow_trade=False,
         snap=None,
         decision=None,
+        execution_policy=None,
     ):
         risk, policy = order_configs()
         temp = tempfile.TemporaryDirectory()
@@ -62,6 +63,7 @@ class OrderValidatorTests(unittest.TestCase):
             pretrade_snapshot=current_snapshot,
             risk_profile=risk,
             order_policy=policy,
+            execution_policy=execution_policy,
             expected_account_id_hash=ACCOUNT_HASH,
         )
 
@@ -207,6 +209,34 @@ class OrderValidatorTests(unittest.TestCase):
         self.assertEqual(
             result.orders[0].status,
             OrderStatus.DEPENDENT,
+        )
+
+    def test_daily_entry_limit_is_rechecked_at_pretrade(
+        self,
+    ) -> None:
+        first = _open_order()
+        second = _open_order()
+        second["broker_order_id"] = "order-MU-buy-2"
+        second["client_order_id"] = "prior-MU-buy-2"
+        result = self._validate(
+            allow_trade=True,
+            snap=snapshot(today_orders=[first, second]),
+            execution_policy={
+                "long_horizon_execution": {
+                    "maximum_discretionary_entries_per_symbol_per_day": 2,
+                }
+            },
+        )
+        self.assertEqual(
+            result.orders[0].status,
+            OrderStatus.BLOCKED,
+        )
+        self.assertIn(
+            "DAILY_ENTRY_LIMIT_REACHED",
+            {
+                issue.code
+                for issue in result.orders[0].issues
+            },
         )
 
 

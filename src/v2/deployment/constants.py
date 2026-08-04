@@ -20,11 +20,11 @@ class ExitCode(IntEnum):
     DEPLOYMENT_ERROR = 70
 
 
-SERVICE_LABEL = "com.wa.trader.paper1"
-PROFILE_ID = "paper1"
+SERVICE_LABEL = "com.wa.trader.live1"
+PROFILE_ID = "live1"
 STRATEGY_ID = "core_long"
-STRATEGY_VERSION = "1.2.0"
-SERVICE_INTERVAL_SECONDS = 3600
+STRATEGY_VERSION = "1.5.0"
+SERVICE_INTERVAL_SECONDS = 60
 
 
 def service_label(profile_id: str) -> str:

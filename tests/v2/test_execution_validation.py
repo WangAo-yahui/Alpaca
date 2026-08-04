@@ -29,6 +29,162 @@ from tests.v2.support import (
 
 
 class ExecutionValidationTests(unittest.TestCase):
+    def test_live_long_horizon_entry_limits_are_python_enforced(
+        self,
+    ) -> None:
+        with tempfile.TemporaryDirectory() as temp:
+            root = Path(temp)
+            result = stage_e_fixture(root)
+            assert result.execution is not None
+            source = copy.deepcopy(
+                result.execution.input_result.payload
+            )
+            source["execution_snapshot"][
+                "market_phase"
+            ] = "regular_session"
+            source["execution_policy"][
+                "long_horizon_execution"
+            ] = {
+                "minimum_material_weight_gap": "0.01",
+                "maximum_discretionary_entries_per_symbol_per_day": 2,
+            }
+            portfolio_decision = source["portfolio"][
+                "decisions"
+            ][0]
+            portfolio_decision[
+                "accumulation_plan"
+            ] = {
+                "style": "staged",
+                "planned_total_fraction": "0.50",
+                "tranches": [
+                    {"sequence": 1, "fraction": "0.25"},
+                    {"sequence": 2, "fraction": "0.25"},
+                ],
+            }
+            symbol = portfolio_decision["symbol"]
+            source["execution_snapshot"][
+                "today_orders"
+            ] = [
+                {
+                    "symbol": symbol,
+                    "side": "buy",
+                    "status": "filled",
+                    "filled_quantity": "0.01",
+                },
+                {
+                    "symbol": symbol,
+                    "side": "buy",
+                    "status": "new",
+                    "filled_quantity": "0",
+                },
+            ]
+            payload = valid_execution_output(source)
+
+            release = load_strategy_release(
+                "core_long",
+                "1.2.0",
+                project_root=root,
+            )
+            schema = load_json_object(
+                release.root
+                / "schemas/execution_output.schema.json"
+            )
+            codes = {
+                item["code"]
+                for item in validate_execution_output(
+                    payload,
+                    input_payload=source,
+                    schema=schema,
+                ).errors
+            }
+            self.assertIn(
+                "EXECUTION_FRACTION_EXCEEDS_ACCUMULATION_TRANCHE",
+                codes,
+            )
+            self.assertIn(
+                "DAILY_ENTRY_LIMIT_REACHED",
+                codes,
+            )
+
+            source["execution_snapshot"][
+                "today_orders"
+            ] = []
+            source["execution_snapshot"][
+                "account"
+            ]["portfolio_value"] = "1000"
+            source["execution_snapshot"][
+                "positions"
+            ].append(
+                {
+                    "symbol": symbol,
+                    "side": "long",
+                    "quantity": "1",
+                    "available_quantity": "1",
+                    "average_entry_price": "75",
+                    "current_price": "75",
+                    "market_value": "75",
+                }
+            )
+            payload = valid_execution_output(source)
+            payload["decisions"][0][
+                "execution_fraction"
+            ] = "0.25"
+            codes = {
+                item["code"]
+                for item in validate_execution_output(
+                    payload,
+                    input_payload=source,
+                    schema=schema,
+                ).errors
+            }
+            self.assertIn(
+                "MATERIAL_WEIGHT_GAP_NOT_MET",
+                codes,
+            )
+
+    def test_no_add_accumulation_plan_blocks_executable_buy(
+        self,
+    ) -> None:
+        with tempfile.TemporaryDirectory() as temp:
+            root = Path(temp)
+            result = stage_e_fixture(root)
+            assert result.execution is not None
+            source = copy.deepcopy(
+                result.execution.input_result.payload
+            )
+            source["execution_snapshot"][
+                "market_phase"
+            ] = "regular_session"
+            source["portfolio"]["decisions"][0][
+                "accumulation_plan"
+            ] = {
+                "style": "no_add",
+                "planned_total_fraction": "0",
+                "tranches": [],
+            }
+            payload = valid_execution_output(source)
+            release = load_strategy_release(
+                "core_long",
+                "1.2.0",
+                project_root=root,
+            )
+            schema = load_json_object(
+                release.root
+                / "schemas/execution_output.schema.json"
+            )
+            codes = {
+                item["code"]
+                for item in validate_execution_output(
+                    payload,
+                    input_payload=source,
+                    schema=schema,
+                ).errors
+            }
+            self.assertIn(
+                "ACCUMULATION_PLAN_BLOCKS_BUY",
+                codes,
+            )
+
     def test_filled_open_may_be_neutral_hold_only(
         self,
     ) -> None:

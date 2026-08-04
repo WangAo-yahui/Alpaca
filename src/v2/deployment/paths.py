@@ -50,8 +50,8 @@ class DeploymentPaths:
         project_root: Path,
         *,
         home: Path | None = None,
-        profile_id: str = "paper1",
-        environment: str = "paper",
+        profile_id: str = "live1",
+        environment: str = "live",
     ) -> "DeploymentPaths":
         root = project_root.expanduser().resolve()
         resolved_home = (

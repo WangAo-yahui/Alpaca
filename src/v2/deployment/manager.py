@@ -176,7 +176,7 @@ class DeploymentManager:
         self,
         project_root: Path,
         *,
-        profile_id: str = "paper1",
+        profile_id: str = "live1",
         home: Path | None = None,
         runner: CommandRunner = subprocess.run,
         platform_name: str | None = None,

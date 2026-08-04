@@ -32,6 +32,7 @@ class StageHManagerTests(unittest.TestCase):
         stdout = MagicMock()
         manager = DeploymentManager(
             Path("/tmp/wa-progress-test"),
+            profile_id="paper1",
             stdout=stdout,
         )
         manager._print("progress")
@@ -44,6 +45,7 @@ class StageHManagerTests(unittest.TestCase):
             root = Path(temporary).resolve()
             manager = DeploymentManager(
                 root,
+                profile_id="paper1",
                 home=root / "home",
                 platform_name="Darwin",
             )
@@ -169,6 +171,7 @@ class StageHManagerTests(unittest.TestCase):
             root = Path(temporary)
             manager = DeploymentManager(
                 root,
+                profile_id="paper1",
                 home=root / "home",
                 platform_name="Darwin",
             )
@@ -184,6 +187,7 @@ class StageHManagerTests(unittest.TestCase):
             root = Path(temporary)
             manager = DeploymentManager(
                 root,
+                profile_id="paper1",
                 home=root / "home",
                 platform_name="Darwin",
             )
@@ -217,6 +221,7 @@ class StageHManagerTests(unittest.TestCase):
             self._healthy_project(root)
             manager = DeploymentManager(
                 root,
+                profile_id="paper1",
                 home=root / "home",
                 platform_name="Darwin",
             )
@@ -259,6 +264,7 @@ class StageHManagerTests(unittest.TestCase):
             root = Path(temporary)
             manager = DeploymentManager(
                 root,
+                profile_id="paper1",
                 home=root / "home",
                 platform_name="Darwin",
             )
@@ -318,6 +324,7 @@ class StageHManagerTests(unittest.TestCase):
             root = Path(temporary)
             manager = DeploymentManager(
                 root,
+                profile_id="paper1",
                 home=root / "home",
                 platform_name="Darwin",
             )
@@ -356,6 +363,7 @@ class StageHManagerTests(unittest.TestCase):
             root = Path(temporary)
             manager = DeploymentManager(
                 root,
+                profile_id="paper1",
                 home=root / "home",
                 platform_name="Darwin",
             )
@@ -381,6 +389,7 @@ class StageHManagerTests(unittest.TestCase):
             root = Path(temporary)
             manager = DeploymentManager(
                 root,
+                profile_id="paper1",
                 home=root / "home",
                 platform_name="Darwin",
             )
@@ -429,6 +438,7 @@ class StageHManagerTests(unittest.TestCase):
             root = Path(temporary)
             manager = DeploymentManager(
                 root,
+                profile_id="paper1",
                 home=root / "home",
                 platform_name="Darwin",
             )
@@ -533,6 +543,7 @@ class StageHManagerTests(unittest.TestCase):
             root = Path(temporary)
             manager = DeploymentManager(
                 root,
+                profile_id="paper1",
                 home=root / "home",
                 platform_name="Darwin",
             )

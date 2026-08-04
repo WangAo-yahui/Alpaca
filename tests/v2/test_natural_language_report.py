@@ -269,6 +269,11 @@ class NaturalLanguageReportTests(unittest.TestCase):
                 )
             self.assertTrue(first.updated)
             self.assertTrue(first.path.is_file())
+            self.assertTrue(
+                legacy_natural_report_path(
+                    daily
+                ).is_symlink()
+            )
             self.assertEqual(
                 legacy_natural_report_path(
                     daily

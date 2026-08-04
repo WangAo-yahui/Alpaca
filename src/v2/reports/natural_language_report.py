@@ -411,14 +411,16 @@ def _sync_legacy_report_alias(
     report_path: Path,
 ) -> None:
     if report_path.is_file():
-        atomic_write_text(
-            legacy_natural_report_path(
-                daily_report_path
-            ),
-            report_path.read_text(
-                encoding="utf-8"
-            ),
+        alias = legacy_natural_report_path(
+            daily_report_path
         )
+        alias.parent.mkdir(parents=True, exist_ok=True)
+        temporary_alias = alias.with_name(
+            f".{alias.name}.tmp"
+        )
+        temporary_alias.unlink(missing_ok=True)
+        temporary_alias.symlink_to(report_path.name)
+        temporary_alias.replace(alias)
 
 
 def _bounded_text(path: Path, limit: int = 120_000) -> str:

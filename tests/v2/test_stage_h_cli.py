@@ -18,6 +18,34 @@ from v2.deployment.constants import ExitCode
 
 
 class StageHCLITests(unittest.TestCase):
+    def test_non_operational_profile_is_rejected(
+        self,
+    ) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            system_path = root / "config/v2/system.json"
+            system_path.parent.mkdir(parents=True)
+            system_path.write_text(
+                '{"operational_profiles":["live1"]}',
+                encoding="utf-8",
+            )
+            with patch(
+                "v2.deployment.cli.DeploymentManager"
+            ) as manager:
+                code = main(
+                    [
+                        "status",
+                        "--profile",
+                        "paper1",
+                    ],
+                    project_root=root,
+                )
+            self.assertEqual(
+                code,
+                int(ExitCode.CONFIGURATION_ERROR),
+            )
+            manager.assert_not_called()
+
     def test_status_json_and_run_exit(self) -> None:
         with tempfile.TemporaryDirectory() as temporary:
             manager = MagicMock()

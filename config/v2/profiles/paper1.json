@@ -1,5 +1,5 @@
 {
-  "_comment": "作用：定义 paper1 的凭据变量、策略 release、风险、订单与提交 policy。重要性：它将账户运行产物完全隔离，并把 Stage G paper 写权限绑定到明确版本。",
+  "_comment": "作用：仅为离线回归保留 paper1 的历史策略与 policy 绑定。重要性：Paper 运行项目已删除，system.operational_profiles 不含本身份，因此不得用于本机运行或部署。",
   "schema_version": "1.0",
   "profile_id": "paper1",
   "enabled": true,

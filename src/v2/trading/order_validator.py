@@ -1264,6 +1264,7 @@ def validate_order_plan(
     pretrade_snapshot: PreTradeSnapshot | Mapping[str, Any],
     risk_profile: RiskProfile,
     order_policy: OrderPolicy,
+    execution_policy: Mapping[str, Any] | None = None,
     expected_account_id_hash: str | None = None,
     generated_at: str | None = None,
 ) -> ValidatedOrderPlan:
@@ -1293,6 +1294,44 @@ def validate_order_plan(
         snapshot.payload.get("account")
     )
     settings = risk_profile.settings
+    long_horizon = _mapping(
+        _mapping(execution_policy).get(
+            "long_horizon_execution"
+        )
+    )
+    maximum_daily_entries = int(
+        decimal_or_zero(
+            long_horizon.get(
+                "maximum_discretionary_entries_per_symbol_per_day"
+            )
+        )
+    )
+    daily_buy_entries: dict[str, int] = {}
+    for broker_order in _records(
+        snapshot.payload.get("today_orders")
+    ):
+        if str(
+            broker_order.get("side", "")
+        ).lower() != "buy":
+            continue
+        status = str(
+            broker_order.get("status", "")
+        ).lower()
+        if (
+            status not in ACTIVE_ORDER_STATUSES
+            and decimal_or_zero(
+                broker_order.get("filled_quantity")
+            )
+            <= ZERO
+        ):
+            continue
+        symbol = str(
+            broker_order.get("symbol", "")
+        ).upper()
+        if symbol:
+            daily_buy_entries[symbol] = (
+                daily_buy_entries.get(symbol, 0) + 1
+            )
     buy_total = sum(
         (
             order.planned_value
@@ -1355,6 +1394,7 @@ def validate_order_plan(
 
     seen_clients: set[str] = set()
     seen_plans: set[str] = set()
+    proposed_buy_entries: dict[str, int] = {}
     validated: list[ValidatedOrder] = []
     for order in plan.orders:
         if order.status != OrderStatus.PROPOSED:
@@ -1373,6 +1413,36 @@ def validate_order_plan(
             seen_clients=seen_clients,
             seen_plans=seen_plans,
         )
+        if (
+            order.side == "buy"
+            and maximum_daily_entries > 0
+            and (
+                daily_buy_entries.get(
+                    order.symbol,
+                    0,
+                )
+                + proposed_buy_entries.get(
+                    order.symbol,
+                    0,
+                )
+            )
+            >= maximum_daily_entries
+        ):
+            order_issues.append(
+                _issue(
+                    "DAILY_ENTRY_LIMIT_REACHED",
+                    "该标的当日分批买入次数已达策略上限",
+                    plan_id=order.plan_id,
+                )
+            )
+        if order.side == "buy":
+            proposed_buy_entries[order.symbol] = (
+                proposed_buy_entries.get(
+                    order.symbol,
+                    0,
+                )
+                + 1
+            )
         if global_issues or order_issues:
             status = OrderStatus.BLOCKED
         else:
