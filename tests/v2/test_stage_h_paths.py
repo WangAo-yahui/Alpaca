@@ -105,6 +105,12 @@ class StageHPathTests(unittest.TestCase):
                 "unknown",
             )
             self.assertEqual(
+                environment[
+                    "WA_PUBLIC_NATURAL_REPORTS_ROOT"
+                ],
+                str(root.resolve() / "natural_language"),
+            )
+            self.assertEqual(
                 environment["WA_SOURCE_TREE_DIRTY"],
                 "false",
             )

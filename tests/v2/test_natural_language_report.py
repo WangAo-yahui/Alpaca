@@ -6,6 +6,7 @@
 
 from __future__ import annotations
 
+import os
 import subprocess
 import tempfile
 import unittest
@@ -22,6 +23,7 @@ from v2.reports.natural_language_report import (
     natural_report_output_path,
     natural_report_path,
     natural_report_state_path,
+    public_natural_reports_directory,
     refresh_natural_report_latest_facts,
     sync_public_natural_reports,
     update_natural_language_report,
@@ -106,6 +108,34 @@ def _state(cycle_id: str) -> SimpleNamespace:
 
 
 class NaturalLanguageReportTests(unittest.TestCase):
+    def test_public_directory_uses_deployment_owned_override(
+        self,
+    ) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            staging = (
+                root
+                / "var/deployment/live1/staging/release"
+            )
+            public = root / "natural_language"
+            with patch.dict(
+                os.environ,
+                {
+                    "WA_PUBLIC_NATURAL_REPORTS_ROOT": str(
+                        public
+                    ),
+                },
+            ):
+                resolved = public_natural_reports_directory(
+                    staging
+                )
+            self.assertEqual(resolved, public.resolve())
+            self.assertFalse(
+                str(resolved).startswith(
+                    str(staging.resolve())
+                )
+            )
+
     def test_first_report_can_read_previous_trading_day_narrative(
         self,
     ) -> None:

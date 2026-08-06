@@ -196,6 +196,7 @@ from v2.reports.daily_report import (  # noqa: E402
 )
 from v2.reports.natural_language_report import (  # noqa: E402
     natural_report_path,
+    public_natural_reports_directory,
     refresh_natural_report_latest_facts,
     sync_public_natural_reports,
     update_natural_language_report,
@@ -3268,13 +3269,16 @@ def _maintain_natural_report(
             flush=True,
         )
     try:
+        public_directory = public_natural_reports_directory(
+            paths.project_root
+        )
         public_count = sync_public_natural_reports(
             paths.daily_report,
-            paths.project_root / "natural_language",
+            public_directory,
         )
         print(
             "完整日报统一入口："
-            f"{paths.project_root / 'natural_language'}"
+            f"{public_directory}"
             f"（{public_count}天）",
             flush=True,
         )

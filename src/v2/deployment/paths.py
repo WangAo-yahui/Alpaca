@@ -171,6 +171,9 @@ class DeploymentPaths:
             {
                 "WA_RUNTIME_ROOT": str(self.runtime),
                 "WA_REPORTS_ROOT": str(self.reports),
+                "WA_PUBLIC_NATURAL_REPORTS_ROOT": str(
+                    self.project_root / "natural_language"
+                ),
                 "WA_SHARED_DATA_ROOT": str(
                     self.market_data
                 ),

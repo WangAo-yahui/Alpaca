@@ -8,6 +8,7 @@ from __future__ import annotations
 
 import hashlib
 import json
+import os
 from collections.abc import Mapping
 from dataclasses import dataclass
 from datetime import datetime
@@ -614,6 +615,25 @@ def sync_public_natural_reports(
         temporary.symlink_to(latest_name)
         temporary.replace(latest)
     return len(selected)
+
+
+def public_natural_reports_directory(
+    project_root: Path,
+) -> Path:
+    """Return the mutable operator index outside immutable releases."""
+
+    configured = os.environ.get(
+        "WA_PUBLIC_NATURAL_REPORTS_ROOT",
+        "",
+    ).strip()
+    if not configured:
+        return project_root.resolve() / "natural_language"
+    candidate = Path(configured).expanduser()
+    if not candidate.is_absolute():
+        raise OSError(
+            "WA_PUBLIC_NATURAL_REPORTS_ROOT必须是绝对路径"
+        )
+    return candidate.resolve()
 
 
 def _report_prompt(*, initial: bool) -> str:
