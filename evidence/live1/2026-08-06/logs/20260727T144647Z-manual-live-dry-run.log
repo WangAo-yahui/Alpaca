@@ -1,0 +1,4 @@
+脚本版本：2026-07-27-v2-natural-report-sync-v4
+v2主流程拒绝或失败
+错误代码：ALPACA_API_UNAVAILABLE
+错误信息：Alpaca API暂时不可用：get_account_for_stage_g_identity

@@ -1,0 +1,766 @@
+{
+  "schema_version": 1,
+  "scope": "live1",
+  "snapshot_date": "2026-08-06",
+  "generated_at_utc": "2026-08-06T11:23:19.306654+00:00",
+  "source_git_commit": "1aa51f76eab79b11607bc2081fb2a3d75e59ce2e",
+  "credential_check": {
+    "dotenv": ".env_live",
+    "secret_values_checked": 2,
+    "exact_secret_matches": 0
+  },
+  "logs": {
+    "source_file_count": 139,
+    "stored_unique_count": 126,
+    "files": [
+      {
+        "source": "20260727T063718Z-manual-live-dry-run.log",
+        "stored": "logs/20260727T063718Z-manual-live-dry-run.log",
+        "sha256": "40274725efcb330071469ac00e9798ae9720f0faf7d346183ce105df045e02a0"
+      },
+      {
+        "source": "20260727T065519Z-manual-live-dry-run.log",
+        "stored": "logs/20260727T065519Z-manual-live-dry-run.log",
+        "sha256": "7ba7d4ccc842cb5167f9ab0000ba8a9cbd6c14870d7d300a14d20cd70d2160bf"
+      },
+      {
+        "source": "20260727T124013Z-manual-live-trade.log",
+        "stored": "logs/20260727T124013Z-manual-live-trade.log",
+        "sha256": "010d46bd4bfa482243c589f9fc176b5229a3cf85d59df5445b608ae8fcf67beb"
+      },
+      {
+        "source": "20260727T125059Z-manual-live-trade.log",
+        "stored": "logs/20260727T125059Z-manual-live-trade.log",
+        "sha256": "f52b1ebe0dbb0979823056b04b13daa3b01ee677fea05c6d9164e5c160993414"
+      },
+      {
+        "source": "20260727T132033Z-manual-live-trade.log",
+        "stored": "logs/20260727T132033Z-manual-live-trade.log",
+        "sha256": "ffa57a01136da13a36af9da4a81790e4e5786e84a580b7f3a114caaf87e68ee9"
+      },
+      {
+        "source": "20260727T132206Z-manual-live-trade.log",
+        "stored": "logs/20260727T132206Z-manual-live-trade.log",
+        "sha256": "bd703453f17564a8f31cc2dad2f1e748a619dcf52494ab52fcde9d8d4ae71ee8"
+      },
+      {
+        "source": "20260727T133104Z-manual-live-trade.log",
+        "stored": "logs/20260727T133104Z-manual-live-trade.log",
+        "sha256": "a0642ff9301d42678a9a83d1149e4d0e6e00cee244023b86126bcc3ac85e047c"
+      },
+      {
+        "source": "20260727T135833Z-manual-live-dry-run.log",
+        "stored": "logs/20260727T135833Z-manual-live-dry-run.log",
+        "sha256": "abc200750547b423bccc0bfe9bbe67eafbfea7987d201d4b0764a525b9802a26"
+      },
+      {
+        "source": "20260727T140204Z-manual-live-dry-run.log",
+        "stored": "logs/20260727T140204Z-manual-live-dry-run.log",
+        "sha256": "98a1459ef04c0de74f1e9bdfcb31b279abea84ec39bf8a073f4f5d400fafef4b"
+      },
+      {
+        "source": "20260727T140236Z-manual-live-dry-run.log",
+        "stored": "logs/20260727T140236Z-manual-live-dry-run.log",
+        "sha256": "d9c43b64bad1f340f7ea15de360a6d4597181878142ff491aff67f91e4f6dcd4"
+      },
+      {
+        "source": "20260727T144647Z-manual-live-dry-run.log",
+        "stored": "logs/20260727T144647Z-manual-live-dry-run.log",
+        "sha256": "d6b3cea87731b2a07c0032ec2a0c051d6e67537ec401e3167307b6f25128b676"
+      },
+      {
+        "source": "20260727T144705Z-manual-live-dry-run.log",
+        "stored": "logs/20260727T144705Z-manual-live-dry-run.log",
+        "sha256": "3308f4ee6d8f600e708968e7f241ad96d8d2b8dfda04c7892938992d731727bb"
+      },
+      {
+        "source": "20260727T150002Z-manual-live-dry-run.log",
+        "stored": "logs/20260727T150002Z-manual-live-dry-run.log",
+        "sha256": "f2460d97a0185ce4a4c3064420ea977e625a04601e7a14d356b107b15bb4d74e"
+      },
+      {
+        "source": "20260727T150757Z-manual-live-trade.log",
+        "stored": "logs/20260727T150757Z-manual-live-trade.log",
+        "sha256": "2f3e00de27387cf0f9a7f6336b93036d51ccb797eff9ce0f527a7c4bfb6a6218"
+      },
+      {
+        "source": "20260727T153234Z-manual-live-dry-run.log",
+        "stored": "logs/20260727T153234Z-manual-live-dry-run.log",
+        "sha256": "b1ac277cceccfe104734760cc2d9eb4680bd09c6283552d365d2bd76db47a86e"
+      },
+      {
+        "source": "20260727T153414Z-deploy-dry-run.log",
+        "stored": "logs/20260727T153414Z-deploy-dry-run.log",
+        "sha256": "c68daba1099efc05b52cb9c2d56ce788b9511386379d2338fe560a90fd2bf4c9"
+      },
+      {
+        "source": "20260727T153838Z-deploy-dry-run.log",
+        "stored": "logs/20260727T153838Z-deploy-dry-run.log",
+        "sha256": "9327dbb8b5068f611d75f55b4499f590320bfa87f0e89ceaad66c1d5d99b7518"
+      },
+      {
+        "source": "20260727T154536Z-launchd-live1-intraday.log",
+        "stored": "logs/20260727T154536Z-launchd-live1-intraday.log",
+        "sha256": "b0b76e42b1f08abaf6c545bb4cc41a81b7c8ca779e215b53a4052d0c279c7438"
+      },
+      {
+        "source": "20260727T155743Z-manual-live-trade.log",
+        "stored": "logs/20260727T155743Z-manual-live-trade.log",
+        "sha256": "6ff93de65d4100c0821d2dd7c70f79ea55c9ce0b2d768268e174d2f5f3173891"
+      },
+      {
+        "source": "20260727T164523Z-launchd-live1-intraday.log",
+        "stored": "logs/20260727T164523Z-launchd-live1-intraday.log",
+        "sha256": "e223cca089269e87c630e11df1b4a90bd7afbb34accf7a985ff3844f444305dc"
+      },
+      {
+        "source": "20260727T174530Z-launchd-live1-intraday.log",
+        "stored": "logs/20260727T174530Z-launchd-live1-intraday.log",
+        "sha256": "47e8cb6db1f87a418d4a989200c2782c7ff7ba3f7f5302a411da8545da48735b"
+      },
+      {
+        "source": "20260727T180216Z-deploy-dry-run.log",
+        "stored": "logs/20260727T180216Z-deploy-dry-run.log",
+        "sha256": "1d9f46d63fa4deb287d73248b8172edb7bef592ed647d8d129a2fbf1ee5d771b"
+      },
+      {
+        "source": "20260727T184538Z-launchd-live1-intraday.log",
+        "stored": "logs/20260727T184538Z-launchd-live1-intraday.log",
+        "sha256": "ec8dbf9ea68ca6fb3a6ba2fd972fff54f54aae0175da0e89d437da5d53f45310"
+      },
+      {
+        "source": "20260727T184842Z-launchd-live1-intraday.log",
+        "stored": "logs/20260727T184842Z-launchd-live1-intraday.log",
+        "sha256": "323d734f19100118935e07b70e6def6a112b6ec51dd244c7099b2042c6d320fe"
+      },
+      {
+        "source": "20260727T194525Z-launchd-live1-intraday.log",
+        "stored": "logs/20260727T194525Z-launchd-live1-intraday.log",
+        "sha256": "adad0cac8bf1bb9aa5ac35acad4764d5e90f4a505f32e8c3866f96bb92ac2cdc"
+      },
+      {
+        "source": "20260727T200008Z-deploy-dry-run.log",
+        "stored": "logs/20260727T200008Z-deploy-dry-run.log",
+        "sha256": "176c8ae1ac6595c19b7244c2fae955c20f9e47568b5c5be4d8cf3600f4e8cbe1"
+      },
+      {
+        "source": "20260727T204059Z-manual-live-dry-run.log",
+        "stored": "logs/20260727T204059Z-manual-live-dry-run.log",
+        "sha256": "1844ece37f86ddc9d75530f2a23420857fd1378789aa4ecb113820424392aa01"
+      },
+      {
+        "source": "20260728T082748Z-deploy-dry-run.log",
+        "stored": "logs/20260728T082748Z-deploy-dry-run.log",
+        "sha256": "a52b0cf6317c07035d2450c18f7bf77b96a446f7a65354145fdd81fb7a801eef"
+      },
+      {
+        "source": "20260728T084707Z-deploy-dry-run.log",
+        "stored": "logs/20260728T084707Z-deploy-dry-run.log",
+        "sha256": "2cfcaa1f80d91cc5f43bb029e4ee31364089aea5d18120c0810db538a49da2a3"
+      },
+      {
+        "source": "20260728T113257Z-deploy-dry-run.log",
+        "stored": "logs/20260728T113257Z-deploy-dry-run.log",
+        "sha256": "fb2435ed7a719c83c846b27372e1d147591f60fa090c879042d40e56dc429917"
+      },
+      {
+        "source": "20260728T114507Z-deploy-dry-run.log",
+        "stored": "logs/20260728T114507Z-deploy-dry-run.log",
+        "sha256": "1a55be2260f2fd65ca9c3a3d6fcd6b2f90f5f3753b35245c42dda90dcce6aae8"
+      },
+      {
+        "source": "20260728T115917Z-deploy-dry-run.log",
+        "stored": "logs/20260728T115917Z-deploy-dry-run.log",
+        "sha256": "7c92fcf90249827101140c8ac829567ae192646a5707ee15a65d5a2b5a17e2e7"
+      },
+      {
+        "source": "20260728T121241Z-deploy-dry-run.log",
+        "stored": "logs/20260728T121241Z-deploy-dry-run.log",
+        "sha256": "debcb1dba5ad76dad2067fc7e11f100007e573f28e827494418ce626fe4a8bc7"
+      },
+      {
+        "source": "20260728T122607Z-deploy-dry-run.log",
+        "stored": "logs/20260728T122607Z-deploy-dry-run.log",
+        "sha256": "a3815ca993bc006f16d0dbab023eab5b5fbac3e39b3b728369300e06dcfe0c59"
+      },
+      {
+        "source": "20260728T123223Z-deploy-dry-run.log",
+        "stored": "logs/20260728T123223Z-deploy-dry-run.log",
+        "sha256": "663c9dbadf37bc2a4142200096a1e0b0a491a3ca20ee61b184e165547561bac8"
+      },
+      {
+        "source": "20260728T124159Z-manual-live-trade.log",
+        "stored": "logs/20260728T124159Z-manual-live-trade.log",
+        "sha256": "d066db0179e5be548381ac334cc0080b7f2281131eaf6906139b42bdf5842e72"
+      },
+      {
+        "source": "20260728T134512Z-launchd-live1-intraday.log",
+        "stored": "logs/20260728T134512Z-launchd-live1-intraday.log",
+        "sha256": "a9c1dedbf4dc0fa971e0e2f7c942572482930a61e52bd3692e0cb968577a88a4"
+      },
+      {
+        "source": "20260728T144552Z-launchd-live1-intraday.log",
+        "stored": "logs/20260728T144552Z-launchd-live1-intraday.log",
+        "sha256": "d309e2a83ee98be62f6b2086e38feb9fd5fca8d6c2dc4c8655114957014b3e3a"
+      },
+      {
+        "source": "20260728T145408Z-deploy-dry-run.log",
+        "stored": "logs/20260728T145408Z-deploy-dry-run.log",
+        "sha256": "2fcd47040b3cc41e43859a6ada94ba0bb4e9b950744ed269eabde26257213972"
+      },
+      {
+        "source": "20260728T153134Z-deploy-dry-run.log",
+        "stored": "logs/20260728T153134Z-deploy-dry-run.log",
+        "sha256": "624fc8abed408948ff5e64fa74810271688f2a205215eb398fa59fcf314d6fb0"
+      },
+      {
+        "source": "20260728T154556Z-launchd-live1-intraday.log",
+        "stored": "logs/20260728T154556Z-launchd-live1-intraday.log",
+        "sha256": "a226c08bd8a917735450136c6354cde14261d4b33f990466b5a74dbae9573996"
+      },
+      {
+        "source": "20260728T170159Z-launchd-live1-intraday.log",
+        "stored": "logs/20260728T170159Z-launchd-live1-intraday.log",
+        "sha256": "cc5671be80ae59f767304a41d7b4b08040e717bcbd1923e2d50f1fb3bda5859f"
+      },
+      {
+        "source": "20260728T221519Z-manual-live-dry-run.log",
+        "stored": "logs/20260728T221519Z-manual-live-dry-run.log",
+        "sha256": "6725473eb03d73be5a8687df5492c73086733ab9934ec8cf10313ea2a43bed29"
+      },
+      {
+        "source": "20260729T005040Z-deploy-dry-run.log",
+        "stored": "logs/20260729T005040Z-deploy-dry-run.log",
+        "sha256": "a4f6327ea906fad1d580379f7ccd9e598f33c90f86dea05ef295c1a3320d9295"
+      },
+      {
+        "source": "20260729T005729Z-deploy-dry-run.log",
+        "stored": "logs/20260729T005729Z-deploy-dry-run.log",
+        "sha256": "3d2da6f54dc5df9744198182ab1d84e835912133f39cf073de736050851c5a00"
+      },
+      {
+        "source": "20260729T111133Z-deploy-dry-run.log",
+        "stored": "logs/20260729T111133Z-deploy-dry-run.log",
+        "sha256": "0530bd1edfe2df6eca47f0aa71d7c921de18294806ccee0361aabe6888fb5cd6"
+      },
+      {
+        "source": "20260729T114513Z-deploy-dry-run.log",
+        "stored": "logs/20260729T114513Z-deploy-dry-run.log",
+        "sha256": "89f3427da281dde57d8811e543c8baf859a5c7f44e1e1db0108cfbd1f55adb66"
+      },
+      {
+        "source": "20260729T140040Z-launchd-live1-intraday.log",
+        "stored": "logs/20260729T140040Z-launchd-live1-intraday.log",
+        "sha256": "2884da583a78d0ef702f2479ebfd6372b1a35ad471d4f1f51fc6ec05aebf087a"
+      },
+      {
+        "source": "20260729T150640Z-launchd-live1-intraday.log",
+        "stored": "logs/20260729T150640Z-launchd-live1-intraday.log",
+        "sha256": "de790500bb6b536e4214dec16696da1a0beb1c96310023175a0db71a156acb0b"
+      },
+      {
+        "source": "20260729T151152Z-launchd-live1-intraday.log",
+        "stored": "logs/20260729T151152Z-launchd-live1-intraday.log",
+        "sha256": "b409207421b60aca973268486bacffab52e89bd5bc4abad223fbb2895f5f0d9c"
+      },
+      {
+        "source": "20260729T163336Z-deploy-dry-run.log",
+        "stored": "logs/20260729T163336Z-deploy-dry-run.log",
+        "sha256": "b9c9a67723c20edd9db2353b9b10d74a7b84e64af04bb4add80620757f839916"
+      },
+      {
+        "source": "20260729T164920Z-deploy-dry-run.log",
+        "stored": "logs/20260729T164920Z-deploy-dry-run.log",
+        "sha256": "08da6387e5e31978194b28625fe163a7e6938863ea0e47ace46469699467b701"
+      },
+      {
+        "source": "20260729T165158Z-deploy-dry-run.log",
+        "stored": "logs/20260729T165158Z-deploy-dry-run.log",
+        "sha256": "0f5276bac73684d7179eda7bfe8e25c8fa62cf1cc609f8f4166c7135bb5eb1ba"
+      },
+      {
+        "source": "20260729T170414Z-deploy-dry-run.log",
+        "stored": "logs/20260729T170414Z-deploy-dry-run.log",
+        "sha256": "27a0945df30dc62b8161203d2912e451b9a8246487da62caf8a365061c63b4f3"
+      },
+      {
+        "source": "20260729T233907Z-manual-live-dry-run.log",
+        "stored": "logs/20260729T233907Z-manual-live-dry-run.log",
+        "sha256": "a011813ffb286c30dcd391fe0032929e215c035b59e8cd53d363e6d75f783087"
+      },
+      {
+        "source": "20260729T234144Z-deploy-dry-run.log",
+        "stored": "logs/20260729T234144Z-deploy-dry-run.log",
+        "sha256": "9c906ba49612c7a7a119312771d9f9ed1ee9f69957a4c035323a33e405e3d71d"
+      },
+      {
+        "source": "20260729T234729Z-deploy-dry-run.log",
+        "stored": "logs/20260729T234729Z-deploy-dry-run.log",
+        "sha256": "b676b2df042c2ec31b589b62f72e3f31b9761ec994003d237b5786475da9c4a4"
+      },
+      {
+        "source": "20260730T001455Z-deploy-dry-run.log",
+        "stored": "logs/20260730T001455Z-deploy-dry-run.log",
+        "sha256": "347ad8b4dd0c38ac7110223c4d050cd86980453f1edd4932f4925276438985aa"
+      },
+      {
+        "source": "20260730T002006Z-manual-live-dry-run.log",
+        "stored": "logs/20260730T002006Z-manual-live-dry-run.log",
+        "sha256": "017b5f0379f79e8db8cc22eff7bbc40d6847ee557d0873b2f1c288d11e574dc1"
+      },
+      {
+        "source": "20260730T003426Z-deploy-dry-run.log",
+        "stored": "logs/20260730T003426Z-deploy-dry-run.log",
+        "sha256": "02b866fe75bda868f74980a8647447b3c3d8611b6fbf1dacd8b09fc157aa322d"
+      },
+      {
+        "source": "20260730T003833Z-manual-live-dry-run.log",
+        "stored": "logs/20260730T003833Z-manual-live-dry-run.log",
+        "sha256": "b3aa84f5735dd712bead6a828c5d714323e28fae7a0e94aa9c19d5b0c7293c94"
+      },
+      {
+        "source": "20260730T004520Z-manual-live-dry-run.log",
+        "stored": "logs/20260730T004520Z-manual-live-dry-run.log",
+        "sha256": "2ef5d746cc3cdc51d6983b300290d8d965a7cf84f8d9d83d044e26150213725f"
+      },
+      {
+        "source": "20260730T004721Z-deploy-dry-run.log",
+        "stored": "logs/20260730T004721Z-deploy-dry-run.log",
+        "sha256": "d414590dadb9d5e5575a427884ddde9c80954ff536ebe6ead5f540d789cbb42b"
+      },
+      {
+        "source": "20260730T140015Z-launchd-live1-intraday.log",
+        "stored": "logs/20260730T140015Z-launchd-live1-intraday.log",
+        "sha256": "d45a93f77633910c7939db05747f0f6d13e72d7c73e2fb00f94e410dd54236bb"
+      },
+      {
+        "source": "20260730T150828Z-launchd-live1-intraday.log",
+        "stored": "logs/20260730T150828Z-launchd-live1-intraday.log",
+        "sha256": "6a7b6874ef21aa789cf66758ca199b3486eb00836b660892f707595392259abf"
+      },
+      {
+        "source": "20260730T160001Z-launchd-live1-intraday.log",
+        "stored": "logs/20260730T160001Z-launchd-live1-intraday.log",
+        "sha256": "45e1d2f251a8eaa3f2f5fa2e0d837e20ab8b983c0748d153d04bf0ce478baa7c"
+      },
+      {
+        "source": "20260730T180102Z-launchd-live1-intraday.log",
+        "stored": "logs/20260730T180102Z-launchd-live1-intraday.log",
+        "sha256": "3322e57ac1777fda714639e4e2416ca80884fe1b57e50bbc117324291c61a125"
+      },
+      {
+        "source": "20260730T193536Z-manual-live-trade.log",
+        "stored": "logs/20260730T193536Z-manual-live-trade.log",
+        "sha256": "726f95420291588dfee4d04ca428b75c3c46d0cd48573431ab12b9eda2e594be"
+      },
+      {
+        "source": "20260730T201553Z-launchd-live1-close.log",
+        "stored": "logs/20260730T201553Z-launchd-live1-close.log",
+        "sha256": "1f43b6b283142e3b7fa54276af295efcd080b2fa9da518d603f688ed4fae6d34"
+      },
+      {
+        "source": "20260730T205457Z-deploy-dry-run.log",
+        "stored": "logs/20260730T205457Z-deploy-dry-run.log",
+        "sha256": "b39b3ea1a8bf2545fe4a7ea277b6b3fe9c351ad68d23163489e62de9ff44bac2"
+      },
+      {
+        "source": "20260730T205900Z-manual-live-dry-run.log",
+        "stored": "logs/20260730T205900Z-manual-live-dry-run.log",
+        "sha256": "ddc3daf8f76daa5f97c622326eedba381aa9663380a4e1c7ffb5a8ec908a4cb6"
+      },
+      {
+        "source": "20260731T140008Z-launchd-live1-intraday.log",
+        "stored": "logs/20260731T140008Z-launchd-live1-intraday.log",
+        "sha256": "c0e2a3e2cb28310b2f5898376b336cef4fa04924da8e28f2ce71bf32ba2bda3c"
+      },
+      {
+        "source": "20260731T143152Z-deploy-dry-run.log",
+        "stored": "logs/20260731T143152Z-deploy-dry-run.log",
+        "sha256": "8ebd8eba8723392b6926a008fd74c07133ea34bafb14d61d1375c5b29795b1aa"
+      },
+      {
+        "source": "20260731T143807Z-manual-live-trade.log",
+        "stored": "logs/20260731T143807Z-manual-live-trade.log",
+        "sha256": "d7995136a4fc34181764c94b280b997a3db55bf8ab6245eb2d863e976be37e73"
+      },
+      {
+        "source": "20260731T145633Z-deploy-dry-run.log",
+        "stored": "logs/20260731T145633Z-deploy-dry-run.log",
+        "sha256": "a0e0e51a11ee7fb3a8fd94f913a6f038d3b8101be3b883263856eef44110bc1c"
+      },
+      {
+        "source": "20260731T150121Z-launchd-live1-intraday.log",
+        "stored": "logs/20260731T150121Z-launchd-live1-intraday.log",
+        "sha256": "c432fd03cdb86065975838d7de2bf9e7c62d0d82e4e08795434c133eb53fbe9f"
+      },
+      {
+        "source": "20260731T150833Z-deploy-dry-run.log",
+        "stored": "logs/20260731T150833Z-deploy-dry-run.log",
+        "sha256": "dab712dc46c8848d78526c196db234cfd2572560e4708f7cfe1ca2c739391d52"
+      },
+      {
+        "source": "20260731T151925Z-deploy-dry-run.log",
+        "stored": "logs/20260731T151925Z-deploy-dry-run.log",
+        "sha256": "ff153faaae023656e8972d2d2c61af6294f367365fa855e70a381814859a0b7f"
+      },
+      {
+        "source": "20260731T160040Z-launchd-live1-intraday.log",
+        "stored": "logs/20260731T160040Z-launchd-live1-intraday.log",
+        "sha256": "f9b3e49a939ca544d7fbe6319c4aaa1c0e3cedeba4e83c0c1a1df39db350f861"
+      },
+      {
+        "source": "20260731T170347Z-launchd-live1-intraday.log",
+        "stored": "logs/20260731T170347Z-launchd-live1-intraday.log",
+        "sha256": "3c33b7349c9fcaf03a2b9e838f4aff86cf4acfc9547a176757fcf30107aab521"
+      },
+      {
+        "source": "20260731T180446Z-launchd-live1-intraday.log",
+        "stored": "logs/20260731T180446Z-launchd-live1-intraday.log",
+        "sha256": "faf6245408a52596c0a3844d1cd48c6ce952248a377c4ca4a75e852514da263d"
+      },
+      {
+        "source": "20260731T190051Z-launchd-live1-intraday.log",
+        "stored": "logs/20260731T190051Z-launchd-live1-intraday.log",
+        "sha256": "fc1cda2ba856d22e8c8e12924e70d592cd00d8b3f3d3e89afd8e8b3a03476340"
+      },
+      {
+        "source": "20260731T201539Z-launchd-live1-close.log",
+        "stored": "logs/20260731T201539Z-launchd-live1-close.log",
+        "sha256": "dbdbf5ca7dbd7fe9526685b3cc2195f2fcef7fee9ff32c1019f751d3e6a68219"
+      },
+      {
+        "source": "20260803T140001Z-launchd-live1-intraday.log",
+        "stored": "logs/20260803T140001Z-launchd-live1-intraday.log",
+        "sha256": "2ca1bd50959da99b4e69a06f4de00fd6ce6c80d273a4fe15739b0f1d3d8a6733"
+      },
+      {
+        "source": "20260803T150152Z-launchd-live1-intraday.log",
+        "stored": "logs/20260803T150152Z-launchd-live1-intraday.log",
+        "sha256": "8a9fa7939e94074f9ec17935ff83505dc22ba960ab84c72e68aad151e7251146"
+      },
+      {
+        "source": "20260803T180038Z-launchd-live1-intraday.log",
+        "stored": "logs/20260803T180038Z-launchd-live1-intraday.log",
+        "sha256": "5c10b4db2c6c1f34fc9c9d0c895b84846755ef4c1009ecdc63e2b298eb292564"
+      },
+      {
+        "source": "20260803T190058Z-launchd-live1-intraday.log",
+        "stored": "logs/20260803T190058Z-launchd-live1-intraday.log",
+        "sha256": "51f3b1731f32ec30aa1b8cc179ec0df17b249dbe335a40bfb7e8b4e6d2ce7bd3"
+      },
+      {
+        "source": "20260803T201501Z-launchd-live1-close.log",
+        "stored": "logs/20260803T201501Z-launchd-live1-close.log",
+        "sha256": "c0f11c4ccd8325b0958f8f2d8997de90ff41bc8ddd297605f16956f00464b218"
+      },
+      {
+        "source": "20260804T023543Z-deploy-dry-run.log",
+        "stored": "logs/20260804T023543Z-deploy-dry-run.log",
+        "sha256": "87138f8e7e77e2e0cf37f46674fe8d19fbf638bd819be21b8b5c9e404925e886"
+      },
+      {
+        "source": "20260804T025232Z-deploy-dry-run.log",
+        "stored": "logs/20260804T025232Z-deploy-dry-run.log",
+        "sha256": "2f06df59206ca8380e614f07784a9b25cf668168514a4ee21362ac10994226e9"
+      },
+      {
+        "source": "20260804T030140Z-deploy-dry-run.log",
+        "stored": "logs/20260804T030140Z-deploy-dry-run.log",
+        "sha256": "91e3e675dface5af307cc86891b55b379216f7afea403bd8d4944488f5172e8c"
+      },
+      {
+        "source": "20260804T042837Z-deploy-dry-run.log",
+        "stored": "logs/20260804T042837Z-deploy-dry-run.log",
+        "sha256": "384b8b51fecd471f2525b0b8ce454268856b486d9ad604506cfc17327659f306"
+      },
+      {
+        "source": "20260804T043633Z-deploy-dry-run.log",
+        "stored": "logs/20260804T043633Z-deploy-dry-run.log",
+        "sha256": "d89c9231945ff654a78e67d352cd3f9a08897756f5ed4e7dc62bfd0b04c6ccf4"
+      },
+      {
+        "source": "20260804T043857Z-deploy-dry-run.log",
+        "stored": "logs/20260804T043857Z-deploy-dry-run.log",
+        "sha256": "c7b28c7071f5ce7f5985d5307d6427e3ab1d9284eaec833c30546899511d1fe8"
+      },
+      {
+        "source": "20260804T045149Z-deploy-dry-run.log",
+        "stored": "logs/20260804T045149Z-deploy-dry-run.log",
+        "sha256": "ca570b3f09de05d65149abe35debaa4536c224a4ce644456cdd016daca5f2b68"
+      },
+      {
+        "source": "20260804T045835Z-deploy-dry-run.log",
+        "stored": "logs/20260804T045835Z-deploy-dry-run.log",
+        "sha256": "1f11f2005be0c29431b2329c1c2f07d49780de42c7be7907caecc57a48635132"
+      },
+      {
+        "source": "20260804T051126Z-deploy-dry-run.log",
+        "stored": "logs/20260804T051126Z-deploy-dry-run.log",
+        "sha256": "891c18676ddb0439c433d764a6d3eb4f33972717247e6fb705546ba653fe2cd8"
+      },
+      {
+        "source": "20260804T052217Z-deploy-dry-run.log",
+        "stored": "logs/20260804T052217Z-deploy-dry-run.log",
+        "sha256": "2cc92a7efd74ae432173325c26a143e530bbdf0b4866fd3c4dc75b6579fa6cf7"
+      },
+      {
+        "source": "20260804T133111Z-manual-live-trade.log",
+        "stored": "logs/20260804T133111Z-manual-live-trade.log",
+        "sha256": "f35d50c7b8c610cc2166185b51cf2f7ebd9de6434c20f81f19d9133cf15f1ae6"
+      },
+      {
+        "source": "20260804T133902Z-deploy-dry-run.log",
+        "stored": "logs/20260804T133902Z-deploy-dry-run.log",
+        "sha256": "e40b5ea471a2a63bf03b6ab9fd13945414aad088be92e47eeaa8d38f9c99444f"
+      },
+      {
+        "source": "20260804T140009Z-launchd-live1-intraday.log",
+        "stored": "logs/20260804T140009Z-launchd-live1-intraday.log",
+        "sha256": "2db99d05e5a8596aca6e3f09491459730ee4c6a41ed29b94cc6bd58a80cf09e1"
+      },
+      {
+        "source": "20260804T160032Z-launchd-live1-intraday.log",
+        "stored": "logs/20260804T160032Z-launchd-live1-intraday.log",
+        "sha256": "ef32092f24ce87b6fe4dbfde24e4106e75ab9500a70c9eebe1e32b7a91d172f7"
+      },
+      {
+        "source": "20260804T180024Z-launchd-live1-intraday.log",
+        "stored": "logs/20260804T180024Z-launchd-live1-intraday.log",
+        "sha256": "d30cb6cdd25f2bea29d6adfe61537ad507b677a08a8f4d557d63dda5781353df"
+      },
+      {
+        "source": "20260804T201518Z-launchd-live1-close.log",
+        "stored": "logs/20260804T201518Z-launchd-live1-close.log",
+        "sha256": "bd50f6735c7b75921805f95129c16f7cc6d911374e0eacd4161793a1cecd80c8"
+      },
+      {
+        "source": "20260805T140000Z-launchd-live1-intraday.log",
+        "stored": "logs/20260805T140000Z-launchd-live1-intraday.log",
+        "sha256": "c7f9528f9be4bf5abe9f5df299be790d36a43840c142450f44a51d2d00e71b9a"
+      },
+      {
+        "source": "20260805T160038Z-launchd-live1-intraday.log",
+        "stored": "logs/20260805T160038Z-launchd-live1-intraday.log",
+        "sha256": "5edf58d3bb6152c030e27766765a003844b8dbb2e1fece5d99ff9ecb0e42c801"
+      },
+      {
+        "source": "20260805T160218Z-launchd-live1-intraday.log",
+        "stored": "logs/20260805T160218Z-launchd-live1-intraday.log",
+        "sha256": "f7f2a025e1cce1557506589133a8cbe9790e8244e75467cbfb6cf6b46a142062"
+      },
+      {
+        "source": "20260805T180040Z-launchd-live1-intraday.log",
+        "stored": "logs/20260805T180040Z-launchd-live1-intraday.log",
+        "sha256": "fad440b7e8dd20719922f607e29bfeb05b871a5487bf072e8fe1ed6d4cf89c91"
+      },
+      {
+        "source": "20260805T201544Z-launchd-live1-close.log",
+        "stored": "logs/20260805T201544Z-launchd-live1-close.log",
+        "sha256": "7d82c32c980b2ca99e8e3fccab81f342777e2b9ebc913fd92f213dcd2253b34b"
+      },
+      {
+        "source": "20260806T085228Z-deploy-dry-run.log",
+        "stored": "logs/20260806T085228Z-deploy-dry-run.log",
+        "sha256": "f2d840f2b4661e8a9d3caddd921bc69181fbb4bb4b331b7e5bac6678d6a3ec0e"
+      },
+      {
+        "source": "20260806T085903Z-deploy-dry-run.log",
+        "stored": "logs/20260806T085903Z-deploy-dry-run.log",
+        "sha256": "46ff37dbfbf06d5acd811aa010df24886fc5621572c7657250bfafc29438e0e4"
+      },
+      {
+        "source": "20260806T100631Z-deploy-dry-run.log",
+        "stored": "logs/20260806T100631Z-deploy-dry-run.log",
+        "sha256": "3853196784efa72fc456cd1a30732930d5b923f7beab9bf758cacff4f503270b"
+      },
+      {
+        "source": "20260806T102207Z-deploy-dry-run.log",
+        "stored": "logs/20260806T102207Z-deploy-dry-run.log",
+        "sha256": "e5e24ebd81522ff7ba09fd56dca5f5a008637491451d213141f8bfc7948bf28a"
+      },
+      {
+        "source": "20260806T103319Z-deploy-dry-run.log",
+        "stored": "logs/20260806T103319Z-deploy-dry-run.log",
+        "sha256": "5513a6a30d9d3c51e95030d98af5455e98bba256bc61015cbed275b85d662a02"
+      },
+      {
+        "source": "20260806T104858Z-deploy-dry-run.log",
+        "stored": "logs/20260806T104858Z-deploy-dry-run.log",
+        "sha256": "2921ecc56b85cd16f11f912e79f807ec9b491ccf846974a929a96d3b63c18b11"
+      },
+      {
+        "source": "20260806T110306Z-deploy-dry-run.log",
+        "stored": "logs/20260806T110306Z-deploy-dry-run.log",
+        "sha256": "7cf5b80f1b75d923162b2b6964c6b95e4fbbe9333e167f228e074db7e660e2f5"
+      },
+      {
+        "source": "launchd.stderr.log",
+        "stored": "logs/launchd.stderr.log",
+        "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+      },
+      {
+        "source": "launchd.stdout.log",
+        "stored": "logs/launchd.stdout.log",
+        "sha256": "05378056b90622ec467e37cd19cb1c376620ea660748b3b47ee4df004646495e"
+      },
+      {
+        "source": "monitor/2026-07-27.jsonl",
+        "stored": "logs/monitor/2026-07-27.jsonl",
+        "sha256": "2a403b8e1eaccbe854fc47bb4d9f3ef7f4017df31d1153c2978385e7153d02f6"
+      },
+      {
+        "source": "monitor/2026-07-28.jsonl",
+        "stored": "logs/monitor/2026-07-28.jsonl",
+        "sha256": "5c02480824e1fb8f41c59f494aeab24c4ef809d590b7f75b0f41e98ea0fd243e"
+      },
+      {
+        "source": "monitor/2026-07-29.jsonl",
+        "stored": "logs/monitor/2026-07-29.jsonl",
+        "sha256": "edc46049a3ab500fad74381fb4ccc5b9835b4de4ed570f30221191c4e1ec3568"
+      },
+      {
+        "source": "monitor/2026-07-30.jsonl",
+        "stored": "logs/monitor/2026-07-30.jsonl",
+        "sha256": "a6fa3a8e8f9868c038b759c26ce247faa80d14b4da0ba29a39807bbd08c4ac40"
+      },
+      {
+        "source": "monitor/2026-07-31.jsonl",
+        "stored": "logs/monitor/2026-07-31.jsonl",
+        "sha256": "c3490c7e5c2f224e156f09aa535bca9082adcb1bc1974bbf06c831cb1c139b00"
+      },
+      {
+        "source": "monitor/2026-08-03.jsonl",
+        "stored": "logs/monitor/2026-08-03.jsonl",
+        "sha256": "4a05cafa4dab1ca128496c0cbb0eb7bac6317a7d4cdfb735886f4cac9f80777e"
+      },
+      {
+        "source": "monitor/2026-08-04.jsonl",
+        "stored": "logs/monitor/2026-08-04.jsonl",
+        "sha256": "99e5547da85ee234189a2cb0c79bcb3dd524d8c93b1e153167512c13fc102494"
+      },
+      {
+        "source": "monitor/2026-08-05.jsonl",
+        "stored": "logs/monitor/2026-08-05.jsonl",
+        "sha256": "5a24df3a03c09c5f0d3865618ac7c9e6f6c4acc06203ef1c8fdf28e577842bc5"
+      }
+    ],
+    "duplicate_aliases": [
+      {
+        "source": "20260728T150426Z-deploy-dry-run.log",
+        "same_content_as": "logs/20260728T113257Z-deploy-dry-run.log",
+        "sha256": "fb2435ed7a719c83c846b27372e1d147591f60fa090c879042d40e56dc429917"
+      },
+      {
+        "source": "20260728T151551Z-deploy-dry-run.log",
+        "same_content_as": "logs/20260728T113257Z-deploy-dry-run.log",
+        "sha256": "fb2435ed7a719c83c846b27372e1d147591f60fa090c879042d40e56dc429917"
+      },
+      {
+        "source": "20260728T203336Z-launchd-live1-close.log",
+        "same_content_as": "logs/20260727T144647Z-manual-live-dry-run.log",
+        "sha256": "d6b3cea87731b2a07c0032ec2a0c051d6e67537ec401e3167307b6f25128b676"
+      },
+      {
+        "source": "20260729T104644Z-deploy-dry-run.log",
+        "same_content_as": "logs/20260728T113257Z-deploy-dry-run.log",
+        "sha256": "fb2435ed7a719c83c846b27372e1d147591f60fa090c879042d40e56dc429917"
+      },
+      {
+        "source": "20260729T105730Z-deploy-dry-run.log",
+        "same_content_as": "logs/20260728T113257Z-deploy-dry-run.log",
+        "sha256": "fb2435ed7a719c83c846b27372e1d147591f60fa090c879042d40e56dc429917"
+      },
+      {
+        "source": "20260729T155859Z-deploy-dry-run.log",
+        "same_content_as": "logs/20260727T144647Z-manual-live-dry-run.log",
+        "sha256": "d6b3cea87731b2a07c0032ec2a0c051d6e67537ec401e3167307b6f25128b676"
+      },
+      {
+        "source": "20260729T155936Z-deploy-dry-run.log",
+        "same_content_as": "logs/20260727T144647Z-manual-live-dry-run.log",
+        "sha256": "d6b3cea87731b2a07c0032ec2a0c051d6e67537ec401e3167307b6f25128b676"
+      },
+      {
+        "source": "20260729T163225Z-deploy-dry-run.log",
+        "same_content_as": "logs/20260727T144647Z-manual-live-dry-run.log",
+        "sha256": "d6b3cea87731b2a07c0032ec2a0c051d6e67537ec401e3167307b6f25128b676"
+      },
+      {
+        "source": "20260729T233849Z-manual-live-dry-run.log",
+        "same_content_as": "logs/20260727T144647Z-manual-live-dry-run.log",
+        "sha256": "d6b3cea87731b2a07c0032ec2a0c051d6e67537ec401e3167307b6f25128b676"
+      },
+      {
+        "source": "20260730T004316Z-deploy-dry-run.log",
+        "same_content_as": "logs/20260727T144647Z-manual-live-dry-run.log",
+        "sha256": "d6b3cea87731b2a07c0032ec2a0c051d6e67537ec401e3167307b6f25128b676"
+      },
+      {
+        "source": "20260730T174312Z-manual-live-trade.log",
+        "same_content_as": "logs/20260727T144647Z-manual-live-dry-run.log",
+        "sha256": "d6b3cea87731b2a07c0032ec2a0c051d6e67537ec401e3167307b6f25128b676"
+      },
+      {
+        "source": "20260731T143122Z-deploy-dry-run.log",
+        "same_content_as": "logs/20260727T144647Z-manual-live-dry-run.log",
+        "sha256": "d6b3cea87731b2a07c0032ec2a0c051d6e67537ec401e3167307b6f25128b676"
+      },
+      {
+        "source": "20260804T015551Z-deploy-dry-run.log",
+        "same_content_as": "logs/20260729T165158Z-deploy-dry-run.log",
+        "sha256": "0f5276bac73684d7179eda7bfe8e25c8fa62cf1cc609f8f4166c7135bb5eb1ba"
+      }
+    ]
+  },
+  "daily_reports": {
+    "stored_count": 9,
+    "latest": "2026-08-06.md",
+    "files": [
+      {
+        "source_index": "2026-07-27.md",
+        "stored": "reports/natural_language/2026-07-27.md",
+        "sha256": "cbab42779aec87ec1ec6a7062cccdcb4a1ff49720947de46148456ee39820fb8"
+      },
+      {
+        "source_index": "2026-07-28.md",
+        "stored": "reports/natural_language/2026-07-28.md",
+        "sha256": "0683b719ec6e3c944bba6659d2c659d60db88b054df1a84ff949e8b497803dec"
+      },
+      {
+        "source_index": "2026-07-29.md",
+        "stored": "reports/natural_language/2026-07-29.md",
+        "sha256": "673f9e92124a74c0c7b56b1291e80f23e4d1b369b8932bfe44f060968526ab72"
+      },
+      {
+        "source_index": "2026-07-30.md",
+        "stored": "reports/natural_language/2026-07-30.md",
+        "sha256": "e61d0631547ff6cd81ef9b985a0201e13c4fc5468500a608e2e2f0c2cd6dcc1b"
+      },
+      {
+        "source_index": "2026-07-31.md",
+        "stored": "reports/natural_language/2026-07-31.md",
+        "sha256": "bd214a677b222829703212e78778ffa6ba6c8dc310c967413130ae834f2481bd"
+      },
+      {
+        "source_index": "2026-08-03.md",
+        "stored": "reports/natural_language/2026-08-03.md",
+        "sha256": "76e508783f88ada0045af457106f1419da2c691bc13196500b4ace8788ce9bf8"
+      },
+      {
+        "source_index": "2026-08-04.md",
+        "stored": "reports/natural_language/2026-08-04.md",
+        "sha256": "70b2beb99c4900277497f96e2981c74f998a322a78d3032e3d3d847971df5449"
+      },
+      {
+        "source_index": "2026-08-05.md",
+        "stored": "reports/natural_language/2026-08-05.md",
+        "sha256": "be98c19037adc2bf4528cf24eaaf743abde1d5062af76298ae3ad6875b2c521a"
+      },
+      {
+        "source_index": "2026-08-06.md",
+        "stored": "reports/natural_language/2026-08-06.md",
+        "sha256": "5acae54521b4887f428f1dc3d249c6605d1ddcc986aeae3a40d318aadc545afb"
+      }
+    ]
+  }
+}

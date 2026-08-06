@@ -1,0 +1,15 @@
+脚本版本：2026-08-04-v2-strategy-performance-v1
+Codex粗选已启动；单次最长等待600秒
+Codex粗选仍在运行：30秒；可按 Ctrl-C 安全中断
+Codex粗选仍在运行：60秒；可按 Ctrl-C 安全中断
+Codex粗选仍在运行：90秒；可按 Ctrl-C 安全中断
+Codex粗选仍在运行：120秒；可按 Ctrl-C 安全中断
+Codex粗选仍在运行：150秒；可按 Ctrl-C 安全中断
+Codex粗选仍在运行：180秒；可按 Ctrl-C 安全中断
+Codex粗选仍在运行：210秒；可按 Ctrl-C 安全中断
+Codex粗选仍在运行：240秒；可按 Ctrl-C 安全中断
+Codex粗选仍在运行：270秒；可按 Ctrl-C 安全中断
+Codex粗选进程结束：277秒，退出码0
+v2主流程拒绝或失败
+错误代码：COARSE_SCHEMA_PREFLIGHT_FAILED
+错误信息：粗选输出Schema不满足严格对象约束

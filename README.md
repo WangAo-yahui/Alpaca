@@ -1069,3 +1069,21 @@ find var/deployment/live1/history -type f -maxdepth 1 -print
 - `live1` 是唯一生产凭据、账户绑定、policy、运行锁和服务身份；
 - Live 手工运行支持首轮完整决策和同日计划 execution refresh；
 - Live 自然语言日报支持联网新闻、持仓/订单解释及无变化时不追加。
+
+## 25. 私有 GitHub 证据快照
+
+`var/` 继续保持 Git 忽略，避免动态运行状态、大体积行情缓存和券商可写产物进入
+版本历史。需要备份审计证据时，仅把经过检查的只读日志与最完整日报导出到
+`evidence/live1/<DATE>/`：
+
+```bash
+.Alpaca/bin/python tools/export_live1_evidence.py --snapshot-date YYYY-MM-DD
+```
+
+导出工具会读取 `.env_live` 中的敏感值做精确匹配检查，但不会复制或输出这些值；
+发现匹配会直接拒绝导出。日志按 SHA-256 去重，日报从根目录
+`natural_language/` 索引解析为可移植的实体文件，并生成带校验和的
+`manifest.json`。证据中可能保留持仓和账户价值事实，因此包含证据的远端仓库必须
+始终保持 **Private**。
+
+当前快照：[`evidence/live1/2026-08-06`](evidence/live1/2026-08-06/README.md)。

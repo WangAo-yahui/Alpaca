@@ -1,0 +1,13 @@
+脚本版本：2026-07-27-v2-natural-report-sync-v4
+Codex组合已启动；单次最长等待600秒
+Codex组合仍在运行：30秒；可按 Ctrl-C 安全中断
+Codex组合仍在运行：60秒；可按 Ctrl-C 安全中断
+Codex组合仍在运行：90秒；可按 Ctrl-C 安全中断
+Codex组合仍在运行：120秒；可按 Ctrl-C 安全中断
+Codex组合仍在运行：150秒；可按 Ctrl-C 安全中断
+Codex组合仍在运行：180秒；可按 Ctrl-C 安全中断
+Codex组合仍在运行：210秒；可按 Ctrl-C 安全中断
+Codex组合进程结束：235秒，退出码0
+v2主流程拒绝或失败
+错误代码：CODEX_OUTPUT_INVALID
+错误信息：Codex组合输出未通过Schema或业务校验

@@ -1,0 +1,25 @@
+脚本版本：2026-07-27-v2-natural-report-sync-v4
+Codex网络预检暂时失败；1秒后重试（2/3）
+Codex执行已启动；单次最长等待600秒
+Codex执行仍在运行：30秒；可按 Ctrl-C 安全中断
+Codex执行仍在运行：60秒；可按 Ctrl-C 安全中断
+Codex执行仍在运行：90秒；可按 Ctrl-C 安全中断
+Codex执行仍在运行：120秒；可按 Ctrl-C 安全中断
+Codex执行仍在运行：150秒；可按 Ctrl-C 安全中断
+Codex执行仍在运行：181秒；可按 Ctrl-C 安全中断
+Codex执行仍在运行：211秒；可按 Ctrl-C 安全中断
+Codex执行仍在运行：241秒；可按 Ctrl-C 安全中断
+Codex执行仍在运行：271秒；可按 Ctrl-C 安全中断
+Codex执行仍在运行：301秒；可按 Ctrl-C 安全中断
+Codex执行仍在运行：332秒；可按 Ctrl-C 安全中断
+Codex执行仍在运行：362秒；可按 Ctrl-C 安全中断
+Codex执行仍在运行：392秒；可按 Ctrl-C 安全中断
+Codex执行仍在运行：422秒；可按 Ctrl-C 安全中断
+Codex执行仍在运行：452秒；可按 Ctrl-C 安全中断
+Codex执行仍在运行：483秒；可按 Ctrl-C 安全中断
+Codex执行仍在运行：513秒；可按 Ctrl-C 安全中断
+Codex执行仍在运行：543秒；可按 Ctrl-C 安全中断
+Codex执行仍在运行：573秒；可按 Ctrl-C 安全中断
+v2主流程拒绝或失败
+错误代码：CODEX_TIMEOUT
+错误信息：Codex执行调用超时

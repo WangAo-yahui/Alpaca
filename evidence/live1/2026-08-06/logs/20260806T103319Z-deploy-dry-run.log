@@ -1,0 +1,35 @@
+脚本版本：2026-08-06-v2-mandatory-web-attempt-v1
+Codex粗选已启动；单次最长等待600秒
+Codex粗选仍在运行：30秒；可按 Ctrl-C 安全中断
+Codex粗选仍在运行：60秒；可按 Ctrl-C 安全中断
+Codex粗选仍在运行：90秒；可按 Ctrl-C 安全中断
+Codex粗选仍在运行：120秒；可按 Ctrl-C 安全中断
+Codex粗选仍在运行：150秒；可按 Ctrl-C 安全中断
+Codex粗选仍在运行：180秒；可按 Ctrl-C 安全中断
+Codex粗选仍在运行：210秒；可按 Ctrl-C 安全中断
+Codex粗选仍在运行：240秒；可按 Ctrl-C 安全中断
+Codex粗选仍在运行：270秒；可按 Ctrl-C 安全中断
+Codex粗选进程结束：271秒，退出码0
+Codex组合已启动；单次最长等待600秒
+Codex组合仍在运行：30秒；可按 Ctrl-C 安全中断
+Codex组合仍在运行：60秒；可按 Ctrl-C 安全中断
+Codex组合仍在运行：90秒；可按 Ctrl-C 安全中断
+Codex组合仍在运行：120秒；可按 Ctrl-C 安全中断
+Codex组合仍在运行：150秒；可按 Ctrl-C 安全中断
+Codex组合仍在运行：180秒；可按 Ctrl-C 安全中断
+Codex组合仍在运行：210秒；可按 Ctrl-C 安全中断
+Codex组合仍在运行：240秒；可按 Ctrl-C 安全中断
+Codex组合仍在运行：270秒；可按 Ctrl-C 安全中断
+Codex组合仍在运行：300秒；可按 Ctrl-C 安全中断
+Codex组合仍在运行：330秒；可按 Ctrl-C 安全中断
+Codex组合仍在运行：360秒；可按 Ctrl-C 安全中断
+Codex组合仍在运行：390秒；可按 Ctrl-C 安全中断
+Codex组合仍在运行：420秒；可按 Ctrl-C 安全中断
+Codex组合仍在运行：450秒；可按 Ctrl-C 安全中断
+Codex组合仍在运行：480秒；可按 Ctrl-C 安全中断
+Codex组合仍在运行：510秒；可按 Ctrl-C 安全中断
+Codex组合仍在运行：540秒；可按 Ctrl-C 安全中断
+Codex组合仍在运行：570秒；可按 Ctrl-C 安全中断
+v2主流程拒绝或失败
+错误代码：CODEX_TIMEOUT
+错误信息：Codex组合调用超时

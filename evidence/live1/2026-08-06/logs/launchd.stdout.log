@@ -1,0 +1,1631 @@
+脚本版本：2026-07-27-v2-natural-report-sync-v4
+Codex执行已启动；单次最长等待600秒
+Codex执行仍在运行：30秒；可按 Ctrl-C 安全中断
+Codex执行仍在运行：60秒；可按 Ctrl-C 安全中断
+Codex执行仍在运行：90秒；可按 Ctrl-C 安全中断
+Codex执行进程结束：91秒，退出码0
+Codex自然语言日报已启动；单次最长等待600秒
+Codex自然语言日报仍在运行：30秒；可按 Ctrl-C 安全中断
+Codex自然语言日报仍在运行：60秒；可按 Ctrl-C 安全中断
+Codex自然语言日报进程结束：62秒，退出码0
+自然语言日报：updated / /Users/wangao/Alpaca/var/shared/reports/accounts/live1/strategies/core_long/1.2.0/daily/2026-07-27.natural.md
+v2主流程初始化成功
+纽约日期：2026-07-27
+cycle_id：20260727T114546
+轮次处理：创建/初始化新轮次
+原因：创建新的主函数运行轮次
+轮次类型：execution_refresh
+人工复查：skipped_by_flag
+交易模式：live
+当前步骤：COMPLETE
+轮次状态：completed_with_open_orders
+下一步骤：无
+日期状态：/Users/wangao/Alpaca/var/shared/runtime/accounts/live1/strategies/core_long/1.2.0/2026-07-27/daily_state.json
+轮次状态：/Users/wangao/Alpaca/var/shared/runtime/accounts/live1/strategies/core_long/1.2.0/2026-07-27/cycles/20260727T114546/cycle_state.json
+轮次目录：/Users/wangao/Alpaca/var/shared/runtime/accounts/live1/strategies/core_long/1.2.0/2026-07-27/cycles/20260727T114546
+
+阶段A基础设施已就绪。
+Submission policy：alpaca_live@1.0.0
+启动维护旧cycle：2
+模式：live-submit
+提交：7
+取消确认：4
+不确定：0
+成交：3
+部分成交：0
+Open：4
+拒绝：0
+最终状态：completed_with_open_orders
+Cycle summary：/Users/wangao/Alpaca/var/shared/runtime/accounts/live1/strategies/core_long/1.2.0/2026-07-27/cycles/20260727T114546/cycle_summary.json
+日报：/Users/wangao/Alpaca/var/shared/reports/accounts/live1/strategies/core_long/1.2.0/daily/2026-07-27.md
+自然语言日报：/Users/wangao/Alpaca/var/shared/reports/accounts/live1/strategies/core_long/1.2.0/daily/2026-07-27.natural.md
+脚本版本：2026-07-27-v2-natural-report-sync-v4
+Codex执行已启动；单次最长等待600秒
+Codex执行仍在运行：30秒；可按 Ctrl-C 安全中断
+Codex执行仍在运行：60秒；可按 Ctrl-C 安全中断
+Codex执行仍在运行：90秒；可按 Ctrl-C 安全中断
+Codex执行进程结束：110秒，退出码0
+Codex自然语言日报已启动；单次最长等待600秒
+Codex自然语言日报仍在运行：30秒；可按 Ctrl-C 安全中断
+Codex自然语言日报仍在运行：60秒；可按 Ctrl-C 安全中断
+Codex自然语言日报进程结束：65秒，退出码0
+自然语言日报：updated / /Users/wangao/Alpaca/var/shared/reports/accounts/live1/strategies/core_long/1.2.0/daily/2026-07-27.natural.md
+v2主流程初始化成功
+纽约日期：2026-07-27
+cycle_id：20260727T124542
+轮次处理：创建/初始化新轮次
+原因：创建新的主函数运行轮次
+轮次类型：execution_refresh
+人工复查：skipped_by_flag
+交易模式：live
+当前步骤：COMPLETE
+轮次状态：completed_with_rejections
+下一步骤：无
+日期状态：/Users/wangao/Alpaca/var/shared/runtime/accounts/live1/strategies/core_long/1.2.0/2026-07-27/daily_state.json
+轮次状态：/Users/wangao/Alpaca/var/shared/runtime/accounts/live1/strategies/core_long/1.2.0/2026-07-27/cycles/20260727T124542/cycle_state.json
+轮次目录：/Users/wangao/Alpaca/var/shared/runtime/accounts/live1/strategies/core_long/1.2.0/2026-07-27/cycles/20260727T124542
+
+阶段A基础设施已就绪。
+Submission policy：alpaca_live@1.0.0
+启动维护旧cycle：4
+模式：live-submit
+提交：4
+取消确认：1
+不确定：0
+成交：0
+部分成交：0
+Open：4
+拒绝：0
+最终状态：completed_with_rejections
+Cycle summary：/Users/wangao/Alpaca/var/shared/runtime/accounts/live1/strategies/core_long/1.2.0/2026-07-27/cycles/20260727T124542/cycle_summary.json
+日报：/Users/wangao/Alpaca/var/shared/reports/accounts/live1/strategies/core_long/1.2.0/daily/2026-07-27.md
+自然语言日报：/Users/wangao/Alpaca/var/shared/reports/accounts/live1/strategies/core_long/1.2.0/daily/2026-07-27.natural.md
+脚本版本：2026-07-27-v2-natural-report-sync-v4
+Codex执行已启动；单次最长等待600秒
+Codex执行仍在运行：30秒；可按 Ctrl-C 安全中断
+Codex执行仍在运行：60秒；可按 Ctrl-C 安全中断
+Codex执行进程结束：86秒，退出码0
+Codex自然语言日报已启动；单次最长等待600秒
+Codex自然语言日报仍在运行：30秒；可按 Ctrl-C 安全中断
+Codex自然语言日报仍在运行：60秒；可按 Ctrl-C 安全中断
+Codex自然语言日报进程结束：74秒，退出码0
+自然语言日报：updated / /Users/wangao/Alpaca/var/shared/reports/accounts/live1/strategies/core_long/1.2.0/daily/2026-07-27.natural.md
+v2主流程初始化成功
+纽约日期：2026-07-27
+cycle_id：20260727T134550
+轮次处理：创建/初始化新轮次
+原因：创建新的主函数运行轮次
+轮次类型：execution_refresh
+人工复查：skipped_by_flag
+交易模式：live
+当前步骤：COMPLETE
+轮次状态：completed_with_rejections
+下一步骤：无
+日期状态：/Users/wangao/Alpaca/var/shared/runtime/accounts/live1/strategies/core_long/1.2.0/2026-07-27/daily_state.json
+轮次状态：/Users/wangao/Alpaca/var/shared/runtime/accounts/live1/strategies/core_long/1.2.0/2026-07-27/cycles/20260727T134550/cycle_state.json
+轮次目录：/Users/wangao/Alpaca/var/shared/runtime/accounts/live1/strategies/core_long/1.2.0/2026-07-27/cycles/20260727T134550
+
+阶段A基础设施已就绪。
+Submission policy：alpaca_live@1.0.0
+启动维护旧cycle：5
+模式：live-submit
+提交：3
+取消确认：1
+不确定：0
+成交：0
+部分成交：0
+Open：3
+拒绝：0
+最终状态：completed_with_rejections
+Cycle summary：/Users/wangao/Alpaca/var/shared/runtime/accounts/live1/strategies/core_long/1.2.0/2026-07-27/cycles/20260727T134550/cycle_summary.json
+日报：/Users/wangao/Alpaca/var/shared/reports/accounts/live1/strategies/core_long/1.2.0/daily/2026-07-27.md
+自然语言日报：/Users/wangao/Alpaca/var/shared/reports/accounts/live1/strategies/core_long/1.2.0/daily/2026-07-27.natural.md
+脚本版本：2026-07-27-v2-natural-report-sync-v4
+Codex执行已启动；单次最长等待600秒
+Codex执行仍在运行：30秒；可按 Ctrl-C 安全中断
+Codex执行仍在运行：60秒；可按 Ctrl-C 安全中断
+Codex执行仍在运行：90秒；可按 Ctrl-C 安全中断
+Codex执行进程结束：92秒，退出码0
+v2主流程拒绝或失败
+错误代码：CODEX_OUTPUT_INVALID
+错误信息：Codex execution输出未通过Schema或业务校验
+脚本版本：2026-07-27-v2-natural-report-sync-v4
+Codex执行已启动；单次最长等待600秒
+Codex执行仍在运行：30秒；可按 Ctrl-C 安全中断
+Codex执行仍在运行：60秒；可按 Ctrl-C 安全中断
+Codex执行仍在运行：90秒；可按 Ctrl-C 安全中断
+Codex执行进程结束：104秒，退出码0
+Codex自然语言日报已启动；单次最长等待600秒
+Codex自然语言日报仍在运行：30秒；可按 Ctrl-C 安全中断
+Codex自然语言日报仍在运行：60秒；可按 Ctrl-C 安全中断
+Codex自然语言日报进程结束：65秒，退出码0
+自然语言日报：updated / /Users/wangao/Alpaca/var/shared/reports/accounts/live1/strategies/core_long/1.2.0/daily/2026-07-27.natural.md
+v2主流程初始化成功
+纽约日期：2026-07-27
+cycle_id：20260727T144601
+轮次处理：恢复已有轮次
+原因：轮次状态允许恢复
+轮次类型：execution_refresh
+人工复查：skipped_by_flag
+交易模式：live
+当前步骤：COMPLETE
+轮次状态：completed_with_open_orders
+下一步骤：无
+日期状态：/Users/wangao/Alpaca/var/shared/runtime/accounts/live1/strategies/core_long/1.2.0/2026-07-27/daily_state.json
+轮次状态：/Users/wangao/Alpaca/var/shared/runtime/accounts/live1/strategies/core_long/1.2.0/2026-07-27/cycles/20260727T144601/cycle_state.json
+轮次目录：/Users/wangao/Alpaca/var/shared/runtime/accounts/live1/strategies/core_long/1.2.0/2026-07-27/cycles/20260727T144601
+
+阶段A基础设施已就绪。
+Submission policy：alpaca_live@1.0.0
+启动维护旧cycle：6
+模式：live-submit
+提交：4
+取消确认：0
+不确定：0
+成交：0
+部分成交：0
+Open：4
+拒绝：0
+最终状态：completed_with_open_orders
+Cycle summary：/Users/wangao/Alpaca/var/shared/runtime/accounts/live1/strategies/core_long/1.2.0/2026-07-27/cycles/20260727T144601/cycle_summary.json
+日报：/Users/wangao/Alpaca/var/shared/reports/accounts/live1/strategies/core_long/1.2.0/daily/2026-07-27.md
+自然语言日报：/Users/wangao/Alpaca/var/shared/reports/accounts/live1/strategies/core_long/1.2.0/daily/2026-07-27.natural.md
+脚本版本：2026-07-27-v2-natural-report-sync-v4
+v2主流程拒绝或失败
+错误代码：EXECUTION_PORTFOLIO_INVALID
+错误信息：历史portfolio已过期或身份无效
+脚本版本：2026-07-27-v2-natural-report-sync-v4
+Codex执行已启动；单次最长等待600秒
+Codex执行仍在运行：30秒；可按 Ctrl-C 安全中断
+Codex执行仍在运行：60秒；可按 Ctrl-C 安全中断
+Codex执行仍在运行：90秒；可按 Ctrl-C 安全中断
+Codex执行仍在运行：120秒；可按 Ctrl-C 安全中断
+Codex执行仍在运行：150秒；可按 Ctrl-C 安全中断
+Codex执行进程结束：181秒，退出码0
+Codex自然语言日报已启动；单次最长等待600秒
+Codex自然语言日报仍在运行：30秒；可按 Ctrl-C 安全中断
+Codex自然语言日报仍在运行：60秒；可按 Ctrl-C 安全中断
+Codex自然语言日报仍在运行：90秒；可按 Ctrl-C 安全中断
+Codex自然语言日报仍在运行：120秒；可按 Ctrl-C 安全中断
+Codex自然语言日报仍在运行：150秒；可按 Ctrl-C 安全中断
+Codex自然语言日报仍在运行：181秒；可按 Ctrl-C 安全中断
+Codex自然语言日报仍在运行：211秒；可按 Ctrl-C 安全中断
+Codex自然语言日报仍在运行：241秒；可按 Ctrl-C 安全中断
+Codex自然语言日报仍在运行：271秒；可按 Ctrl-C 安全中断
+Codex自然语言日报进程结束：288秒，退出码0
+自然语言日报：updated / /Users/wangao/Alpaca/var/shared/reports/accounts/live1/strategies/core_long/1.3.0/daily/2026-07-28.natural.md
+v2主流程初始化成功
+纽约日期：2026-07-28
+cycle_id：20260728T094516
+轮次处理：创建/初始化新轮次
+原因：创建新的主函数运行轮次
+轮次类型：execution_refresh
+人工复查：skipped_by_flag
+交易模式：live
+当前步骤：COMPLETE
+轮次状态：completed_no_action
+下一步骤：无
+日期状态：/Users/wangao/Alpaca/var/shared/runtime/accounts/live1/strategies/core_long/1.3.0/2026-07-28/daily_state.json
+轮次状态：/Users/wangao/Alpaca/var/shared/runtime/accounts/live1/strategies/core_long/1.3.0/2026-07-28/cycles/20260728T094516/cycle_state.json
+轮次目录：/Users/wangao/Alpaca/var/shared/runtime/accounts/live1/strategies/core_long/1.3.0/2026-07-28/cycles/20260728T094516
+
+阶段A基础设施已就绪。
+Submission policy：alpaca_live@1.0.0
+启动维护旧cycle：0
+模式：live-submit
+提交：0
+取消确认：0
+不确定：0
+成交：0
+部分成交：0
+Open：0
+拒绝：0
+最终状态：completed_no_action
+Cycle summary：/Users/wangao/Alpaca/var/shared/runtime/accounts/live1/strategies/core_long/1.3.0/2026-07-28/cycles/20260728T094516/cycle_summary.json
+日报：/Users/wangao/Alpaca/var/shared/reports/accounts/live1/strategies/core_long/1.3.0/daily/2026-07-28.md
+自然语言日报：/Users/wangao/Alpaca/var/shared/reports/accounts/live1/strategies/core_long/1.3.0/daily/2026-07-28.natural.md
+脚本版本：2026-07-27-v2-natural-report-sync-v4
+Codex执行已启动；单次最长等待600秒
+Codex执行仍在运行：30秒；可按 Ctrl-C 安全中断
+Codex执行仍在运行：60秒；可按 Ctrl-C 安全中断
+Codex执行仍在运行：90秒；可按 Ctrl-C 安全中断
+Codex执行仍在运行：120秒；可按 Ctrl-C 安全中断
+Codex执行仍在运行：150秒；可按 Ctrl-C 安全中断
+Codex执行进程结束：155秒，退出码0
+Codex自然语言日报已启动；单次最长等待600秒
+Codex自然语言日报仍在运行：30秒；可按 Ctrl-C 安全中断
+Codex自然语言日报仍在运行：60秒；可按 Ctrl-C 安全中断
+Codex自然语言日报仍在运行：90秒；可按 Ctrl-C 安全中断
+Codex自然语言日报仍在运行：120秒；可按 Ctrl-C 安全中断
+Codex自然语言日报仍在运行：150秒；可按 Ctrl-C 安全中断
+Codex自然语言日报仍在运行：180秒；可按 Ctrl-C 安全中断
+Codex自然语言日报仍在运行：210秒；可按 Ctrl-C 安全中断
+Codex自然语言日报仍在运行：240秒；可按 Ctrl-C 安全中断
+Codex自然语言日报进程结束：248秒，退出码0
+自然语言日报：updated / /Users/wangao/Alpaca/var/shared/reports/accounts/live1/strategies/core_long/1.3.0/daily/2026-07-28.natural.md
+v2主流程初始化成功
+纽约日期：2026-07-28
+cycle_id：20260728T104557
+轮次处理：创建/初始化新轮次
+原因：创建新的主函数运行轮次
+轮次类型：execution_refresh
+人工复查：skipped_by_flag
+交易模式：live
+当前步骤：COMPLETE
+轮次状态：completed_with_open_orders
+下一步骤：无
+日期状态：/Users/wangao/Alpaca/var/shared/runtime/accounts/live1/strategies/core_long/1.3.0/2026-07-28/daily_state.json
+轮次状态：/Users/wangao/Alpaca/var/shared/runtime/accounts/live1/strategies/core_long/1.3.0/2026-07-28/cycles/20260728T104557/cycle_state.json
+轮次目录：/Users/wangao/Alpaca/var/shared/runtime/accounts/live1/strategies/core_long/1.3.0/2026-07-28/cycles/20260728T104557
+
+阶段A基础设施已就绪。
+Submission policy：alpaca_live@1.0.0
+启动维护旧cycle：0
+模式：live-submit
+提交：1
+取消确认：0
+不确定：0
+成交：0
+部分成交：0
+Open：1
+拒绝：0
+最终状态：completed_with_open_orders
+Cycle summary：/Users/wangao/Alpaca/var/shared/runtime/accounts/live1/strategies/core_long/1.3.0/2026-07-28/cycles/20260728T104557/cycle_summary.json
+日报：/Users/wangao/Alpaca/var/shared/reports/accounts/live1/strategies/core_long/1.3.0/daily/2026-07-28.md
+自然语言日报：/Users/wangao/Alpaca/var/shared/reports/accounts/live1/strategies/core_long/1.3.0/daily/2026-07-28.natural.md
+脚本版本：2026-07-27-v2-natural-report-sync-v4
+Codex执行已启动；单次最长等待600秒
+Codex执行仍在运行：30秒；可按 Ctrl-C 安全中断
+Codex执行仍在运行：60秒；可按 Ctrl-C 安全中断
+Codex执行仍在运行：90秒；可按 Ctrl-C 安全中断
+Codex执行仍在运行：120秒；可按 Ctrl-C 安全中断
+Codex执行仍在运行：150秒；可按 Ctrl-C 安全中断
+Codex执行仍在运行：180秒；可按 Ctrl-C 安全中断
+Codex执行进程结束：201秒，退出码0
+Codex自然语言日报已启动；单次最长等待600秒
+Codex自然语言日报仍在运行：30秒；可按 Ctrl-C 安全中断
+Codex自然语言日报仍在运行：60秒；可按 Ctrl-C 安全中断
+Codex自然语言日报进程结束：66秒，退出码0
+自然语言日报生成失败；已写入无新闻的事实降级版：/Users/wangao/Alpaca/var/shared/reports/accounts/live1/strategies/core_long/1.3.0/daily/2026-07-28.natural.md；错误：/Users/wangao/Alpaca/var/shared/reports/accounts/live1/strategies/core_long/1.3.0/daily/2026-07-28.natural.error.json
+v2主流程初始化成功
+纽约日期：2026-07-28
+cycle_id：20260728T114602
+轮次处理：创建/初始化新轮次
+原因：创建新的主函数运行轮次
+轮次类型：execution_refresh
+人工复查：skipped_by_flag
+交易模式：live
+当前步骤：COMPLETE
+轮次状态：completed_no_action
+下一步骤：无
+日期状态：/Users/wangao/Alpaca/var/shared/runtime/accounts/live1/strategies/core_long/1.3.0/2026-07-28/daily_state.json
+轮次状态：/Users/wangao/Alpaca/var/shared/runtime/accounts/live1/strategies/core_long/1.3.0/2026-07-28/cycles/20260728T114602/cycle_state.json
+轮次目录：/Users/wangao/Alpaca/var/shared/runtime/accounts/live1/strategies/core_long/1.3.0/2026-07-28/cycles/20260728T114602
+
+阶段A基础设施已就绪。
+Submission policy：alpaca_live@1.0.0
+启动维护旧cycle：1
+模式：live-submit
+提交：0
+取消确认：0
+不确定：0
+成交：0
+部分成交：0
+Open：0
+拒绝：0
+最终状态：completed_no_action
+Cycle summary：/Users/wangao/Alpaca/var/shared/runtime/accounts/live1/strategies/core_long/1.3.0/2026-07-28/cycles/20260728T114602/cycle_summary.json
+日报：/Users/wangao/Alpaca/var/shared/reports/accounts/live1/strategies/core_long/1.3.0/daily/2026-07-28.md
+自然语言日报：/Users/wangao/Alpaca/var/shared/reports/accounts/live1/strategies/core_long/1.3.0/daily/2026-07-28.natural.md
+脚本版本：2026-07-27-v2-natural-report-sync-v4
+Codex网络预检暂时失败；1秒后重试（2/3）
+Codex执行已启动；单次最长等待600秒
+Codex执行仍在运行：30秒；可按 Ctrl-C 安全中断
+Codex执行仍在运行：60秒；可按 Ctrl-C 安全中断
+Codex执行仍在运行：90秒；可按 Ctrl-C 安全中断
+Codex执行仍在运行：120秒；可按 Ctrl-C 安全中断
+Codex执行仍在运行：150秒；可按 Ctrl-C 安全中断
+Codex执行仍在运行：181秒；可按 Ctrl-C 安全中断
+Codex执行仍在运行：211秒；可按 Ctrl-C 安全中断
+Codex执行仍在运行：241秒；可按 Ctrl-C 安全中断
+Codex执行仍在运行：271秒；可按 Ctrl-C 安全中断
+Codex执行仍在运行：301秒；可按 Ctrl-C 安全中断
+Codex执行仍在运行：332秒；可按 Ctrl-C 安全中断
+Codex执行仍在运行：362秒；可按 Ctrl-C 安全中断
+Codex执行仍在运行：392秒；可按 Ctrl-C 安全中断
+Codex执行仍在运行：422秒；可按 Ctrl-C 安全中断
+Codex执行仍在运行：452秒；可按 Ctrl-C 安全中断
+Codex执行仍在运行：483秒；可按 Ctrl-C 安全中断
+Codex执行仍在运行：513秒；可按 Ctrl-C 安全中断
+Codex执行仍在运行：543秒；可按 Ctrl-C 安全中断
+Codex执行仍在运行：573秒；可按 Ctrl-C 安全中断
+v2主流程拒绝或失败
+错误代码：CODEX_TIMEOUT
+错误信息：Codex执行调用超时
+脚本版本：2026-07-27-v2-natural-report-sync-v4
+Codex执行已启动；单次最长等待600秒
+Codex执行仍在运行：30秒；可按 Ctrl-C 安全中断
+Codex执行仍在运行：60秒；可按 Ctrl-C 安全中断
+Codex执行仍在运行：90秒；可按 Ctrl-C 安全中断
+Codex执行仍在运行：120秒；可按 Ctrl-C 安全中断
+Codex执行仍在运行：150秒；可按 Ctrl-C 安全中断
+Codex执行进程结束：173秒，退出码0
+Codex自然语言日报已启动；单次最长等待600秒
+Codex自然语言日报仍在运行：30秒；可按 Ctrl-C 安全中断
+Codex自然语言日报仍在运行：60秒；可按 Ctrl-C 安全中断
+Codex自然语言日报仍在运行：90秒；可按 Ctrl-C 安全中断
+Codex自然语言日报仍在运行：120秒；可按 Ctrl-C 安全中断
+Codex自然语言日报仍在运行：150秒；可按 Ctrl-C 安全中断
+Codex自然语言日报仍在运行：180秒；可按 Ctrl-C 安全中断
+Codex自然语言日报仍在运行：210秒；可按 Ctrl-C 安全中断
+Codex自然语言日报进程结束：235秒，退出码0
+自然语言日报：updated / /Users/wangao/Alpaca/var/shared/reports/accounts/live1/strategies/core_long/1.3.0/daily/2026-07-29.natural.md
+v2主流程初始化成功
+纽约日期：2026-07-29
+cycle_id：20260729T100047
+轮次处理：创建/初始化新轮次
+原因：创建新的主函数运行轮次
+轮次类型：execution_refresh
+人工复查：skipped_by_flag
+交易模式：live
+当前步骤：COMPLETE
+轮次状态：completed_no_action
+下一步骤：无
+日期状态：/Users/wangao/Alpaca/var/shared/runtime/accounts/live1/strategies/core_long/1.3.0/2026-07-29/daily_state.json
+轮次状态：/Users/wangao/Alpaca/var/shared/runtime/accounts/live1/strategies/core_long/1.3.0/2026-07-29/cycles/20260729T100047/cycle_state.json
+轮次目录：/Users/wangao/Alpaca/var/shared/runtime/accounts/live1/strategies/core_long/1.3.0/2026-07-29/cycles/20260729T100047
+
+阶段A基础设施已就绪。
+Submission policy：alpaca_live@1.0.0
+启动维护旧cycle：1
+模式：live-submit
+提交：0
+取消确认：0
+不确定：0
+成交：0
+部分成交：0
+Open：0
+拒绝：0
+最终状态：completed_no_action
+Cycle summary：/Users/wangao/Alpaca/var/shared/runtime/accounts/live1/strategies/core_long/1.3.0/2026-07-29/cycles/20260729T100047/cycle_summary.json
+日报：/Users/wangao/Alpaca/var/shared/reports/accounts/live1/strategies/core_long/1.3.0/daily/2026-07-29.md
+自然语言日报：/Users/wangao/Alpaca/var/shared/reports/accounts/live1/strategies/core_long/1.3.0/daily/2026-07-29.natural.md
+脚本版本：2026-07-27-v2-natural-report-sync-v4
+Codex执行已启动；单次最长等待600秒
+Codex执行仍在运行：30秒；可按 Ctrl-C 安全中断
+Codex执行仍在运行：60秒；可按 Ctrl-C 安全中断
+Codex执行仍在运行：90秒；可按 Ctrl-C 安全中断
+Codex执行仍在运行：120秒；可按 Ctrl-C 安全中断
+Codex执行仍在运行：150秒；可按 Ctrl-C 安全中断
+Codex执行仍在运行：180秒；可按 Ctrl-C 安全中断
+Codex执行仍在运行：210秒；可按 Ctrl-C 安全中断
+Codex执行进程结束：236秒，退出码0
+v2主流程拒绝或失败
+错误代码：CODEX_OUTPUT_INVALID
+错误信息：Codex execution输出未通过Schema或业务校验
+脚本版本：2026-07-27-v2-natural-report-sync-v4
+Codex执行已启动；单次最长等待600秒
+Codex执行仍在运行：30秒；可按 Ctrl-C 安全中断
+Codex执行仍在运行：60秒；可按 Ctrl-C 安全中断
+Codex执行仍在运行：90秒；可按 Ctrl-C 安全中断
+Codex执行仍在运行：120秒；可按 Ctrl-C 安全中断
+Codex执行仍在运行：150秒；可按 Ctrl-C 安全中断
+Codex执行进程结束：152秒，退出码0
+Codex自然语言日报已启动；单次最长等待600秒
+Codex自然语言日报仍在运行：30秒；可按 Ctrl-C 安全中断
+Codex自然语言日报仍在运行：60秒；可按 Ctrl-C 安全中断
+Codex自然语言日报仍在运行：90秒；可按 Ctrl-C 安全中断
+Codex自然语言日报仍在运行：120秒；可按 Ctrl-C 安全中断
+Codex自然语言日报仍在运行：150秒；可按 Ctrl-C 安全中断
+Codex自然语言日报仍在运行：180秒；可按 Ctrl-C 安全中断
+Codex自然语言日报仍在运行：210秒；可按 Ctrl-C 安全中断
+Codex自然语言日报进程结束：230秒，退出码0
+自然语言日报：updated / /Users/wangao/Alpaca/var/shared/reports/accounts/live1/strategies/core_long/1.3.0/daily/2026-07-29.natural.md
+v2主流程初始化成功
+纽约日期：2026-07-29
+cycle_id：20260729T110646
+轮次处理：恢复已有轮次
+原因：轮次状态允许恢复
+轮次类型：execution_refresh
+人工复查：skipped_by_flag
+交易模式：live
+当前步骤：COMPLETE
+轮次状态：completed_no_action
+下一步骤：无
+日期状态：/Users/wangao/Alpaca/var/shared/runtime/accounts/live1/strategies/core_long/1.3.0/2026-07-29/daily_state.json
+轮次状态：/Users/wangao/Alpaca/var/shared/runtime/accounts/live1/strategies/core_long/1.3.0/2026-07-29/cycles/20260729T110646/cycle_state.json
+轮次目录：/Users/wangao/Alpaca/var/shared/runtime/accounts/live1/strategies/core_long/1.3.0/2026-07-29/cycles/20260729T110646
+
+阶段A基础设施已就绪。
+Submission policy：alpaca_live@1.0.0
+启动维护旧cycle：1
+模式：live-submit
+提交：0
+取消确认：0
+不确定：0
+成交：0
+部分成交：0
+Open：0
+拒绝：0
+最终状态：completed_no_action
+Cycle summary：/Users/wangao/Alpaca/var/shared/runtime/accounts/live1/strategies/core_long/1.3.0/2026-07-29/cycles/20260729T110646/cycle_summary.json
+日报：/Users/wangao/Alpaca/var/shared/reports/accounts/live1/strategies/core_long/1.3.0/daily/2026-07-29.md
+自然语言日报：/Users/wangao/Alpaca/var/shared/reports/accounts/live1/strategies/core_long/1.3.0/daily/2026-07-29.natural.md
+脚本版本：2026-07-27-v2-natural-report-sync-v4
+Codex粗选已启动；单次最长等待600秒
+Codex粗选仍在运行：30秒；可按 Ctrl-C 安全中断
+Codex粗选仍在运行：60秒；可按 Ctrl-C 安全中断
+Codex粗选仍在运行：90秒；可按 Ctrl-C 安全中断
+Codex粗选仍在运行：120秒；可按 Ctrl-C 安全中断
+Codex粗选仍在运行：150秒；可按 Ctrl-C 安全中断
+Codex粗选仍在运行：180秒；可按 Ctrl-C 安全中断
+Codex粗选仍在运行：210秒；可按 Ctrl-C 安全中断
+Codex粗选仍在运行：240秒；可按 Ctrl-C 安全中断
+Codex粗选仍在运行：270秒；可按 Ctrl-C 安全中断
+Codex粗选仍在运行：301秒；可按 Ctrl-C 安全中断
+Codex粗选仍在运行：331秒；可按 Ctrl-C 安全中断
+Codex粗选仍在运行：361秒；可按 Ctrl-C 安全中断
+Codex粗选仍在运行：391秒；可按 Ctrl-C 安全中断
+Codex粗选进程结束：412秒，退出码0
+Codex组合已启动；单次最长等待600秒
+Codex组合仍在运行：30秒；可按 Ctrl-C 安全中断
+Codex组合仍在运行：60秒；可按 Ctrl-C 安全中断
+Codex组合仍在运行：90秒；可按 Ctrl-C 安全中断
+Codex组合仍在运行：120秒；可按 Ctrl-C 安全中断
+Codex组合仍在运行：150秒；可按 Ctrl-C 安全中断
+Codex组合仍在运行：180秒；可按 Ctrl-C 安全中断
+Codex组合仍在运行：210秒；可按 Ctrl-C 安全中断
+Codex组合仍在运行：240秒；可按 Ctrl-C 安全中断
+Codex组合仍在运行：270秒；可按 Ctrl-C 安全中断
+Codex组合进程结束：281秒，退出码0
+Codex执行已启动；单次最长等待600秒
+Codex执行仍在运行：30秒；可按 Ctrl-C 安全中断
+Codex执行仍在运行：60秒；可按 Ctrl-C 安全中断
+Codex执行仍在运行：90秒；可按 Ctrl-C 安全中断
+Codex执行进程结束：94秒，退出码0
+Codex自然语言日报已启动；单次最长等待600秒
+Codex自然语言日报仍在运行：30秒；可按 Ctrl-C 安全中断
+Codex自然语言日报仍在运行：60秒；可按 Ctrl-C 安全中断
+Codex自然语言日报仍在运行：90秒；可按 Ctrl-C 安全中断
+Codex自然语言日报仍在运行：120秒；可按 Ctrl-C 安全中断
+Codex自然语言日报仍在运行：150秒；可按 Ctrl-C 安全中断
+Codex自然语言日报仍在运行：180秒；可按 Ctrl-C 安全中断
+Codex自然语言日报进程结束：195秒，退出码0
+自然语言日报：updated / /Users/wangao/Alpaca/var/shared/reports/accounts/live1/strategies/core_long/1.5.0/daily/2026-07-30.natural.md
+v2主流程初始化成功
+纽约日期：2026-07-30
+cycle_id：20260730T100020
+轮次处理：创建/初始化新轮次
+原因：创建新的主函数运行轮次
+轮次类型：daily_full
+人工复查：skipped_by_flag
+交易模式：live
+当前步骤：COMPLETE
+轮次状态：completed_no_action
+下一步骤：无
+日期状态：/Users/wangao/Alpaca/var/shared/runtime/accounts/live1/strategies/core_long/1.5.0/2026-07-30/daily_state.json
+轮次状态：/Users/wangao/Alpaca/var/shared/runtime/accounts/live1/strategies/core_long/1.5.0/2026-07-30/cycles/20260730T100020/cycle_state.json
+轮次目录：/Users/wangao/Alpaca/var/shared/runtime/accounts/live1/strategies/core_long/1.5.0/2026-07-30/cycles/20260730T100020
+
+阶段A基础设施已就绪。
+Submission policy：alpaca_live@1.0.0
+启动维护旧cycle：0
+模式：live-submit
+提交：0
+取消确认：0
+不确定：0
+成交：0
+部分成交：0
+Open：0
+拒绝：0
+最终状态：completed_no_action
+Cycle summary：/Users/wangao/Alpaca/var/shared/runtime/accounts/live1/strategies/core_long/1.5.0/2026-07-30/cycles/20260730T100020/cycle_summary.json
+日报：/Users/wangao/Alpaca/var/shared/reports/accounts/live1/strategies/core_long/1.5.0/daily/2026-07-30.md
+自然语言日报：/Users/wangao/Alpaca/var/shared/reports/accounts/live1/strategies/core_long/1.5.0/daily/2026-07-30.natural.md
+脚本版本：2026-07-27-v2-natural-report-sync-v4
+Codex执行已启动；单次最长等待600秒
+Codex执行仍在运行：30秒；可按 Ctrl-C 安全中断
+Codex执行仍在运行：60秒；可按 Ctrl-C 安全中断
+Codex执行仍在运行：90秒；可按 Ctrl-C 安全中断
+Codex执行进程结束：102秒，退出码0
+Codex自然语言日报已启动；单次最长等待600秒
+Codex自然语言日报仍在运行：30秒；可按 Ctrl-C 安全中断
+Codex自然语言日报仍在运行：60秒；可按 Ctrl-C 安全中断
+Codex自然语言日报进程结束：81秒，退出码0
+自然语言日报：updated / /Users/wangao/Alpaca/var/shared/reports/accounts/live1/strategies/core_long/1.5.0/daily/2026-07-30.natural.md
+v2主流程初始化成功
+纽约日期：2026-07-30
+cycle_id：20260730T110833
+轮次处理：创建/初始化新轮次
+原因：创建新的主函数运行轮次
+轮次类型：execution_refresh
+人工复查：skipped_by_flag
+交易模式：live
+当前步骤：COMPLETE
+轮次状态：completed_no_action
+下一步骤：无
+日期状态：/Users/wangao/Alpaca/var/shared/runtime/accounts/live1/strategies/core_long/1.5.0/2026-07-30/daily_state.json
+轮次状态：/Users/wangao/Alpaca/var/shared/runtime/accounts/live1/strategies/core_long/1.5.0/2026-07-30/cycles/20260730T110833/cycle_state.json
+轮次目录：/Users/wangao/Alpaca/var/shared/runtime/accounts/live1/strategies/core_long/1.5.0/2026-07-30/cycles/20260730T110833
+
+阶段A基础设施已就绪。
+Submission policy：alpaca_live@1.0.0
+启动维护旧cycle：0
+模式：live-submit
+提交：0
+取消确认：0
+不确定：0
+成交：0
+部分成交：0
+Open：0
+拒绝：0
+最终状态：completed_no_action
+Cycle summary：/Users/wangao/Alpaca/var/shared/runtime/accounts/live1/strategies/core_long/1.5.0/2026-07-30/cycles/20260730T110833/cycle_summary.json
+日报：/Users/wangao/Alpaca/var/shared/reports/accounts/live1/strategies/core_long/1.5.0/daily/2026-07-30.md
+自然语言日报：/Users/wangao/Alpaca/var/shared/reports/accounts/live1/strategies/core_long/1.5.0/daily/2026-07-30.natural.md
+脚本版本：2026-07-27-v2-natural-report-sync-v4
+Codex执行已启动；单次最长等待600秒
+Codex执行仍在运行：30秒；可按 Ctrl-C 安全中断
+Codex执行仍在运行：60秒；可按 Ctrl-C 安全中断
+Codex执行仍在运行：90秒；可按 Ctrl-C 安全中断
+Codex执行进程结束：94秒，退出码0
+Codex自然语言日报已启动；单次最长等待600秒
+Codex自然语言日报仍在运行：30秒；可按 Ctrl-C 安全中断
+Codex自然语言日报仍在运行：60秒；可按 Ctrl-C 安全中断
+Codex自然语言日报仍在运行：90秒；可按 Ctrl-C 安全中断
+Codex自然语言日报进程结束：95秒，退出码0
+自然语言日报：updated / /Users/wangao/Alpaca/var/shared/reports/accounts/live1/strategies/core_long/1.5.0/daily/2026-07-30.natural.md
+v2主流程初始化成功
+纽约日期：2026-07-30
+cycle_id：20260730T120006
+轮次处理：创建/初始化新轮次
+原因：创建新的主函数运行轮次
+轮次类型：execution_refresh
+人工复查：skipped_by_flag
+交易模式：live
+当前步骤：COMPLETE
+轮次状态：completed_with_submissions
+下一步骤：无
+日期状态：/Users/wangao/Alpaca/var/shared/runtime/accounts/live1/strategies/core_long/1.5.0/2026-07-30/daily_state.json
+轮次状态：/Users/wangao/Alpaca/var/shared/runtime/accounts/live1/strategies/core_long/1.5.0/2026-07-30/cycles/20260730T120006/cycle_state.json
+轮次目录：/Users/wangao/Alpaca/var/shared/runtime/accounts/live1/strategies/core_long/1.5.0/2026-07-30/cycles/20260730T120006
+
+阶段A基础设施已就绪。
+Submission policy：alpaca_live@1.0.0
+启动维护旧cycle：0
+模式：live-submit
+提交：2
+取消确认：0
+不确定：0
+成交：2
+部分成交：0
+Open：0
+拒绝：0
+最终状态：completed_with_submissions
+Cycle summary：/Users/wangao/Alpaca/var/shared/runtime/accounts/live1/strategies/core_long/1.5.0/2026-07-30/cycles/20260730T120006/cycle_summary.json
+日报：/Users/wangao/Alpaca/var/shared/reports/accounts/live1/strategies/core_long/1.5.0/daily/2026-07-30.md
+自然语言日报：/Users/wangao/Alpaca/var/shared/reports/accounts/live1/strategies/core_long/1.5.0/daily/2026-07-30.natural.md
+脚本版本：2026-07-27-v2-natural-report-sync-v4
+Codex执行已启动；单次最长等待600秒
+Codex执行仍在运行：30秒；可按 Ctrl-C 安全中断
+Codex执行仍在运行：60秒；可按 Ctrl-C 安全中断
+Codex执行仍在运行：90秒；可按 Ctrl-C 安全中断
+Codex执行仍在运行：120秒；可按 Ctrl-C 安全中断
+Codex执行仍在运行：150秒；可按 Ctrl-C 安全中断
+Codex执行仍在运行：181秒；可按 Ctrl-C 安全中断
+Codex执行仍在运行：211秒；可按 Ctrl-C 安全中断
+Codex执行仍在运行：241秒；可按 Ctrl-C 安全中断
+Codex执行仍在运行：271秒；可按 Ctrl-C 安全中断
+Codex执行仍在运行：301秒；可按 Ctrl-C 安全中断
+Codex执行仍在运行：331秒；可按 Ctrl-C 安全中断
+Codex执行仍在运行：362秒；可按 Ctrl-C 安全中断
+Codex执行仍在运行：392秒；可按 Ctrl-C 安全中断
+Codex执行仍在运行：422秒；可按 Ctrl-C 安全中断
+Codex执行进程结束：434秒，退出码0
+v2主流程拒绝或失败
+错误代码：CODEX_OUTPUT_INVALID
+错误信息：Codex execution输出未通过Schema或业务校验
+脚本版本：2026-07-27-v2-natural-report-sync-v4
+Codex自然语言日报已启动；单次最长等待600秒
+Codex自然语言日报仍在运行：30秒；可按 Ctrl-C 安全中断
+Codex自然语言日报仍在运行：60秒；可按 Ctrl-C 安全中断
+Codex自然语言日报仍在运行：90秒；可按 Ctrl-C 安全中断
+Codex自然语言日报仍在运行：120秒；可按 Ctrl-C 安全中断
+Codex自然语言日报仍在运行：150秒；可按 Ctrl-C 安全中断
+Codex自然语言日报仍在运行：181秒；可按 Ctrl-C 安全中断
+Codex自然语言日报仍在运行：211秒；可按 Ctrl-C 安全中断
+Codex自然语言日报仍在运行：241秒；可按 Ctrl-C 安全中断
+Codex自然语言日报仍在运行：271秒；可按 Ctrl-C 安全中断
+Codex自然语言日报仍在运行：301秒；可按 Ctrl-C 安全中断
+Codex自然语言日报仍在运行：332秒；可按 Ctrl-C 安全中断
+Codex自然语言日报仍在运行：362秒；可按 Ctrl-C 安全中断
+Codex自然语言日报进程结束：375秒，退出码0
+自然语言日报：updated / /Users/wangao/Alpaca/var/shared/reports/accounts/live1/strategies/core_long/1.5.0/daily/2026-07-30.natural.md
+v2主流程初始化成功
+纽约日期：2026-07-30
+cycle_id：20260730T161558
+轮次处理：创建/初始化新轮次
+原因：创建新的主函数运行轮次
+轮次类型：maintenance_only
+人工复查：skipped_by_flag
+交易模式：live
+当前步骤：COMPLETE
+轮次状态：completed_no_action
+下一步骤：无
+日期状态：/Users/wangao/Alpaca/var/shared/runtime/accounts/live1/strategies/core_long/1.5.0/2026-07-30/daily_state.json
+轮次状态：/Users/wangao/Alpaca/var/shared/runtime/accounts/live1/strategies/core_long/1.5.0/2026-07-30/cycles/20260730T161558/cycle_state.json
+轮次目录：/Users/wangao/Alpaca/var/shared/runtime/accounts/live1/strategies/core_long/1.5.0/2026-07-30/cycles/20260730T161558
+
+阶段A基础设施已就绪。
+Submission policy：alpaca_live@1.0.0
+启动维护旧cycle：0
+模式：dry-run
+提交：0
+取消确认：0
+不确定：0
+成交：0
+部分成交：0
+Open：0
+拒绝：0
+最终状态：completed_no_action
+Cycle summary：/Users/wangao/Alpaca/var/shared/runtime/accounts/live1/strategies/core_long/1.5.0/2026-07-30/cycles/20260730T161558/cycle_summary.json
+日报：/Users/wangao/Alpaca/var/shared/reports/accounts/live1/strategies/core_long/1.5.0/daily/2026-07-30.md
+自然语言日报：/Users/wangao/Alpaca/var/shared/reports/accounts/live1/strategies/core_long/1.5.0/daily/2026-07-30.natural.md
+脚本版本：2026-07-27-v2-natural-report-sync-v4
+Codex粗选已启动；单次最长等待600秒
+Codex粗选仍在运行：30秒；可按 Ctrl-C 安全中断
+Codex粗选仍在运行：60秒；可按 Ctrl-C 安全中断
+Codex粗选仍在运行：90秒；可按 Ctrl-C 安全中断
+Codex粗选仍在运行：120秒；可按 Ctrl-C 安全中断
+Codex粗选仍在运行：150秒；可按 Ctrl-C 安全中断
+Codex粗选仍在运行：181秒；可按 Ctrl-C 安全中断
+Codex粗选进程结束：182秒，退出码0
+Codex组合已启动；单次最长等待600秒
+Codex组合仍在运行：30秒；可按 Ctrl-C 安全中断
+Codex组合仍在运行：60秒；可按 Ctrl-C 安全中断
+Codex组合仍在运行：90秒；可按 Ctrl-C 安全中断
+Codex组合仍在运行：120秒；可按 Ctrl-C 安全中断
+Codex组合仍在运行：150秒；可按 Ctrl-C 安全中断
+Codex组合仍在运行：181秒；可按 Ctrl-C 安全中断
+Codex组合仍在运行：211秒；可按 Ctrl-C 安全中断
+Codex组合进程结束：238秒，退出码0
+Codex执行已启动；单次最长等待600秒
+Codex执行仍在运行：30秒；可按 Ctrl-C 安全中断
+Codex执行仍在运行：60秒；可按 Ctrl-C 安全中断
+Codex执行仍在运行：90秒；可按 Ctrl-C 安全中断
+Codex执行进程结束：112秒，退出码0
+Codex自然语言日报已启动；单次最长等待600秒
+Codex自然语言日报仍在运行：30秒；可按 Ctrl-C 安全中断
+Codex自然语言日报仍在运行：60秒；可按 Ctrl-C 安全中断
+Codex自然语言日报仍在运行：90秒；可按 Ctrl-C 安全中断
+Codex自然语言日报仍在运行：120秒；可按 Ctrl-C 安全中断
+Codex自然语言日报仍在运行：150秒；可按 Ctrl-C 安全中断
+Codex自然语言日报仍在运行：180秒；可按 Ctrl-C 安全中断
+Codex自然语言日报进程结束：191秒，退出码0
+自然语言日报：updated / /Users/wangao/Alpaca/var/shared/reports/accounts/live1/strategies/core_long/1.5.0/daily/2026-07-31.natural.md
+v2主流程初始化成功
+纽约日期：2026-07-31
+cycle_id：20260731T100014
+轮次处理：创建/初始化新轮次
+原因：创建新的主函数运行轮次
+轮次类型：daily_full
+人工复查：skipped_by_flag
+交易模式：live
+当前步骤：COMPLETE
+轮次状态：completed_no_action
+下一步骤：无
+日期状态：/Users/wangao/Alpaca/var/shared/runtime/accounts/live1/strategies/core_long/1.5.0/2026-07-31/daily_state.json
+轮次状态：/Users/wangao/Alpaca/var/shared/runtime/accounts/live1/strategies/core_long/1.5.0/2026-07-31/cycles/20260731T100014/cycle_state.json
+轮次目录：/Users/wangao/Alpaca/var/shared/runtime/accounts/live1/strategies/core_long/1.5.0/2026-07-31/cycles/20260731T100014
+
+阶段A基础设施已就绪。
+Submission policy：alpaca_live@1.0.0
+启动维护旧cycle：0
+模式：live-submit
+提交：0
+取消确认：0
+不确定：0
+成交：0
+部分成交：0
+Open：0
+拒绝：0
+最终状态：completed_no_action
+Cycle summary：/Users/wangao/Alpaca/var/shared/runtime/accounts/live1/strategies/core_long/1.5.0/2026-07-31/cycles/20260731T100014/cycle_summary.json
+日报：/Users/wangao/Alpaca/var/shared/reports/accounts/live1/strategies/core_long/1.5.0/daily/2026-07-31.md
+自然语言日报：/Users/wangao/Alpaca/var/shared/reports/accounts/live1/strategies/core_long/1.5.0/daily/2026-07-31.natural.md
+脚本版本：2026-07-27-v2-natural-report-sync-v4
+Codex执行已启动；单次最长等待600秒
+Codex执行仍在运行：30秒；可按 Ctrl-C 安全中断
+Codex执行仍在运行：60秒；可按 Ctrl-C 安全中断
+Codex执行仍在运行：90秒；可按 Ctrl-C 安全中断
+Codex执行仍在运行：120秒；可按 Ctrl-C 安全中断
+Codex执行仍在运行：150秒；可按 Ctrl-C 安全中断
+Codex执行进程结束：179秒，退出码0
+Codex自然语言日报已启动；单次最长等待600秒
+Codex自然语言日报仍在运行：30秒；可按 Ctrl-C 安全中断
+Codex自然语言日报仍在运行：60秒；可按 Ctrl-C 安全中断
+Codex自然语言日报仍在运行：90秒；可按 Ctrl-C 安全中断
+Codex自然语言日报仍在运行：120秒；可按 Ctrl-C 安全中断
+Codex自然语言日报进程结束：125秒，退出码0
+自然语言日报：updated / /Users/wangao/Alpaca/var/shared/reports/accounts/live1/strategies/core_long/1.5.0/daily/natural_language/2026-07-31.md
+v2主流程初始化成功
+纽约日期：2026-07-31
+cycle_id：20260731T110125
+轮次处理：创建/初始化新轮次
+原因：创建新的主函数运行轮次
+轮次类型：execution_refresh
+人工复查：skipped_by_flag
+交易模式：live
+当前步骤：COMPLETE
+轮次状态：completed_with_submissions
+下一步骤：无
+日期状态：/Users/wangao/Alpaca/var/shared/runtime/accounts/live1/strategies/core_long/1.5.0/2026-07-31/daily_state.json
+轮次状态：/Users/wangao/Alpaca/var/shared/runtime/accounts/live1/strategies/core_long/1.5.0/2026-07-31/cycles/20260731T110125/cycle_state.json
+轮次目录：/Users/wangao/Alpaca/var/shared/runtime/accounts/live1/strategies/core_long/1.5.0/2026-07-31/cycles/20260731T110125
+
+阶段A基础设施已就绪。
+Submission policy：alpaca_live@1.0.0
+启动维护旧cycle：0
+模式：live-submit
+提交：3
+取消确认：0
+不确定：0
+成交：3
+部分成交：0
+Open：0
+拒绝：0
+最终状态：completed_with_submissions
+Cycle summary：/Users/wangao/Alpaca/var/shared/runtime/accounts/live1/strategies/core_long/1.5.0/2026-07-31/cycles/20260731T110125/cycle_summary.json
+日报：/Users/wangao/Alpaca/var/shared/reports/accounts/live1/strategies/core_long/1.5.0/daily/2026-07-31.md
+自然语言日报：/Users/wangao/Alpaca/var/shared/reports/accounts/live1/strategies/core_long/1.5.0/daily/natural_language/2026-07-31.md
+脚本版本：2026-07-27-v2-natural-report-sync-v4
+Codex执行已启动；单次最长等待600秒
+Codex执行仍在运行：30秒；可按 Ctrl-C 安全中断
+Codex执行仍在运行：60秒；可按 Ctrl-C 安全中断
+Codex执行仍在运行：90秒；可按 Ctrl-C 安全中断
+Codex执行仍在运行：120秒；可按 Ctrl-C 安全中断
+Codex执行仍在运行：150秒；可按 Ctrl-C 安全中断
+Codex执行进程结束：165秒，退出码0
+Codex自然语言日报已启动；单次最长等待600秒
+Codex自然语言日报仍在运行：30秒；可按 Ctrl-C 安全中断
+Codex自然语言日报仍在运行：60秒；可按 Ctrl-C 安全中断
+Codex自然语言日报进程结束：85秒，退出码0
+自然语言日报：updated / /Users/wangao/Alpaca/var/shared/reports/accounts/live1/strategies/core_long/1.5.0/daily/natural_language/2026-07-31.md
+v2主流程初始化成功
+纽约日期：2026-07-31
+cycle_id：20260731T120045
+轮次处理：创建/初始化新轮次
+原因：创建新的主函数运行轮次
+轮次类型：execution_refresh
+人工复查：skipped_by_flag
+交易模式：live
+当前步骤：COMPLETE
+轮次状态：completed_no_action
+下一步骤：无
+日期状态：/Users/wangao/Alpaca/var/shared/runtime/accounts/live1/strategies/core_long/1.5.0/2026-07-31/daily_state.json
+轮次状态：/Users/wangao/Alpaca/var/shared/runtime/accounts/live1/strategies/core_long/1.5.0/2026-07-31/cycles/20260731T120045/cycle_state.json
+轮次目录：/Users/wangao/Alpaca/var/shared/runtime/accounts/live1/strategies/core_long/1.5.0/2026-07-31/cycles/20260731T120045
+
+阶段A基础设施已就绪。
+Submission policy：alpaca_live@1.0.0
+启动维护旧cycle：0
+模式：live-submit
+提交：0
+取消确认：0
+不确定：0
+成交：0
+部分成交：0
+Open：0
+拒绝：0
+最终状态：completed_no_action
+Cycle summary：/Users/wangao/Alpaca/var/shared/runtime/accounts/live1/strategies/core_long/1.5.0/2026-07-31/cycles/20260731T120045/cycle_summary.json
+日报：/Users/wangao/Alpaca/var/shared/reports/accounts/live1/strategies/core_long/1.5.0/daily/2026-07-31.md
+自然语言日报：/Users/wangao/Alpaca/var/shared/reports/accounts/live1/strategies/core_long/1.5.0/daily/natural_language/2026-07-31.md
+脚本版本：2026-07-27-v2-natural-report-sync-v4
+Codex执行已启动；单次最长等待600秒
+Codex执行仍在运行：30秒；可按 Ctrl-C 安全中断
+Codex执行仍在运行：60秒；可按 Ctrl-C 安全中断
+Codex执行仍在运行：90秒；可按 Ctrl-C 安全中断
+Codex执行仍在运行：120秒；可按 Ctrl-C 安全中断
+Codex执行仍在运行：150秒；可按 Ctrl-C 安全中断
+Codex执行仍在运行：181秒；可按 Ctrl-C 安全中断
+Codex执行仍在运行：211秒；可按 Ctrl-C 安全中断
+Codex执行仍在运行：241秒；可按 Ctrl-C 安全中断
+Codex执行仍在运行：271秒；可按 Ctrl-C 安全中断
+Codex执行仍在运行：301秒；可按 Ctrl-C 安全中断
+Codex执行仍在运行：332秒；可按 Ctrl-C 安全中断
+Codex执行仍在运行：362秒；可按 Ctrl-C 安全中断
+Codex执行仍在运行：392秒；可按 Ctrl-C 安全中断
+Codex执行仍在运行：422秒；可按 Ctrl-C 安全中断
+Codex执行进程结束：434秒，退出码0
+Codex自然语言日报已启动；单次最长等待600秒
+Codex自然语言日报仍在运行：30秒；可按 Ctrl-C 安全中断
+Codex自然语言日报仍在运行：60秒；可按 Ctrl-C 安全中断
+Codex自然语言日报进程结束：82秒，退出码0
+自然语言日报：updated / /Users/wangao/Alpaca/var/shared/reports/accounts/live1/strategies/core_long/1.5.0/daily/natural_language/2026-07-31.md
+v2主流程初始化成功
+纽约日期：2026-07-31
+cycle_id：20260731T130353
+轮次处理：创建/初始化新轮次
+原因：创建新的主函数运行轮次
+轮次类型：execution_refresh
+人工复查：skipped_by_flag
+交易模式：live
+当前步骤：COMPLETE
+轮次状态：completed_no_action
+下一步骤：无
+日期状态：/Users/wangao/Alpaca/var/shared/runtime/accounts/live1/strategies/core_long/1.5.0/2026-07-31/daily_state.json
+轮次状态：/Users/wangao/Alpaca/var/shared/runtime/accounts/live1/strategies/core_long/1.5.0/2026-07-31/cycles/20260731T130353/cycle_state.json
+轮次目录：/Users/wangao/Alpaca/var/shared/runtime/accounts/live1/strategies/core_long/1.5.0/2026-07-31/cycles/20260731T130353
+
+阶段A基础设施已就绪。
+Submission policy：alpaca_live@1.0.0
+启动维护旧cycle：0
+模式：live-submit
+提交：0
+取消确认：0
+不确定：0
+成交：0
+部分成交：0
+Open：0
+拒绝：0
+最终状态：completed_no_action
+Cycle summary：/Users/wangao/Alpaca/var/shared/runtime/accounts/live1/strategies/core_long/1.5.0/2026-07-31/cycles/20260731T130353/cycle_summary.json
+日报：/Users/wangao/Alpaca/var/shared/reports/accounts/live1/strategies/core_long/1.5.0/daily/2026-07-31.md
+自然语言日报：/Users/wangao/Alpaca/var/shared/reports/accounts/live1/strategies/core_long/1.5.0/daily/natural_language/2026-07-31.md
+脚本版本：2026-07-27-v2-natural-report-sync-v4
+Codex执行已启动；单次最长等待600秒
+Codex执行仍在运行：30秒；可按 Ctrl-C 安全中断
+Codex执行仍在运行：60秒；可按 Ctrl-C 安全中断
+Codex执行仍在运行：90秒；可按 Ctrl-C 安全中断
+Codex执行仍在运行：120秒；可按 Ctrl-C 安全中断
+Codex执行仍在运行：150秒；可按 Ctrl-C 安全中断
+Codex执行仍在运行：181秒；可按 Ctrl-C 安全中断
+Codex执行仍在运行：211秒；可按 Ctrl-C 安全中断
+Codex执行仍在运行：241秒；可按 Ctrl-C 安全中断
+Codex执行仍在运行：271秒；可按 Ctrl-C 安全中断
+Codex执行仍在运行：301秒；可按 Ctrl-C 安全中断
+Codex执行仍在运行：332秒；可按 Ctrl-C 安全中断
+Codex执行仍在运行：362秒；可按 Ctrl-C 安全中断
+Codex执行仍在运行：392秒；可按 Ctrl-C 安全中断
+Codex执行仍在运行：422秒；可按 Ctrl-C 安全中断
+Codex执行进程结束：437秒，退出码0
+Codex自然语言日报已启动；单次最长等待600秒
+Codex自然语言日报仍在运行：30秒；可按 Ctrl-C 安全中断
+Codex自然语言日报仍在运行：60秒；可按 Ctrl-C 安全中断
+Codex自然语言日报进程结束：62秒，退出码0
+自然语言日报：updated / /Users/wangao/Alpaca/var/shared/reports/accounts/live1/strategies/core_long/1.5.0/daily/natural_language/2026-07-31.md
+v2主流程初始化成功
+纽约日期：2026-07-31
+cycle_id：20260731T140451
+轮次处理：创建/初始化新轮次
+原因：创建新的主函数运行轮次
+轮次类型：execution_refresh
+人工复查：skipped_by_flag
+交易模式：live
+当前步骤：COMPLETE
+轮次状态：completed_no_action
+下一步骤：无
+日期状态：/Users/wangao/Alpaca/var/shared/runtime/accounts/live1/strategies/core_long/1.5.0/2026-07-31/daily_state.json
+轮次状态：/Users/wangao/Alpaca/var/shared/runtime/accounts/live1/strategies/core_long/1.5.0/2026-07-31/cycles/20260731T140451/cycle_state.json
+轮次目录：/Users/wangao/Alpaca/var/shared/runtime/accounts/live1/strategies/core_long/1.5.0/2026-07-31/cycles/20260731T140451
+
+阶段A基础设施已就绪。
+Submission policy：alpaca_live@1.0.0
+启动维护旧cycle：0
+模式：live-submit
+提交：0
+取消确认：0
+不确定：0
+成交：0
+部分成交：0
+Open：0
+拒绝：0
+最终状态：completed_no_action
+Cycle summary：/Users/wangao/Alpaca/var/shared/runtime/accounts/live1/strategies/core_long/1.5.0/2026-07-31/cycles/20260731T140451/cycle_summary.json
+日报：/Users/wangao/Alpaca/var/shared/reports/accounts/live1/strategies/core_long/1.5.0/daily/2026-07-31.md
+自然语言日报：/Users/wangao/Alpaca/var/shared/reports/accounts/live1/strategies/core_long/1.5.0/daily/natural_language/2026-07-31.md
+脚本版本：2026-07-27-v2-natural-report-sync-v4
+Codex执行已启动；单次最长等待600秒
+Codex执行仍在运行：30秒；可按 Ctrl-C 安全中断
+Codex执行仍在运行：60秒；可按 Ctrl-C 安全中断
+Codex执行仍在运行：90秒；可按 Ctrl-C 安全中断
+Codex执行仍在运行：120秒；可按 Ctrl-C 安全中断
+Codex执行进程结束：130秒，退出码0
+Codex自然语言日报已启动；单次最长等待600秒
+Codex自然语言日报仍在运行：30秒；可按 Ctrl-C 安全中断
+Codex自然语言日报仍在运行：60秒；可按 Ctrl-C 安全中断
+Codex自然语言日报仍在运行：90秒；可按 Ctrl-C 安全中断
+Codex自然语言日报进程结束：102秒，退出码0
+自然语言日报：updated / /Users/wangao/Alpaca/var/shared/reports/accounts/live1/strategies/core_long/1.5.0/daily/natural_language/2026-07-31.md
+v2主流程初始化成功
+纽约日期：2026-07-31
+cycle_id：20260731T150055
+轮次处理：创建/初始化新轮次
+原因：创建新的主函数运行轮次
+轮次类型：execution_refresh
+人工复查：skipped_by_flag
+交易模式：live
+当前步骤：COMPLETE
+轮次状态：completed_no_action
+下一步骤：无
+日期状态：/Users/wangao/Alpaca/var/shared/runtime/accounts/live1/strategies/core_long/1.5.0/2026-07-31/daily_state.json
+轮次状态：/Users/wangao/Alpaca/var/shared/runtime/accounts/live1/strategies/core_long/1.5.0/2026-07-31/cycles/20260731T150055/cycle_state.json
+轮次目录：/Users/wangao/Alpaca/var/shared/runtime/accounts/live1/strategies/core_long/1.5.0/2026-07-31/cycles/20260731T150055
+
+阶段A基础设施已就绪。
+Submission policy：alpaca_live@1.0.0
+启动维护旧cycle：0
+模式：live-submit
+提交：0
+取消确认：0
+不确定：0
+成交：0
+部分成交：0
+Open：0
+拒绝：0
+最终状态：completed_no_action
+Cycle summary：/Users/wangao/Alpaca/var/shared/runtime/accounts/live1/strategies/core_long/1.5.0/2026-07-31/cycles/20260731T150055/cycle_summary.json
+日报：/Users/wangao/Alpaca/var/shared/reports/accounts/live1/strategies/core_long/1.5.0/daily/2026-07-31.md
+自然语言日报：/Users/wangao/Alpaca/var/shared/reports/accounts/live1/strategies/core_long/1.5.0/daily/natural_language/2026-07-31.md
+脚本版本：2026-07-27-v2-natural-report-sync-v4
+Codex自然语言日报已启动；单次最长等待600秒
+Codex自然语言日报仍在运行：30秒；可按 Ctrl-C 安全中断
+Codex自然语言日报进程结束：36秒，退出码0
+自然语言日报生成失败；已写入无新闻的事实降级版：/Users/wangao/Alpaca/var/shared/reports/accounts/live1/strategies/core_long/1.5.0/daily/natural_language/2026-07-31.md；错误：/Users/wangao/Alpaca/var/shared/reports/accounts/live1/strategies/core_long/1.5.0/daily/.natural_language_report/errors/2026-07-31.json
+v2主流程初始化成功
+纽约日期：2026-07-31
+cycle_id：20260731T161542
+轮次处理：创建/初始化新轮次
+原因：创建新的主函数运行轮次
+轮次类型：maintenance_only
+人工复查：skipped_by_flag
+交易模式：live
+当前步骤：COMPLETE
+轮次状态：completed_no_action
+下一步骤：无
+日期状态：/Users/wangao/Alpaca/var/shared/runtime/accounts/live1/strategies/core_long/1.5.0/2026-07-31/daily_state.json
+轮次状态：/Users/wangao/Alpaca/var/shared/runtime/accounts/live1/strategies/core_long/1.5.0/2026-07-31/cycles/20260731T161542/cycle_state.json
+轮次目录：/Users/wangao/Alpaca/var/shared/runtime/accounts/live1/strategies/core_long/1.5.0/2026-07-31/cycles/20260731T161542
+
+阶段A基础设施已就绪。
+Submission policy：alpaca_live@1.0.0
+启动维护旧cycle：0
+模式：dry-run
+提交：0
+取消确认：0
+不确定：0
+成交：0
+部分成交：0
+Open：0
+拒绝：0
+最终状态：completed_no_action
+Cycle summary：/Users/wangao/Alpaca/var/shared/runtime/accounts/live1/strategies/core_long/1.5.0/2026-07-31/cycles/20260731T161542/cycle_summary.json
+日报：/Users/wangao/Alpaca/var/shared/reports/accounts/live1/strategies/core_long/1.5.0/daily/2026-07-31.md
+自然语言日报：/Users/wangao/Alpaca/var/shared/reports/accounts/live1/strategies/core_long/1.5.0/daily/natural_language/2026-07-31.md
+脚本版本：2026-07-27-v2-natural-report-sync-v4
+Codex粗选已启动；单次最长等待600秒
+Codex粗选仍在运行：30秒；可按 Ctrl-C 安全中断
+Codex粗选仍在运行：60秒；可按 Ctrl-C 安全中断
+Codex粗选仍在运行：90秒；可按 Ctrl-C 安全中断
+Codex粗选仍在运行：120秒；可按 Ctrl-C 安全中断
+Codex粗选仍在运行：150秒；可按 Ctrl-C 安全中断
+Codex粗选仍在运行：180秒；可按 Ctrl-C 安全中断
+Codex粗选仍在运行：210秒；可按 Ctrl-C 安全中断
+Codex粗选进程结束：218秒，退出码0
+Codex组合已启动；单次最长等待600秒
+Codex组合仍在运行：30秒；可按 Ctrl-C 安全中断
+Codex组合仍在运行：60秒；可按 Ctrl-C 安全中断
+Codex组合仍在运行：90秒；可按 Ctrl-C 安全中断
+Codex组合仍在运行：120秒；可按 Ctrl-C 安全中断
+Codex组合仍在运行：150秒；可按 Ctrl-C 安全中断
+Codex组合仍在运行：180秒；可按 Ctrl-C 安全中断
+Codex组合仍在运行：210秒；可按 Ctrl-C 安全中断
+Codex组合仍在运行：240秒；可按 Ctrl-C 安全中断
+Codex组合仍在运行：270秒；可按 Ctrl-C 安全中断
+Codex组合仍在运行：300秒；可按 Ctrl-C 安全中断
+Codex组合仍在运行：330秒；可按 Ctrl-C 安全中断
+Codex组合仍在运行：361秒；可按 Ctrl-C 安全中断
+Codex组合进程结束：381秒，退出码0
+Codex执行已启动；单次最长等待600秒
+Codex执行仍在运行：30秒；可按 Ctrl-C 安全中断
+Codex执行仍在运行：60秒；可按 Ctrl-C 安全中断
+Codex执行仍在运行：90秒；可按 Ctrl-C 安全中断
+Codex执行仍在运行：120秒；可按 Ctrl-C 安全中断
+Codex执行进程结束：139秒，退出码0
+Codex自然语言日报已启动；单次最长等待600秒
+Codex自然语言日报仍在运行：30秒；可按 Ctrl-C 安全中断
+Codex自然语言日报仍在运行：60秒；可按 Ctrl-C 安全中断
+Codex自然语言日报仍在运行：90秒；可按 Ctrl-C 安全中断
+Codex自然语言日报仍在运行：120秒；可按 Ctrl-C 安全中断
+Codex自然语言日报仍在运行：150秒；可按 Ctrl-C 安全中断
+Codex自然语言日报仍在运行：180秒；可按 Ctrl-C 安全中断
+Codex自然语言日报仍在运行：210秒；可按 Ctrl-C 安全中断
+Codex自然语言日报仍在运行：240秒；可按 Ctrl-C 安全中断
+Codex自然语言日报进程结束：262秒，退出码0
+自然语言日报：updated / /Users/wangao/Alpaca/var/shared/reports/accounts/live1/strategies/core_long/1.5.0/daily/natural_language/2026-08-03.md
+v2主流程初始化成功
+纽约日期：2026-08-03
+cycle_id：20260803T100007
+轮次处理：创建/初始化新轮次
+原因：创建新的主函数运行轮次
+轮次类型：daily_full
+人工复查：skipped_by_flag
+交易模式：live
+当前步骤：COMPLETE
+轮次状态：completed_with_submissions
+下一步骤：无
+日期状态：/Users/wangao/Alpaca/var/shared/runtime/accounts/live1/strategies/core_long/1.5.0/2026-08-03/daily_state.json
+轮次状态：/Users/wangao/Alpaca/var/shared/runtime/accounts/live1/strategies/core_long/1.5.0/2026-08-03/cycles/20260803T100007/cycle_state.json
+轮次目录：/Users/wangao/Alpaca/var/shared/runtime/accounts/live1/strategies/core_long/1.5.0/2026-08-03/cycles/20260803T100007
+
+阶段A基础设施已就绪。
+Submission policy：alpaca_live@1.0.0
+启动维护旧cycle：0
+模式：live-submit
+提交：1
+取消确认：0
+不确定：0
+成交：1
+部分成交：0
+Open：0
+拒绝：0
+最终状态：completed_with_submissions
+Cycle summary：/Users/wangao/Alpaca/var/shared/runtime/accounts/live1/strategies/core_long/1.5.0/2026-08-03/cycles/20260803T100007/cycle_summary.json
+日报：/Users/wangao/Alpaca/var/shared/reports/accounts/live1/strategies/core_long/1.5.0/daily/2026-08-03.md
+自然语言日报：/Users/wangao/Alpaca/var/shared/reports/accounts/live1/strategies/core_long/1.5.0/daily/natural_language/2026-08-03.md
+脚本版本：2026-07-27-v2-natural-report-sync-v4
+Codex执行已启动；单次最长等待600秒
+Codex执行仍在运行：30秒；可按 Ctrl-C 安全中断
+Codex执行仍在运行：60秒；可按 Ctrl-C 安全中断
+Codex执行仍在运行：90秒；可按 Ctrl-C 安全中断
+Codex执行仍在运行：120秒；可按 Ctrl-C 安全中断
+Codex执行仍在运行：150秒；可按 Ctrl-C 安全中断
+Codex执行仍在运行：181秒；可按 Ctrl-C 安全中断
+Codex执行仍在运行：211秒；可按 Ctrl-C 安全中断
+Codex执行仍在运行：241秒；可按 Ctrl-C 安全中断
+Codex执行仍在运行：271秒；可按 Ctrl-C 安全中断
+Codex执行仍在运行：301秒；可按 Ctrl-C 安全中断
+Codex执行仍在运行：332秒；可按 Ctrl-C 安全中断
+Codex执行仍在运行：362秒；可按 Ctrl-C 安全中断
+Codex执行仍在运行：392秒；可按 Ctrl-C 安全中断
+Codex执行仍在运行：422秒；可按 Ctrl-C 安全中断
+Codex执行进程结束：426秒，退出码0
+Codex自然语言日报已启动；单次最长等待600秒
+Codex自然语言日报仍在运行：30秒；可按 Ctrl-C 安全中断
+Codex自然语言日报仍在运行：60秒；可按 Ctrl-C 安全中断
+Codex自然语言日报仍在运行：90秒；可按 Ctrl-C 安全中断
+Codex自然语言日报仍在运行：120秒；可按 Ctrl-C 安全中断
+Codex自然语言日报仍在运行：151秒；可按 Ctrl-C 安全中断
+Codex自然语言日报仍在运行：181秒；可按 Ctrl-C 安全中断
+Codex自然语言日报仍在运行：211秒；可按 Ctrl-C 安全中断
+Codex自然语言日报仍在运行：241秒；可按 Ctrl-C 安全中断
+Codex自然语言日报仍在运行：271秒；可按 Ctrl-C 安全中断
+Codex自然语言日报仍在运行：302秒；可按 Ctrl-C 安全中断
+Codex自然语言日报仍在运行：332秒；可按 Ctrl-C 安全中断
+Codex自然语言日报仍在运行：362秒；可按 Ctrl-C 安全中断
+Codex自然语言日报仍在运行：392秒；可按 Ctrl-C 安全中断
+Codex自然语言日报仍在运行：422秒；可按 Ctrl-C 安全中断
+Codex自然语言日报仍在运行：453秒；可按 Ctrl-C 安全中断
+Codex自然语言日报仍在运行：483秒；可按 Ctrl-C 安全中断
+Codex自然语言日报仍在运行：513秒；可按 Ctrl-C 安全中断
+Codex自然语言日报仍在运行：543秒；可按 Ctrl-C 安全中断
+Codex自然语言日报仍在运行：573秒；可按 Ctrl-C 安全中断
+自然语言日报生成失败；已写入无新闻的事实降级版：/Users/wangao/Alpaca/var/shared/reports/accounts/live1/strategies/core_long/1.5.0/daily/natural_language/2026-08-03.md；错误：/Users/wangao/Alpaca/var/shared/reports/accounts/live1/strategies/core_long/1.5.0/daily/.natural_language_report/errors/2026-08-03.json
+v2主流程初始化成功
+纽约日期：2026-08-03
+cycle_id：20260803T110157
+轮次处理：创建/初始化新轮次
+原因：创建新的主函数运行轮次
+轮次类型：execution_refresh
+人工复查：skipped_by_flag
+交易模式：live
+当前步骤：COMPLETE
+轮次状态：completed_no_action
+下一步骤：无
+日期状态：/Users/wangao/Alpaca/var/shared/runtime/accounts/live1/strategies/core_long/1.5.0/2026-08-03/daily_state.json
+轮次状态：/Users/wangao/Alpaca/var/shared/runtime/accounts/live1/strategies/core_long/1.5.0/2026-08-03/cycles/20260803T110157/cycle_state.json
+轮次目录：/Users/wangao/Alpaca/var/shared/runtime/accounts/live1/strategies/core_long/1.5.0/2026-08-03/cycles/20260803T110157
+
+阶段A基础设施已就绪。
+Submission policy：alpaca_live@1.0.0
+启动维护旧cycle：0
+模式：live-submit
+提交：0
+取消确认：0
+不确定：0
+成交：0
+部分成交：0
+Open：0
+拒绝：0
+最终状态：completed_no_action
+Cycle summary：/Users/wangao/Alpaca/var/shared/runtime/accounts/live1/strategies/core_long/1.5.0/2026-08-03/cycles/20260803T110157/cycle_summary.json
+日报：/Users/wangao/Alpaca/var/shared/reports/accounts/live1/strategies/core_long/1.5.0/daily/2026-08-03.md
+自然语言日报：/Users/wangao/Alpaca/var/shared/reports/accounts/live1/strategies/core_long/1.5.0/daily/natural_language/2026-08-03.md
+脚本版本：2026-07-27-v2-natural-report-sync-v4
+Codex执行已启动；单次最长等待600秒
+Codex执行仍在运行：30秒；可按 Ctrl-C 安全中断
+Codex执行仍在运行：60秒；可按 Ctrl-C 安全中断
+Codex执行仍在运行：90秒；可按 Ctrl-C 安全中断
+Codex执行进程结束：115秒，退出码0
+Codex自然语言日报已启动；单次最长等待600秒
+Codex自然语言日报仍在运行：30秒；可按 Ctrl-C 安全中断
+Codex自然语言日报仍在运行：60秒；可按 Ctrl-C 安全中断
+Codex自然语言日报仍在运行：90秒；可按 Ctrl-C 安全中断
+Codex自然语言日报进程结束：103秒，退出码0
+自然语言日报：updated / /Users/wangao/Alpaca/var/shared/reports/accounts/live1/strategies/core_long/1.5.0/daily/natural_language/2026-08-03.md
+v2主流程初始化成功
+纽约日期：2026-08-03
+cycle_id：20260803T140042
+轮次处理：创建/初始化新轮次
+原因：创建新的主函数运行轮次
+轮次类型：execution_refresh
+人工复查：skipped_by_flag
+交易模式：live
+当前步骤：COMPLETE
+轮次状态：completed_no_action
+下一步骤：无
+日期状态：/Users/wangao/Alpaca/var/shared/runtime/accounts/live1/strategies/core_long/1.5.0/2026-08-03/daily_state.json
+轮次状态：/Users/wangao/Alpaca/var/shared/runtime/accounts/live1/strategies/core_long/1.5.0/2026-08-03/cycles/20260803T140042/cycle_state.json
+轮次目录：/Users/wangao/Alpaca/var/shared/runtime/accounts/live1/strategies/core_long/1.5.0/2026-08-03/cycles/20260803T140042
+
+阶段A基础设施已就绪。
+Submission policy：alpaca_live@1.0.0
+启动维护旧cycle：0
+模式：live-submit
+提交：0
+取消确认：0
+不确定：0
+成交：0
+部分成交：0
+Open：0
+拒绝：0
+最终状态：completed_no_action
+Cycle summary：/Users/wangao/Alpaca/var/shared/runtime/accounts/live1/strategies/core_long/1.5.0/2026-08-03/cycles/20260803T140042/cycle_summary.json
+日报：/Users/wangao/Alpaca/var/shared/reports/accounts/live1/strategies/core_long/1.5.0/daily/2026-08-03.md
+自然语言日报：/Users/wangao/Alpaca/var/shared/reports/accounts/live1/strategies/core_long/1.5.0/daily/natural_language/2026-08-03.md
+脚本版本：2026-07-27-v2-natural-report-sync-v4
+Codex执行已启动；单次最长等待600秒
+Codex执行仍在运行：30秒；可按 Ctrl-C 安全中断
+Codex执行仍在运行：60秒；可按 Ctrl-C 安全中断
+Codex执行仍在运行：90秒；可按 Ctrl-C 安全中断
+Codex执行仍在运行：120秒；可按 Ctrl-C 安全中断
+Codex执行进程结束：125秒，退出码0
+Codex自然语言日报已启动；单次最长等待600秒
+Codex自然语言日报仍在运行：30秒；可按 Ctrl-C 安全中断
+Codex自然语言日报仍在运行：60秒；可按 Ctrl-C 安全中断
+Codex自然语言日报进程结束：68秒，退出码0
+自然语言日报：updated / /Users/wangao/Alpaca/var/shared/reports/accounts/live1/strategies/core_long/1.5.0/daily/natural_language/2026-08-03.md
+v2主流程初始化成功
+纽约日期：2026-08-03
+cycle_id：20260803T150102
+轮次处理：创建/初始化新轮次
+原因：创建新的主函数运行轮次
+轮次类型：execution_refresh
+人工复查：skipped_by_flag
+交易模式：live
+当前步骤：COMPLETE
+轮次状态：completed_no_action
+下一步骤：无
+日期状态：/Users/wangao/Alpaca/var/shared/runtime/accounts/live1/strategies/core_long/1.5.0/2026-08-03/daily_state.json
+轮次状态：/Users/wangao/Alpaca/var/shared/runtime/accounts/live1/strategies/core_long/1.5.0/2026-08-03/cycles/20260803T150102/cycle_state.json
+轮次目录：/Users/wangao/Alpaca/var/shared/runtime/accounts/live1/strategies/core_long/1.5.0/2026-08-03/cycles/20260803T150102
+
+阶段A基础设施已就绪。
+Submission policy：alpaca_live@1.0.0
+启动维护旧cycle：0
+模式：live-submit
+提交：0
+取消确认：0
+不确定：0
+成交：0
+部分成交：0
+Open：0
+拒绝：0
+最终状态：completed_no_action
+Cycle summary：/Users/wangao/Alpaca/var/shared/runtime/accounts/live1/strategies/core_long/1.5.0/2026-08-03/cycles/20260803T150102/cycle_summary.json
+日报：/Users/wangao/Alpaca/var/shared/reports/accounts/live1/strategies/core_long/1.5.0/daily/2026-08-03.md
+自然语言日报：/Users/wangao/Alpaca/var/shared/reports/accounts/live1/strategies/core_long/1.5.0/daily/natural_language/2026-08-03.md
+脚本版本：2026-07-27-v2-natural-report-sync-v4
+Codex自然语言日报已启动；单次最长等待600秒
+Codex自然语言日报仍在运行：30秒；可按 Ctrl-C 安全中断
+Codex自然语言日报仍在运行：60秒；可按 Ctrl-C 安全中断
+Codex自然语言日报仍在运行：90秒；可按 Ctrl-C 安全中断
+Codex自然语言日报进程结束：106秒，退出码0
+自然语言日报：updated / /Users/wangao/Alpaca/var/shared/reports/accounts/live1/strategies/core_long/1.5.0/daily/natural_language/2026-08-03.md
+v2主流程初始化成功
+纽约日期：2026-08-03
+cycle_id：20260803T161504
+轮次处理：创建/初始化新轮次
+原因：创建新的主函数运行轮次
+轮次类型：maintenance_only
+人工复查：skipped_by_flag
+交易模式：live
+当前步骤：COMPLETE
+轮次状态：completed_no_action
+下一步骤：无
+日期状态：/Users/wangao/Alpaca/var/shared/runtime/accounts/live1/strategies/core_long/1.5.0/2026-08-03/daily_state.json
+轮次状态：/Users/wangao/Alpaca/var/shared/runtime/accounts/live1/strategies/core_long/1.5.0/2026-08-03/cycles/20260803T161504/cycle_state.json
+轮次目录：/Users/wangao/Alpaca/var/shared/runtime/accounts/live1/strategies/core_long/1.5.0/2026-08-03/cycles/20260803T161504
+
+阶段A基础设施已就绪。
+Submission policy：alpaca_live@1.0.0
+启动维护旧cycle：0
+模式：dry-run
+提交：0
+取消确认：0
+不确定：0
+成交：0
+部分成交：0
+Open：0
+拒绝：0
+最终状态：completed_no_action
+Cycle summary：/Users/wangao/Alpaca/var/shared/runtime/accounts/live1/strategies/core_long/1.5.0/2026-08-03/cycles/20260803T161504/cycle_summary.json
+日报：/Users/wangao/Alpaca/var/shared/reports/accounts/live1/strategies/core_long/1.5.0/daily/2026-08-03.md
+自然语言日报：/Users/wangao/Alpaca/var/shared/reports/accounts/live1/strategies/core_long/1.5.0/daily/natural_language/2026-08-03.md
+脚本版本：2026-08-04-v2-strategy-performance-v1
+Codex执行已启动；单次最长等待600秒
+Codex执行仍在运行：30秒；可按 Ctrl-C 安全中断
+Codex执行仍在运行：60秒；可按 Ctrl-C 安全中断
+Codex执行仍在运行：90秒；可按 Ctrl-C 安全中断
+Codex执行仍在运行：120秒；可按 Ctrl-C 安全中断
+Codex执行进程结束：149秒，退出码0
+Codex自然语言日报已启动；单次最长等待600秒
+Codex自然语言日报仍在运行：30秒；可按 Ctrl-C 安全中断
+Codex自然语言日报仍在运行：60秒；可按 Ctrl-C 安全中断
+Codex自然语言日报仍在运行：90秒；可按 Ctrl-C 安全中断
+Codex自然语言日报进程结束：91秒，退出码0
+自然语言日报：updated / /Users/wangao/Alpaca/var/shared/reports/accounts/live1/strategies/core_long/1.6.0/daily/natural_language/2026-08-04.md
+v2主流程初始化成功
+纽约日期：2026-08-04
+cycle_id：20260804T100013
+轮次处理：创建/初始化新轮次
+原因：创建新的主函数运行轮次
+轮次类型：execution_refresh
+人工复查：skipped_by_flag
+交易模式：live
+当前步骤：COMPLETE
+轮次状态：completed_no_action
+下一步骤：无
+日期状态：/Users/wangao/Alpaca/var/shared/runtime/accounts/live1/strategies/core_long/1.6.0/2026-08-04/daily_state.json
+轮次状态：/Users/wangao/Alpaca/var/shared/runtime/accounts/live1/strategies/core_long/1.6.0/2026-08-04/cycles/20260804T100013/cycle_state.json
+轮次目录：/Users/wangao/Alpaca/var/shared/runtime/accounts/live1/strategies/core_long/1.6.0/2026-08-04/cycles/20260804T100013
+
+阶段A基础设施已就绪。
+Submission policy：alpaca_live@1.0.0
+启动维护旧cycle：0
+模式：live-submit
+提交：0
+取消确认：0
+不确定：0
+成交：0
+部分成交：0
+Open：0
+拒绝：0
+最终状态：completed_no_action
+Cycle summary：/Users/wangao/Alpaca/var/shared/runtime/accounts/live1/strategies/core_long/1.6.0/2026-08-04/cycles/20260804T100013/cycle_summary.json
+日报：/Users/wangao/Alpaca/var/shared/reports/accounts/live1/strategies/core_long/1.6.0/daily/2026-08-04.md
+自然语言日报：/Users/wangao/Alpaca/var/shared/reports/accounts/live1/strategies/core_long/1.6.0/daily/natural_language/2026-08-04.md
+脚本版本：2026-08-04-v2-strategy-performance-v1
+Codex执行已启动；单次最长等待600秒
+Codex执行仍在运行：30秒；可按 Ctrl-C 安全中断
+Codex执行仍在运行：60秒；可按 Ctrl-C 安全中断
+Codex执行仍在运行：90秒；可按 Ctrl-C 安全中断
+Codex执行仍在运行：120秒；可按 Ctrl-C 安全中断
+Codex执行进程结束：121秒，退出码0
+Codex自然语言日报已启动；单次最长等待600秒
+Codex自然语言日报仍在运行：30秒；可按 Ctrl-C 安全中断
+Codex自然语言日报仍在运行：60秒；可按 Ctrl-C 安全中断
+Codex自然语言日报仍在运行：90秒；可按 Ctrl-C 安全中断
+Codex自然语言日报进程结束：95秒，退出码0
+自然语言日报：updated / /Users/wangao/Alpaca/var/shared/reports/accounts/live1/strategies/core_long/1.6.0/daily/natural_language/2026-08-04.md
+v2主流程初始化成功
+纽约日期：2026-08-04
+cycle_id：20260804T120036
+轮次处理：创建/初始化新轮次
+原因：创建新的主函数运行轮次
+轮次类型：execution_refresh
+人工复查：skipped_by_flag
+交易模式：live
+当前步骤：COMPLETE
+轮次状态：completed_no_action
+下一步骤：无
+日期状态：/Users/wangao/Alpaca/var/shared/runtime/accounts/live1/strategies/core_long/1.6.0/2026-08-04/daily_state.json
+轮次状态：/Users/wangao/Alpaca/var/shared/runtime/accounts/live1/strategies/core_long/1.6.0/2026-08-04/cycles/20260804T120036/cycle_state.json
+轮次目录：/Users/wangao/Alpaca/var/shared/runtime/accounts/live1/strategies/core_long/1.6.0/2026-08-04/cycles/20260804T120036
+
+阶段A基础设施已就绪。
+Submission policy：alpaca_live@1.0.0
+启动维护旧cycle：0
+模式：live-submit
+提交：0
+取消确认：0
+不确定：0
+成交：0
+部分成交：0
+Open：0
+拒绝：0
+最终状态：completed_no_action
+Cycle summary：/Users/wangao/Alpaca/var/shared/runtime/accounts/live1/strategies/core_long/1.6.0/2026-08-04/cycles/20260804T120036/cycle_summary.json
+日报：/Users/wangao/Alpaca/var/shared/reports/accounts/live1/strategies/core_long/1.6.0/daily/2026-08-04.md
+自然语言日报：/Users/wangao/Alpaca/var/shared/reports/accounts/live1/strategies/core_long/1.6.0/daily/natural_language/2026-08-04.md
+脚本版本：2026-08-04-v2-strategy-performance-v1
+Codex执行已启动；单次最长等待600秒
+Codex执行仍在运行：30秒；可按 Ctrl-C 安全中断
+Codex执行仍在运行：60秒；可按 Ctrl-C 安全中断
+Codex执行仍在运行：90秒；可按 Ctrl-C 安全中断
+Codex执行仍在运行：120秒；可按 Ctrl-C 安全中断
+Codex执行进程结束：124秒，退出码0
+Codex自然语言日报已启动；单次最长等待600秒
+Codex自然语言日报仍在运行：30秒；可按 Ctrl-C 安全中断
+Codex自然语言日报仍在运行：60秒；可按 Ctrl-C 安全中断
+Codex自然语言日报进程结束：74秒，退出码0
+自然语言日报：updated / /Users/wangao/Alpaca/var/shared/reports/accounts/live1/strategies/core_long/1.6.0/daily/natural_language/2026-08-04.md
+v2主流程初始化成功
+纽约日期：2026-08-04
+cycle_id：20260804T140028
+轮次处理：创建/初始化新轮次
+原因：创建新的主函数运行轮次
+轮次类型：execution_refresh
+人工复查：skipped_by_flag
+交易模式：live
+当前步骤：COMPLETE
+轮次状态：completed_no_action
+下一步骤：无
+日期状态：/Users/wangao/Alpaca/var/shared/runtime/accounts/live1/strategies/core_long/1.6.0/2026-08-04/daily_state.json
+轮次状态：/Users/wangao/Alpaca/var/shared/runtime/accounts/live1/strategies/core_long/1.6.0/2026-08-04/cycles/20260804T140028/cycle_state.json
+轮次目录：/Users/wangao/Alpaca/var/shared/runtime/accounts/live1/strategies/core_long/1.6.0/2026-08-04/cycles/20260804T140028
+
+阶段A基础设施已就绪。
+Submission policy：alpaca_live@1.0.0
+启动维护旧cycle：0
+模式：live-submit
+提交：0
+取消确认：0
+不确定：0
+成交：0
+部分成交：0
+Open：0
+拒绝：0
+最终状态：completed_no_action
+Cycle summary：/Users/wangao/Alpaca/var/shared/runtime/accounts/live1/strategies/core_long/1.6.0/2026-08-04/cycles/20260804T140028/cycle_summary.json
+日报：/Users/wangao/Alpaca/var/shared/reports/accounts/live1/strategies/core_long/1.6.0/daily/2026-08-04.md
+自然语言日报：/Users/wangao/Alpaca/var/shared/reports/accounts/live1/strategies/core_long/1.6.0/daily/natural_language/2026-08-04.md
+脚本版本：2026-08-04-v2-strategy-performance-v1
+Codex自然语言日报已启动；单次最长等待600秒
+Codex自然语言日报仍在运行：30秒；可按 Ctrl-C 安全中断
+Codex自然语言日报仍在运行：60秒；可按 Ctrl-C 安全中断
+Codex自然语言日报仍在运行：90秒；可按 Ctrl-C 安全中断
+Codex自然语言日报进程结束：97秒，退出码0
+自然语言日报：updated / /Users/wangao/Alpaca/var/shared/reports/accounts/live1/strategies/core_long/1.6.0/daily/natural_language/2026-08-04.md
+v2主流程初始化成功
+纽约日期：2026-08-04
+cycle_id：20260804T161523
+轮次处理：创建/初始化新轮次
+原因：创建新的主函数运行轮次
+轮次类型：maintenance_only
+人工复查：skipped_by_flag
+交易模式：live
+当前步骤：COMPLETE
+轮次状态：completed_no_action
+下一步骤：无
+日期状态：/Users/wangao/Alpaca/var/shared/runtime/accounts/live1/strategies/core_long/1.6.0/2026-08-04/daily_state.json
+轮次状态：/Users/wangao/Alpaca/var/shared/runtime/accounts/live1/strategies/core_long/1.6.0/2026-08-04/cycles/20260804T161523/cycle_state.json
+轮次目录：/Users/wangao/Alpaca/var/shared/runtime/accounts/live1/strategies/core_long/1.6.0/2026-08-04/cycles/20260804T161523
+
+阶段A基础设施已就绪。
+Submission policy：alpaca_live@1.0.0
+启动维护旧cycle：0
+模式：dry-run
+提交：0
+取消确认：0
+不确定：0
+成交：0
+部分成交：0
+Open：0
+拒绝：0
+最终状态：completed_no_action
+Cycle summary：/Users/wangao/Alpaca/var/shared/runtime/accounts/live1/strategies/core_long/1.6.0/2026-08-04/cycles/20260804T161523/cycle_summary.json
+日报：/Users/wangao/Alpaca/var/shared/reports/accounts/live1/strategies/core_long/1.6.0/daily/2026-08-04.md
+自然语言日报：/Users/wangao/Alpaca/var/shared/reports/accounts/live1/strategies/core_long/1.6.0/daily/natural_language/2026-08-04.md
+脚本版本：2026-08-04-v2-strategy-performance-v1
+Codex粗选已启动；单次最长等待600秒
+Codex粗选仍在运行：30秒；可按 Ctrl-C 安全中断
+Codex粗选仍在运行：60秒；可按 Ctrl-C 安全中断
+Codex粗选仍在运行：90秒；可按 Ctrl-C 安全中断
+Codex粗选仍在运行：120秒；可按 Ctrl-C 安全中断
+Codex粗选仍在运行：150秒；可按 Ctrl-C 安全中断
+Codex粗选仍在运行：180秒；可按 Ctrl-C 安全中断
+Codex粗选仍在运行：210秒；可按 Ctrl-C 安全中断
+Codex粗选进程结束：228秒，退出码0
+Codex组合已启动；单次最长等待600秒
+Codex组合仍在运行：30秒；可按 Ctrl-C 安全中断
+Codex组合仍在运行：60秒；可按 Ctrl-C 安全中断
+Codex组合仍在运行：90秒；可按 Ctrl-C 安全中断
+Codex组合仍在运行：120秒；可按 Ctrl-C 安全中断
+Codex组合仍在运行：150秒；可按 Ctrl-C 安全中断
+Codex组合仍在运行：181秒；可按 Ctrl-C 安全中断
+Codex组合仍在运行：211秒；可按 Ctrl-C 安全中断
+Codex组合仍在运行：241秒；可按 Ctrl-C 安全中断
+Codex组合仍在运行：271秒；可按 Ctrl-C 安全中断
+Codex组合仍在运行：301秒；可按 Ctrl-C 安全中断
+Codex组合仍在运行：332秒；可按 Ctrl-C 安全中断
+Codex组合仍在运行：362秒；可按 Ctrl-C 安全中断
+Codex组合仍在运行：392秒；可按 Ctrl-C 安全中断
+Codex组合进程结束：406秒，退出码0
+Codex网络预检暂时失败；1秒后重试（2/3）
+Codex执行已启动；单次最长等待600秒
+Codex执行仍在运行：30秒；可按 Ctrl-C 安全中断
+Codex执行仍在运行：60秒；可按 Ctrl-C 安全中断
+Codex执行仍在运行：90秒；可按 Ctrl-C 安全中断
+Codex执行仍在运行：120秒；可按 Ctrl-C 安全中断
+Codex执行进程结束：146秒，退出码0
+Codex自然语言日报已启动；单次最长等待600秒
+Codex自然语言日报仍在运行：30秒；可按 Ctrl-C 安全中断
+Codex自然语言日报仍在运行：60秒；可按 Ctrl-C 安全中断
+Codex自然语言日报仍在运行：90秒；可按 Ctrl-C 安全中断
+Codex自然语言日报仍在运行：120秒；可按 Ctrl-C 安全中断
+Codex自然语言日报仍在运行：150秒；可按 Ctrl-C 安全中断
+Codex自然语言日报仍在运行：180秒；可按 Ctrl-C 安全中断
+Codex自然语言日报进程结束：204秒，退出码0
+自然语言日报：updated / /Users/wangao/Alpaca/var/shared/reports/accounts/live1/strategies/core_long/1.6.0/daily/natural_language/2026-08-05.md
+v2主流程初始化成功
+纽约日期：2026-08-05
+cycle_id：20260805T100009
+轮次处理：创建/初始化新轮次
+原因：创建新的主函数运行轮次
+轮次类型：daily_full
+人工复查：skipped_by_flag
+交易模式：live
+当前步骤：COMPLETE
+轮次状态：completed_with_open_orders
+下一步骤：无
+日期状态：/Users/wangao/Alpaca/var/shared/runtime/accounts/live1/strategies/core_long/1.6.0/2026-08-05/daily_state.json
+轮次状态：/Users/wangao/Alpaca/var/shared/runtime/accounts/live1/strategies/core_long/1.6.0/2026-08-05/cycles/20260805T100009/cycle_state.json
+轮次目录：/Users/wangao/Alpaca/var/shared/runtime/accounts/live1/strategies/core_long/1.6.0/2026-08-05/cycles/20260805T100009
+
+阶段A基础设施已就绪。
+Submission policy：alpaca_live@1.0.0
+启动维护旧cycle：0
+模式：live-submit
+提交：1
+取消确认：0
+不确定：0
+成交：0
+部分成交：0
+Open：1
+拒绝：0
+最终状态：completed_with_open_orders
+Cycle summary：/Users/wangao/Alpaca/var/shared/runtime/accounts/live1/strategies/core_long/1.6.0/2026-08-05/cycles/20260805T100009/cycle_summary.json
+日报：/Users/wangao/Alpaca/var/shared/reports/accounts/live1/strategies/core_long/1.6.0/daily/2026-08-05.md
+自然语言日报：/Users/wangao/Alpaca/var/shared/reports/accounts/live1/strategies/core_long/1.6.0/daily/natural_language/2026-08-05.md
+脚本版本：2026-08-04-v2-strategy-performance-v1
+Codex网络预检暂时失败；1秒后重试（2/3）
+Codex网络预检暂时失败；1秒后重试（3/3）
+v2主流程拒绝或失败
+错误代码：CODEX_NETWORK_UNAVAILABLE
+错误信息：Codex网络预检失败；请检查DNS、VPN或网络连接后重试
+脚本版本：2026-08-04-v2-strategy-performance-v1
+Codex网络预检暂时失败；1秒后重试（2/3）
+Codex执行已启动；单次最长等待600秒
+Codex执行仍在运行：30秒；可按 Ctrl-C 安全中断
+Codex执行仍在运行：60秒；可按 Ctrl-C 安全中断
+Codex执行仍在运行：90秒；可按 Ctrl-C 安全中断
+Codex执行仍在运行：120秒；可按 Ctrl-C 安全中断
+Codex执行进程结束：127秒，退出码0
+Codex自然语言日报已启动；单次最长等待600秒
+Codex自然语言日报仍在运行：30秒；可按 Ctrl-C 安全中断
+Codex自然语言日报仍在运行：60秒；可按 Ctrl-C 安全中断
+Codex自然语言日报仍在运行：90秒；可按 Ctrl-C 安全中断
+Codex自然语言日报仍在运行：120秒；可按 Ctrl-C 安全中断
+Codex自然语言日报仍在运行：150秒；可按 Ctrl-C 安全中断
+Codex自然语言日报进程结束：153秒，退出码0
+自然语言日报：updated / /Users/wangao/Alpaca/var/shared/reports/accounts/live1/strategies/core_long/1.6.0/daily/natural_language/2026-08-05.md
+v2主流程初始化成功
+纽约日期：2026-08-05
+cycle_id：20260805T120047
+轮次处理：恢复已有轮次
+原因：轮次状态允许恢复
+轮次类型：execution_refresh
+人工复查：skipped_by_flag
+交易模式：live
+当前步骤：COMPLETE
+轮次状态：completed_with_open_orders
+下一步骤：无
+日期状态：/Users/wangao/Alpaca/var/shared/runtime/accounts/live1/strategies/core_long/1.6.0/2026-08-05/daily_state.json
+轮次状态：/Users/wangao/Alpaca/var/shared/runtime/accounts/live1/strategies/core_long/1.6.0/2026-08-05/cycles/20260805T120047/cycle_state.json
+轮次目录：/Users/wangao/Alpaca/var/shared/runtime/accounts/live1/strategies/core_long/1.6.0/2026-08-05/cycles/20260805T120047
+
+阶段A基础设施已就绪。
+Submission policy：alpaca_live@1.0.0
+启动维护旧cycle：1
+模式：live-submit
+提交：1
+取消确认：0
+不确定：0
+成交：0
+部分成交：0
+Open：1
+拒绝：0
+最终状态：completed_with_open_orders
+Cycle summary：/Users/wangao/Alpaca/var/shared/runtime/accounts/live1/strategies/core_long/1.6.0/2026-08-05/cycles/20260805T120047/cycle_summary.json
+日报：/Users/wangao/Alpaca/var/shared/reports/accounts/live1/strategies/core_long/1.6.0/daily/2026-08-05.md
+自然语言日报：/Users/wangao/Alpaca/var/shared/reports/accounts/live1/strategies/core_long/1.6.0/daily/natural_language/2026-08-05.md
+脚本版本：2026-08-04-v2-strategy-performance-v1
+Codex执行已启动；单次最长等待600秒
+Codex执行仍在运行：30秒；可按 Ctrl-C 安全中断
+Codex执行仍在运行：60秒；可按 Ctrl-C 安全中断
+Codex执行仍在运行：90秒；可按 Ctrl-C 安全中断
+Codex执行进程结束：101秒，退出码0
+Codex自然语言日报已启动；单次最长等待600秒
+Codex自然语言日报仍在运行：30秒；可按 Ctrl-C 安全中断
+Codex自然语言日报仍在运行：60秒；可按 Ctrl-C 安全中断
+Codex自然语言日报进程结束：83秒，退出码0
+自然语言日报：updated / /Users/wangao/Alpaca/var/shared/reports/accounts/live1/strategies/core_long/1.6.0/daily/natural_language/2026-08-05.md
+v2主流程初始化成功
+纽约日期：2026-08-05
+cycle_id：20260805T140049
+轮次处理：创建/初始化新轮次
+原因：创建新的主函数运行轮次
+轮次类型：execution_refresh
+人工复查：skipped_by_flag
+交易模式：live
+当前步骤：COMPLETE
+轮次状态：completed_no_action
+下一步骤：无
+日期状态：/Users/wangao/Alpaca/var/shared/runtime/accounts/live1/strategies/core_long/1.6.0/2026-08-05/daily_state.json
+轮次状态：/Users/wangao/Alpaca/var/shared/runtime/accounts/live1/strategies/core_long/1.6.0/2026-08-05/cycles/20260805T140049/cycle_state.json
+轮次目录：/Users/wangao/Alpaca/var/shared/runtime/accounts/live1/strategies/core_long/1.6.0/2026-08-05/cycles/20260805T140049
+
+阶段A基础设施已就绪。
+Submission policy：alpaca_live@1.0.0
+启动维护旧cycle：2
+模式：live-submit
+提交：0
+取消确认：0
+不确定：0
+成交：0
+部分成交：0
+Open：0
+拒绝：0
+最终状态：completed_no_action
+Cycle summary：/Users/wangao/Alpaca/var/shared/runtime/accounts/live1/strategies/core_long/1.6.0/2026-08-05/cycles/20260805T140049/cycle_summary.json
+日报：/Users/wangao/Alpaca/var/shared/reports/accounts/live1/strategies/core_long/1.6.0/daily/2026-08-05.md
+自然语言日报：/Users/wangao/Alpaca/var/shared/reports/accounts/live1/strategies/core_long/1.6.0/daily/natural_language/2026-08-05.md
+脚本版本：2026-08-04-v2-strategy-performance-v1
+Codex自然语言日报已启动；单次最长等待600秒
+Codex自然语言日报仍在运行：30秒；可按 Ctrl-C 安全中断
+Codex自然语言日报仍在运行：60秒；可按 Ctrl-C 安全中断
+Codex自然语言日报仍在运行：90秒；可按 Ctrl-C 安全中断
+Codex自然语言日报进程结束：100秒，退出码0
+自然语言日报：updated / /Users/wangao/Alpaca/var/shared/reports/accounts/live1/strategies/core_long/1.6.0/daily/natural_language/2026-08-05.md
+v2主流程初始化成功
+纽约日期：2026-08-05
+cycle_id：20260805T161553
+轮次处理：创建/初始化新轮次
+原因：创建新的主函数运行轮次
+轮次类型：maintenance_only
+人工复查：skipped_by_flag
+交易模式：live
+当前步骤：COMPLETE
+轮次状态：completed_no_action
+下一步骤：无
+日期状态：/Users/wangao/Alpaca/var/shared/runtime/accounts/live1/strategies/core_long/1.6.0/2026-08-05/daily_state.json
+轮次状态：/Users/wangao/Alpaca/var/shared/runtime/accounts/live1/strategies/core_long/1.6.0/2026-08-05/cycles/20260805T161553/cycle_state.json
+轮次目录：/Users/wangao/Alpaca/var/shared/runtime/accounts/live1/strategies/core_long/1.6.0/2026-08-05/cycles/20260805T161553
+
+阶段A基础设施已就绪。
+Submission policy：alpaca_live@1.0.0
+启动维护旧cycle：2
+模式：dry-run
+提交：0
+取消确认：0
+不确定：0
+成交：0
+部分成交：0
+Open：0
+拒绝：0
+最终状态：completed_no_action
+Cycle summary：/Users/wangao/Alpaca/var/shared/runtime/accounts/live1/strategies/core_long/1.6.0/2026-08-05/cycles/20260805T161553/cycle_summary.json
+日报：/Users/wangao/Alpaca/var/shared/reports/accounts/live1/strategies/core_long/1.6.0/daily/2026-08-05.md
+自然语言日报：/Users/wangao/Alpaca/var/shared/reports/accounts/live1/strategies/core_long/1.6.0/daily/natural_language/2026-08-05.md

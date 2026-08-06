@@ -1,0 +1,41 @@
+脚本版本：2026-08-04-v2-strategy-performance-v1
+Codex执行已启动；单次最长等待600秒
+Codex执行仍在运行：30秒；可按 Ctrl-C 安全中断
+Codex执行仍在运行：60秒；可按 Ctrl-C 安全中断
+Codex执行进程结束：89秒，退出码0
+Codex自然语言日报已启动；单次最长等待600秒
+Codex自然语言日报仍在运行：30秒；可按 Ctrl-C 安全中断
+Codex自然语言日报仍在运行：60秒；可按 Ctrl-C 安全中断
+Codex自然语言日报仍在运行：90秒；可按 Ctrl-C 安全中断
+Codex自然语言日报进程结束：96秒，退出码0
+自然语言日报：updated / /Users/wangao/Alpaca/var/shared/reports/accounts/live1/strategies/core_long/1.6.0/daily/natural_language/2026-08-04.md
+v2主流程初始化成功
+纽约日期：2026-08-04
+cycle_id：20260804T093903
+轮次处理：创建/初始化新轮次
+原因：创建新的主函数运行轮次
+轮次类型：execution_refresh
+人工复查：skipped_by_flag
+交易模式：live
+当前步骤：COMPLETE
+轮次状态：completed_dry_run
+下一步骤：无
+日期状态：/Users/wangao/Alpaca/var/shared/runtime/accounts/live1/strategies/core_long/1.6.0/2026-08-04/daily_state.json
+轮次状态：/Users/wangao/Alpaca/var/shared/runtime/accounts/live1/strategies/core_long/1.6.0/2026-08-04/cycles/20260804T093903/cycle_state.json
+轮次目录：/Users/wangao/Alpaca/var/shared/runtime/accounts/live1/strategies/core_long/1.6.0/2026-08-04/cycles/20260804T093903
+
+阶段A基础设施已就绪。
+Submission policy：alpaca_live@1.0.0
+启动维护旧cycle：0
+模式：dry-run
+提交：0
+取消确认：0
+不确定：0
+成交：0
+部分成交：0
+Open：0
+拒绝：0
+最终状态：completed_dry_run
+Cycle summary：/Users/wangao/Alpaca/var/shared/runtime/accounts/live1/strategies/core_long/1.6.0/2026-08-04/cycles/20260804T093903/cycle_summary.json
+日报：/Users/wangao/Alpaca/var/shared/reports/accounts/live1/strategies/core_long/1.6.0/daily/2026-08-04.md
+自然语言日报：/Users/wangao/Alpaca/var/shared/reports/accounts/live1/strategies/core_long/1.6.0/daily/natural_language/2026-08-04.md

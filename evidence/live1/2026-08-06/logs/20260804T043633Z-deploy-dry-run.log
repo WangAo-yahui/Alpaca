@@ -1,0 +1,5 @@
+脚本版本：2026-08-04-v2-strategy-performance-v1
+Codex组合已启动；单次最长等待600秒
+v2主流程拒绝或失败
+错误代码：CODEX_NETWORK_UNAVAILABLE
+错误信息：Codex网络连接持续失败；请检查VPN或网络后重试

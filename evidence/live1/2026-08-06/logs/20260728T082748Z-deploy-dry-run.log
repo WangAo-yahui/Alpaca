@@ -1,0 +1,6 @@
+脚本版本：2026-07-27-v2-natural-report-sync-v4
+Codex网络预检暂时失败；1秒后重试（2/3）
+Codex网络预检暂时失败；1秒后重试（3/3）
+v2主流程拒绝或失败
+错误代码：CODEX_NETWORK_UNAVAILABLE
+错误信息：Codex网络预检失败；请检查DNS、VPN或网络连接后重试

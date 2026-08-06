@@ -6,7 +6,7 @@ decision_runtime_v2/
 decision_runtime_v2_legacy/
 reports/v2/
 # Runtime-maintained index of the most complete daily reports across strategy versions.
-natural_language/
+/natural_language/
 account_bindings/
 archive/
 shared_data/

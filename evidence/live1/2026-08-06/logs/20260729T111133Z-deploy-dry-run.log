@@ -1,0 +1,89 @@
+脚本版本：2026-07-27-v2-natural-report-sync-v4
+Codex粗选已启动；单次最长等待600秒
+Codex粗选仍在运行：30秒；可按 Ctrl-C 安全中断
+Codex粗选仍在运行：60秒；可按 Ctrl-C 安全中断
+Codex粗选仍在运行：90秒；可按 Ctrl-C 安全中断
+Codex粗选仍在运行：120秒；可按 Ctrl-C 安全中断
+Codex粗选仍在运行：150秒；可按 Ctrl-C 安全中断
+Codex粗选仍在运行：180秒；可按 Ctrl-C 安全中断
+Codex粗选仍在运行：210秒；可按 Ctrl-C 安全中断
+Codex粗选仍在运行：240秒；可按 Ctrl-C 安全中断
+Codex粗选仍在运行：270秒；可按 Ctrl-C 安全中断
+Codex粗选仍在运行：300秒；可按 Ctrl-C 安全中断
+Codex粗选仍在运行：330秒；可按 Ctrl-C 安全中断
+Codex粗选仍在运行：360秒；可按 Ctrl-C 安全中断
+Codex粗选仍在运行：390秒；可按 Ctrl-C 安全中断
+Codex粗选仍在运行：420秒；可按 Ctrl-C 安全中断
+Codex粗选仍在运行：450秒；可按 Ctrl-C 安全中断
+Codex粗选仍在运行：480秒；可按 Ctrl-C 安全中断
+Codex粗选仍在运行：510秒；可按 Ctrl-C 安全中断
+Codex粗选仍在运行：540秒；可按 Ctrl-C 安全中断
+Codex粗选仍在运行：570秒；可按 Ctrl-C 安全中断
+Codex粗选进程结束：582秒，退出码0
+Codex组合已启动；单次最长等待600秒
+Codex组合仍在运行：30秒；可按 Ctrl-C 安全中断
+Codex组合仍在运行：60秒；可按 Ctrl-C 安全中断
+Codex组合仍在运行：90秒；可按 Ctrl-C 安全中断
+Codex组合仍在运行：120秒；可按 Ctrl-C 安全中断
+Codex组合仍在运行：150秒；可按 Ctrl-C 安全中断
+Codex组合仍在运行：180秒；可按 Ctrl-C 安全中断
+Codex组合仍在运行：210秒；可按 Ctrl-C 安全中断
+Codex组合仍在运行：240秒；可按 Ctrl-C 安全中断
+Codex组合仍在运行：270秒；可按 Ctrl-C 安全中断
+Codex组合仍在运行：300秒；可按 Ctrl-C 安全中断
+Codex组合仍在运行：330秒；可按 Ctrl-C 安全中断
+Codex组合仍在运行：360秒；可按 Ctrl-C 安全中断
+Codex组合仍在运行：390秒；可按 Ctrl-C 安全中断
+Codex组合仍在运行：420秒；可按 Ctrl-C 安全中断
+Codex组合仍在运行：450秒；可按 Ctrl-C 安全中断
+Codex组合仍在运行：480秒；可按 Ctrl-C 安全中断
+Codex组合进程结束：509秒，退出码0
+Codex执行已启动；单次最长等待600秒
+Codex执行仍在运行：30秒；可按 Ctrl-C 安全中断
+Codex执行仍在运行：60秒；可按 Ctrl-C 安全中断
+Codex执行仍在运行：90秒；可按 Ctrl-C 安全中断
+Codex执行仍在运行：120秒；可按 Ctrl-C 安全中断
+Codex执行进程结束：129秒，退出码0
+Codex自然语言日报已启动；单次最长等待600秒
+Codex自然语言日报仍在运行：30秒；可按 Ctrl-C 安全中断
+Codex自然语言日报仍在运行：60秒；可按 Ctrl-C 安全中断
+Codex自然语言日报仍在运行：90秒；可按 Ctrl-C 安全中断
+Codex自然语言日报仍在运行：120秒；可按 Ctrl-C 安全中断
+Codex自然语言日报仍在运行：150秒；可按 Ctrl-C 安全中断
+Codex自然语言日报仍在运行：180秒；可按 Ctrl-C 安全中断
+Codex自然语言日报仍在运行：210秒；可按 Ctrl-C 安全中断
+Codex自然语言日报仍在运行：240秒；可按 Ctrl-C 安全中断
+Codex自然语言日报仍在运行：270秒；可按 Ctrl-C 安全中断
+Codex自然语言日报仍在运行：300秒；可按 Ctrl-C 安全中断
+Codex自然语言日报进程结束：328秒，退出码0
+自然语言日报：updated / /Users/wangao/Alpaca/var/shared/reports/accounts/live1/strategies/core_long/1.3.0/daily/2026-07-29.natural.md
+v2主流程初始化成功
+纽约日期：2026-07-29
+cycle_id：20260729T064647
+轮次处理：恢复已有轮次
+原因：轮次状态允许恢复
+轮次类型：daily_full
+人工复查：skipped_by_flag
+交易模式：live
+当前步骤：COMPLETE
+轮次状态：completed_dry_run
+下一步骤：无
+日期状态：/Users/wangao/Alpaca/var/shared/runtime/accounts/live1/strategies/core_long/1.3.0/2026-07-29/daily_state.json
+轮次状态：/Users/wangao/Alpaca/var/shared/runtime/accounts/live1/strategies/core_long/1.3.0/2026-07-29/cycles/20260729T064647/cycle_state.json
+轮次目录：/Users/wangao/Alpaca/var/shared/runtime/accounts/live1/strategies/core_long/1.3.0/2026-07-29/cycles/20260729T064647
+
+阶段A基础设施已就绪。
+Submission policy：alpaca_live@1.0.0
+启动维护旧cycle：1
+模式：dry-run
+提交：0
+取消确认：0
+不确定：0
+成交：0
+部分成交：0
+Open：0
+拒绝：0
+最终状态：completed_dry_run
+Cycle summary：/Users/wangao/Alpaca/var/shared/runtime/accounts/live1/strategies/core_long/1.3.0/2026-07-29/cycles/20260729T064647/cycle_summary.json
+日报：/Users/wangao/Alpaca/var/shared/reports/accounts/live1/strategies/core_long/1.3.0/daily/2026-07-29.md
+自然语言日报：/Users/wangao/Alpaca/var/shared/reports/accounts/live1/strategies/core_long/1.3.0/daily/2026-07-29.natural.md
