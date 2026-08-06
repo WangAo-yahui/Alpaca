@@ -115,7 +115,11 @@ class DailyReportTests(unittest.TestCase):
                 text,
             )
             self.assertIn(
-                "模型未返回中文摘要",
+                "本轮选出 60 只研究候选",
+                text,
+            )
+            self.assertIn(
+                "组合模型未返回中文市场段落",
                 text,
             )
 

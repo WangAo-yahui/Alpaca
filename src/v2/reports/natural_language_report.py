@@ -526,6 +526,96 @@ def _bounded_text(path: Path, limit: int = 120_000) -> str:
     )
 
 
+def _previous_dated_natural_report(
+    report_path: Path,
+) -> Path | None:
+    """Return the newest earlier YYYY-MM-DD narrative, if present."""
+
+    candidates = {
+        candidate
+        for candidate in report_path.parent.glob(
+            "????-??-??.md"
+        )
+        if candidate.is_file()
+        and candidate.name < report_path.name
+    }
+    if (
+        report_path.parent.name
+        == "natural_language"
+        and report_path.parent.parent.name
+        == "daily"
+    ):
+        strategy_root = report_path.parents[3]
+        candidates.update(
+            candidate
+            for candidate in strategy_root.glob(
+                "*/daily/natural_language/"
+                "????-??-??.md"
+            )
+            if candidate.is_file()
+            and candidate.name < report_path.name
+        )
+    return max(
+        candidates,
+        key=lambda candidate: (
+            candidate.name,
+            candidate.parents[2].name,
+        ),
+        default=None,
+    )
+
+
+def sync_public_natural_reports(
+    daily_report_path: Path,
+    public_directory: Path,
+) -> int:
+    """Expose one complete narrative per date without copying report content."""
+
+    if public_directory.is_symlink():
+        public_directory.unlink()
+    public_directory.mkdir(
+        parents=True,
+        exist_ok=True,
+    )
+    strategy_root = daily_report_path.parents[2]
+    selected: dict[str, Path] = {}
+    for candidate in strategy_root.glob(
+        "*/daily/natural_language/????-??-??.md"
+    ):
+        if not candidate.is_file():
+            continue
+        current = selected.get(candidate.name)
+        if current is None:
+            selected[candidate.name] = candidate
+            continue
+        candidate_key = (
+            candidate.stat().st_size,
+            candidate.parents[2].name,
+        )
+        current_key = (
+            current.stat().st_size,
+            current.parents[2].name,
+        )
+        if candidate_key > current_key:
+            selected[candidate.name] = candidate
+    for name, source in sorted(selected.items()):
+        alias = public_directory / name
+        if alias.exists() and not alias.is_symlink():
+            continue
+        temporary = public_directory / f".{name}.tmp"
+        temporary.unlink(missing_ok=True)
+        temporary.symlink_to(source.resolve())
+        temporary.replace(alias)
+    if selected:
+        latest_name = max(selected)
+        latest = public_directory / "latest.md"
+        temporary = public_directory / ".latest.md.tmp"
+        temporary.unlink(missing_ok=True)
+        temporary.symlink_to(latest_name)
+        temporary.replace(latest)
+    return len(selected)
+
+
 def _report_prompt(*, initial: bool) -> str:
     mode = (
         "这是当天第一份自然语言日报，必须输出完整报告。"
@@ -543,7 +633,9 @@ def _report_prompt(*, initial: bool) -> str:
 读取：
 - facts.json：本轮唯一可信的账户、持仓、订单、组合和执行事实；
 - deterministic_daily_report.md：当天从程序事实生成的结构化日报；
-- previous_natural_report.md：同日已有自然语言日报，可能为空。
+- previous_natural_report.md：同日已有自然语言日报；当天首轮则为最近一个
+  交易日的日报，可能为空。它只提供策略与交易连续性，当前账户和订单事实
+  必须以 facts.json 为准。
 
 硬要求：
 1. 使用中文自然语言 Markdown，不输出 JSON。除股票代码、公司或产品专名、
@@ -569,6 +661,7 @@ def _report_prompt(*, initial: bool) -> str:
 18. `protection mode=none` 必须表述为“没有生效的券商自动保护”，并列出替代的 thesis/估值/集中度复查条件。
 19. 若 portfolio 为 `success_local_only` 或多个标的共享同一个上游证据缺口，先用一段话说明决策时点的共同原因，不要把同一句“证据不足”机械复制到每个标的。只补充各标的特有缺口。自然语言日报本次联网取得的新资料属于报告时点背景，不能倒写成 portfolio 决策时已经掌握的证据；应明确说明需在下一次完整组合研究中重新评估。
 20. 净入金、净入金后盈亏、每日和累计时间加权收益只能原样使用 `facts.json` 的 `context.performance`；不得自行从券商原始盈亏重算。必须明确区分券商原始组合盈亏与外部现金流校正后的时间加权收益。`status=partial` 或 `unavailable` 时说明近似或缺失，不能补造数字。
+21. 目标现金比例只能来自本轮 portfolio allocation。必须说明它是各目标证券权重后的剩余比例及本轮资本竞争结果，不是预设风险下限；结合 allocation rationale、现金机会成本、部署触发器和当前实际现金比例解释，不得仅写“接近模型目标”。
 
 第一份完整报告结构：
 # WA Trader v2 自然语言日报 — 日期
@@ -1022,9 +1115,18 @@ def update_natural_language_report(
         workspace / "deterministic_daily_report.md",
         _bounded_text(daily_report_path),
     )
+    previous_report_path = (
+        report_path
+        if report_path.is_file()
+        else _previous_dated_natural_report(
+            report_path
+        )
+    )
     atomic_write_text(
         workspace / "previous_natural_report.md",
-        _bounded_text(report_path),
+        _bounded_text(previous_report_path)
+        if previous_report_path is not None
+        else "",
     )
     atomic_write_text(
         workspace / "instructions.md",

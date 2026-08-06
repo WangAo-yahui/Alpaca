@@ -9,7 +9,7 @@ from jsonschema import Draft202012Validator
 
 from v2.codex.validation import preflight_output_schema
 from v2.models.portfolio import validate_portfolio_output
-from v2.profiles import load_profile, load_risk_profile
+from v2.profiles import load_risk_profile
 from v2.releases import load_strategy_release
 from v2.runtime import load_json_object
 from tests.v2.test_strategy_1_5_release import (
@@ -20,11 +20,7 @@ from tests.v2.test_strategy_1_5_release import (
 class StrategyOneSixReleaseTests(unittest.TestCase):
     def test_release_profile_and_minimum_hard_boundaries(self) -> None:
         release = load_strategy_release("core_long", "1.6.0")
-        profile = load_profile("live1")
-        risk = load_risk_profile(profile.risk_profile)
-        self.assertEqual(profile.strategy_version, "1.6.0")
-        profile_document = load_json_object(profile.source_path)
-        self.assertEqual(profile_document["schedule"]["interval_minutes"], 120)
+        risk = load_risk_profile("live_full@1.2.0")
         self.assertEqual(risk.reference, "live_full@1.2.0")
         self.assertEqual(risk.settings["minimum_cash_weight"], "0.00")
         self.assertEqual(

@@ -257,6 +257,7 @@ def _validate_existing(
     input_result: CoarseInputBuildResult,
     schema: dict[str, Any],
     force_full: bool,
+    refresh_local_only_next_cycle: bool,
     now: datetime | None,
 ) -> tuple[
     dict[str, Any],
@@ -277,6 +278,12 @@ def _validate_existing(
         now=now,
     )
     if not validation.valid:
+        return None
+    if (
+        refresh_local_only_next_cycle
+        and output.get("status")
+        == "success_local_only"
+    ):
         return None
     return output, validation
 
@@ -322,6 +329,11 @@ def execute_coarse_selection(
     guidance = load_initial_guidance(
         paths
     )
+    coarse_policy = load_json_object(
+        active_release.root
+        / "config"
+        / "coarse_policy.json"
+    )
     input_result = build_coarse_input(
         config=config,
         run_date=paths.run_date,
@@ -333,11 +345,7 @@ def execute_coarse_selection(
             paths.strategy_version
         ),
         guidance=guidance.to_dict(),
-        coarse_policy=load_json_object(
-            active_release.root
-            / "config"
-            / "coarse_policy.json"
-        ),
+        coarse_policy=coarse_policy,
     )
     revision = build_coarse_revision_paths(
         daily_paths,
@@ -431,6 +439,12 @@ def execute_coarse_selection(
         input_result=input_result,
         schema=schema,
         force_full=options.force_full,
+        refresh_local_only_next_cycle=bool(
+            coarse_policy.get(
+                "refresh_local_only_next_cycle",
+                False,
+            )
+        ),
         now=now,
     )
     if reusable is not None:

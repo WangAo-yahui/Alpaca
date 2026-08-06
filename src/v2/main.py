@@ -197,13 +197,14 @@ from v2.reports.daily_report import (  # noqa: E402
 from v2.reports.natural_language_report import (  # noqa: E402
     natural_report_path,
     refresh_natural_report_latest_facts,
+    sync_public_natural_reports,
     update_natural_language_report,
     write_fallback_natural_language_report,
     natural_report_error_path,
 )
 
 
-SCRIPT_VERSION = "2026-08-04-v2-strategy-performance-v1"
+SCRIPT_VERSION = "2026-08-06-v2-continuity-web-recovery-v1"
 
 
 @dataclass(frozen=True)
@@ -3264,6 +3265,23 @@ def _maintain_natural_report(
             "自然语言日报生成失败；"
             "已写入无新闻的事实降级版："
             f"{fallback.path}；错误：{error_path}",
+            flush=True,
+        )
+    try:
+        public_count = sync_public_natural_reports(
+            paths.daily_report,
+            paths.project_root / "natural_language",
+        )
+        print(
+            "完整日报统一入口："
+            f"{paths.project_root / 'natural_language'}"
+            f"（{public_count}天）",
+            flush=True,
+        )
+    except OSError as error:
+        print(
+            "完整日报统一入口同步失败；"
+            f"保留内部日报：{error.__class__.__name__}",
             flush=True,
         )
 

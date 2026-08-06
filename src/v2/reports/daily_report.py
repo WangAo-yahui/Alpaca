@@ -86,6 +86,89 @@ def _chinese_summary(value: object) -> str:
     return "模型未返回中文摘要；详细事实保存在本轮结构化产物中。"
 
 
+def _coarse_summary(coarse: Mapping[str, Any]) -> str:
+    summary = _chinese_summary(
+        coarse.get("market_summary")
+    )
+    if not summary.startswith("模型未返回"):
+        return summary
+    selections = coarse.get("selections", [])
+    selections = (
+        selections
+        if isinstance(selections, list)
+        else []
+    )
+    symbols = [
+        str(item.get("symbol", "")).upper()
+        for item in selections
+        if isinstance(item, Mapping)
+        and item.get("symbol")
+    ]
+    supplements = sum(
+        1
+        for item in selections
+        if isinstance(item, Mapping)
+        and item.get("selection_origin")
+        == "codex_supplement"
+    )
+    external = coarse.get(
+        "external_discoveries",
+        [],
+    )
+    external_count = (
+        len(external)
+        if isinstance(external, list)
+        else 0
+    )
+    count = coarse.get(
+        "selection_count",
+        len(symbols),
+    )
+    status = str(coarse.get("status", "unknown"))
+    network_text = (
+        "本轮未取得联网补充，后续计划轮次会重新尝试"
+        if status == "success_local_only"
+        else (
+            f"其中 Codex 联网补充 {supplements} 只，"
+            f"另记录 {external_count} 只外部研究线索"
+        )
+    )
+    symbols_text = (
+        "、".join(symbols)
+        if symbols
+        else "详见结构化候选清单"
+    )
+    return (
+        f"本轮选出 {count} 只研究候选：{symbols_text}；"
+        f"{network_text}。候选清单不等于买入结论。"
+    )
+
+
+def _market_summary(
+    market: Mapping[str, Any],
+    allocation: Mapping[str, Any],
+) -> str:
+    summary = _chinese_summary(
+        market.get("summary")
+    )
+    if not summary.startswith("模型未返回"):
+        return summary
+    target_cash = allocation.get(
+        "target_cash_weight"
+    )
+    try:
+        target_text = (
+            f"{float(str(target_cash)) * 100:.2f}%"
+        )
+    except (TypeError, ValueError):
+        target_text = "未提供"
+    return (
+        "组合模型未返回中文市场段落；其结构化决策给出的"
+        f"目标现金为 {target_text}。该比例来自本轮资本竞争、"
+        "估值证据和集中度比较，不是固定风控下限；逐项依据见下文。"
+    )
+
+
 def _count(document: Mapping[str, Any], key: str) -> Any:
     summary = document.get("summary", {})
     return summary.get(key, 0) if isinstance(summary, Mapping) else 0
@@ -332,8 +415,8 @@ def _detailed_report(
         f"- 市场阶段：{_zh(base.get('market_phase', 'unknown'))}\n"
         f"- 粗选状态/数量：{_zh(coarse.get('status', 'unknown'))} / "
         f"{coarse.get('selection_count', 0)}\n"
-        f"- 粗选摘要：{_chinese_summary(coarse.get('market_summary'))}\n"
-        f"- 市场结论：{_chinese_summary(market.get('summary'))}\n"
+        f"- 粗选摘要：{_coarse_summary(coarse)}\n"
+        f"- 市场结论：{_market_summary(market, allocation)}\n"
         f"- 目标现金：{allocation.get('target_cash_weight')}\n"
         f"- 目标持仓数：{allocation.get('target_position_count')}\n"
         f"- 未来入金：{_zh(capital_plan.get('contribution_pattern', 'irregular_uncommitted'))}；"

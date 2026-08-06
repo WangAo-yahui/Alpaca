@@ -7,6 +7,7 @@
 from __future__ import annotations
 
 import hashlib
+import json
 import signal
 import tempfile
 import unittest
@@ -202,6 +203,58 @@ class CoarseStageTests(unittest.TestCase):
             self.assertNotEqual(
                 first.resolution.paths.cycle_id,
                 second.resolution.paths.cycle_id,
+            )
+
+    def test_local_only_coarse_is_refreshed_next_cycle_when_configured(
+        self,
+    ) -> None:
+        with tempfile.TemporaryDirectory() as temp:
+            root = Path(temp)
+            prepare_stage_c_project(root)
+            profile_path = (
+                root
+                / "config"
+                / "v2"
+                / "profiles"
+                / "paper1.json"
+            )
+            profile = json.loads(
+                profile_path.read_text(
+                    encoding="utf-8"
+                )
+            )
+            profile["strategy"][
+                "strategy_version"
+            ] = "1.6.1"
+            profile_path.write_text(
+                json.dumps(
+                    profile,
+                    ensure_ascii=False,
+                    indent=2,
+                )
+                + "\n",
+                encoding="utf-8",
+            )
+            runner = FakeCoarseRunner()
+            first = run_stage_c(
+                options(),
+                project_root=root,
+                clients=clients(),
+                coarse_runner=runner,
+            )
+            second = run_stage_c(
+                options("--new-cycle"),
+                project_root=root,
+                clients=clients(),
+                coarse_runner=runner,
+            )
+            self.assertEqual(runner.calls, 2)
+            assert first.coarse is not None
+            assert second.coarse is not None
+            self.assertFalse(second.coarse.reused)
+            self.assertEqual(
+                first.coarse.output["status"],
+                "success_local_only",
             )
 
     def test_invalid_forced_result_keeps_old_output(

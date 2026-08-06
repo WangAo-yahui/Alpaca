@@ -45,6 +45,7 @@ from v2.models.portfolio import (
 from v2.models.state import (
     CoarseStatus,
     CycleState,
+    DailyState,
     load_daily_state,
     save_daily_state,
 )
@@ -174,6 +175,98 @@ def _portfolio_capability_paths(
         / "config"
         / "portfolio_policy.json",
     )
+
+
+def _portfolio_output_from_state(
+    *,
+    state: DailyState,
+    cycles_directory: Path,
+) -> dict[str, Any] | None:
+    raw_path = state.latest_valid_portfolio_output_path
+    if not raw_path:
+        return None
+    output_path = Path(raw_path)
+    if not output_path.is_file():
+        return None
+    try:
+        if not output_path.resolve().is_relative_to(
+            cycles_directory.resolve()
+        ):
+            return None
+        return load_json_object(output_path)
+    except (OSError, ValueError):
+        return None
+
+
+def _previous_portfolio_context(
+    *,
+    paths: CyclePaths,
+    daily_state: DailyState,
+) -> dict[str, Any]:
+    """Load today's latest plan, or the newest valid prior-day plan."""
+
+    current = _portfolio_output_from_state(
+        state=daily_state,
+        cycles_directory=paths.cycles_directory,
+    )
+    if current is not None:
+        return current
+    try:
+        strategy_root = paths.identity_root.parent
+        day_directories = [
+            day_directory
+            for version_directory
+            in strategy_root.iterdir()
+            if version_directory.is_dir()
+            for day_directory
+            in version_directory.iterdir()
+            if day_directory.is_dir()
+            and day_directory.name < paths.run_date
+        ]
+    except OSError:
+        return {}
+    prior_states: list[
+        tuple[str, Path, DailyState]
+    ] = []
+    for day_directory in day_directories:
+        state_path = day_directory / "daily_state.json"
+        if not state_path.is_file():
+            continue
+        try:
+            previous_state = load_daily_state(state_path)
+        except (OSError, ValueError):
+            continue
+        if (
+            previous_state.profile_id != paths.profile_id
+            or previous_state.strategy_id
+            != paths.strategy_id
+        ):
+            continue
+        prior_states.append(
+            (
+                previous_state.latest_cycle_id or "",
+                day_directory,
+                previous_state,
+            )
+        )
+    for _, day_directory, previous_state in sorted(
+        prior_states,
+        key=lambda item: (
+            item[1].name,
+            item[0],
+            item[2].strategy_version,
+        ),
+        reverse=True,
+    ):
+        previous = _portfolio_output_from_state(
+            state=previous_state,
+            cycles_directory=(
+                day_directory / "cycles"
+            ),
+        )
+        if previous is not None:
+            return previous
+    return {}
 
 
 def _validation_document(
@@ -615,28 +708,10 @@ def execute_portfolio_decision(
         state.release["risk_profile"],
         project_root=paths.project_root,
     )
-    previous_output: dict[str, Any] = {}
-    if (
-        daily_state.latest_valid_portfolio_output_path
-        and Path(
-            daily_state
-            .latest_valid_portfolio_output_path
-        ).is_file()
-        and Path(
-            daily_state
-            .latest_valid_portfolio_output_path
-        )
-        .resolve()
-        .is_relative_to(
-            paths.cycles_directory.resolve()
-        )
-    ):
-        previous_output = load_json_object(
-            Path(
-                daily_state
-                .latest_valid_portfolio_output_path
-            )
-        )
+    previous_output = _previous_portfolio_context(
+        paths=paths,
+        daily_state=daily_state,
+    )
     input_result = build_portfolio_input(
         paths=paths,
         base_snapshot=base_snapshot,

@@ -1,0 +1,109 @@
+{
+  "_comment": "作用：定义 core_long 1.6.1 的长期复利、跨日计划上下文、可复算估值、资本竞争、限时持仓迟滞、现金部署和ETF穿透研究边界。重要性：仓位形态主要交给模型，0%现金可行；但估值、低置信度、持仓等待和高现金都必须有可核查输入、触发器与复核期限。",
+  "schema_version": "1.0",
+  "portfolio_valid_minutes": 1440,
+  "capital_change_materiality": {
+    "absolute_usd": "100",
+    "relative_fraction": "0.01"
+  },
+  "target_holdings": {
+    "minimum": 0,
+    "maximum": 20
+  },
+  "weight_tolerance": "0.01",
+  "minimum_target_weight": "0.01",
+  "maximum_sector_weight": "0.65",
+  "allow_increase_outside_coarse": false,
+  "allow_empty_portfolio": true,
+  "investment_objective": {
+    "horizon_years_minimum": 10,
+    "horizon_years_maximum": 20,
+    "primary_objective": "maximize_expected_real_terminal_wealth_after_costs",
+    "drawdown_tolerance": "model_determined_including_moderate",
+    "forced_defensive_allocation": false,
+    "forced_investment": false,
+    "forced_diversification": false,
+    "allow_long_term_full_cash": true,
+    "allow_long_term_fully_invested": true,
+    "allow_concentrated_portfolio": true
+  },
+  "expected_contributions": {
+    "pattern": "irregular_uncommitted",
+    "commitment": "non_committed",
+    "amount_guaranteed": false,
+    "timing_guaranteed": false,
+    "planning_only_until_cash_is_available": true,
+    "pre_spend_expected_contribution": false,
+    "allocation_method": "opportunity_ranked",
+    "usdt_to_usd_priority": "convert_before_equity_deployment_when_detected"
+  },
+  "allocation_guidance": {
+    "model_may_choose_cash_weight_from_zero_to_one": true,
+    "model_may_choose_balanced_or_concentrated": true,
+    "moderate_drawdown_is_acceptable_when_rewarded": true,
+    "core_satellite_is_optional": true,
+    "opportunistic_weight_is_not_a_quota": true,
+    "soft_reference_opportunistic_maximum": "0.35",
+    "permit_zero_opportunistic_weight": true,
+    "require_higher_evidence_for_concentration": true,
+    "prefer_low_turnover": true
+  },
+  "capital_competition_requirements": {
+    "enabled": true,
+    "require_cash_comparator": true,
+    "minimum_non_held_comparators": 3,
+    "require_top_ranked_non_held": true,
+    "require_all_holdings_as_comparators": true,
+    "require_counterfactual_for_each_holding": true,
+    "holding_status_is_not_quality_evidence": true,
+    "increase_requires_would_buy_if_not_held": true,
+    "supplemental_discoveries_are_research_only": true,
+    "require_etf_lookthrough_for_held_or_positive": true
+  },
+  "emerging_growth_watchlist": {
+    "source_name": "watchlist_non_sp500",
+    "maximum_initial_target_weight": "0.03",
+    "maximum_aggregate_target_weight": "0.10",
+    "require_staged_entry": true,
+    "require_primary_source_research": true,
+    "allow_zero_allocation": true
+  },
+  "valuation_requirements": {
+    "separate_price_from_value": true,
+    "allow_no_reliable_estimate": true,
+    "require_scenario_range": true,
+    "require_source_or_input_reference": true,
+    "forbid_price_decline_as_sole_undervaluation_evidence": true
+  },
+  "valuation_research": {
+    "minimum_primary_sources_per_stock": 2,
+    "minimum_primary_sources_per_etf": 2,
+    "minimum_calculation_inputs_for_estimate": 2,
+    "minimum_attempted_methods_before_no_estimate": 2,
+    "minimum_evidence_quality_for_open_or_increase": "medium",
+    "minimum_return_confidence_for_open_or_increase": "medium"
+  },
+  "holding_hysteresis": {
+    "maximum_unquantified_days": 14,
+    "maximum_review_days": 30,
+    "require_quantified_switching_cost": true,
+    "require_exit_or_reduce_if_evidence_unresolved": true
+  },
+  "cash_management": {
+    "high_cash_weight_threshold": "0.25",
+    "maximum_review_days": 14,
+    "minimum_deployment_triggers": 2,
+    "cash_floor": "0.00"
+  },
+  "thesis_monitoring": {
+    "maximum_review_days": 30,
+    "minimum_triggers_per_decision": 2
+  },
+  "accumulation_requirements": {
+    "allow_immediate_full_entry": true,
+    "allow_staged_entry": true,
+    "allow_wait": true,
+    "maximum_planned_tranches": 5,
+    "do_not_average_down_after_thesis_break": true
+  }
+}

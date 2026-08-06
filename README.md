@@ -361,7 +361,7 @@ Paper 服务、凭据、账户绑定、runtime、reports 和部署指针均已�
 每个 Live cycle 仍生成确定性日报，同时额外调用一次 Codex 维护：
 
 ```text
-var/shared/reports/accounts/live1/strategies/core_long/1.6.0/daily/
+var/shared/reports/accounts/live1/strategies/core_long/<strategy_version>/daily/
   YYYY-MM-DD.md
   natural_language/
     YYYY-MM-DD.md
@@ -373,6 +373,9 @@ var/shared/reports/accounts/live1/strategies/core_long/1.6.0/daily/
 `natural_language/` 保存合并后的用户日报，`natural_language_report_output/`
 单独保存 Codex 每次调用的当日原始 Markdown 输出；调用状态、错误、事实 JSON、Prompt
 与其他工作文件保存在同级隐藏目录 `.natural_language_report/`，三类内容不再混放。
+根目录 `natural_language/` 是最完整用户日报的统一索引：每个日期只建立一个符号链接，
+指向该日报所属策略版本的 `daily/natural_language/YYYY-MM-DD.md`，因此升级策略后旧日报
+仍连续可见但不复制正文；`latest.md` 指向最新日期。
 
 当天第一次是完整自然语言日报，包含前序日报/账户变化、持仓分析、订单解读、联网
 新闻、资金风险、净入金校正后的每日/累计时间加权收益和未来策略指导。后续轮次只有
@@ -530,7 +533,7 @@ Alpaca/
 ├── .Alpaca/                  # Python 虚拟环境，不进入 Git
 ├── .env_live                 # Live 凭据，不进入 Git
 ├── account_bindings/         # Live 账户绑定，不进入 Git
-└── natural_language -> var/shared/reports/.../daily/natural_language/
+└── natural_language/          # 每日最完整自然语言日报的统一符号链接索引
 ```
 
 ## 9. 根级文件说明

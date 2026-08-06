@@ -15,6 +15,7 @@ from unittest.mock import patch
 
 from v2.exceptions import TemporaryDataError
 from v2.reports.natural_language_report import (
+    _previous_dated_natural_report,
     _report_prompt,
     legacy_natural_report_path,
     natural_report_error_path,
@@ -22,6 +23,7 @@ from v2.reports.natural_language_report import (
     natural_report_path,
     natural_report_state_path,
     refresh_natural_report_latest_facts,
+    sync_public_natural_reports,
     update_natural_language_report,
     write_fallback_natural_language_report,
 )
@@ -104,6 +106,86 @@ def _state(cycle_id: str) -> SimpleNamespace:
 
 
 class NaturalLanguageReportTests(unittest.TestCase):
+    def test_first_report_can_read_previous_trading_day_narrative(
+        self,
+    ) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            strategy_root = (
+                Path(temporary)
+                / "reports"
+                / "core_long"
+            )
+            earlier = (
+                strategy_root
+                / "1.6.0"
+                / "daily"
+                / "natural_language"
+                / "2026-08-04.md"
+            )
+            earlier.parent.mkdir(
+                parents=True
+            )
+            earlier.write_text(
+                "上一交易日完整日报\n",
+                encoding="utf-8",
+            )
+            current = (
+                strategy_root
+                / "1.6.1"
+                / "daily"
+                / "natural_language"
+                / "2026-08-05.md"
+            )
+            self.assertEqual(
+                _previous_dated_natural_report(current),
+                earlier,
+            )
+
+    def test_public_directory_indexes_complete_reports_without_copying(
+        self,
+    ) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            strategy_root = root / "core_long"
+            old_report = (
+                strategy_root
+                / "1.6.0"
+                / "daily"
+                / "natural_language"
+                / "2026-08-04.md"
+            )
+            current_report = (
+                strategy_root
+                / "1.6.1"
+                / "daily"
+                / "natural_language"
+                / "2026-08-05.md"
+            )
+            old_report.parent.mkdir(parents=True)
+            current_report.parent.mkdir(parents=True)
+            old_report.write_text("旧日完整日报\n", encoding="utf-8")
+            current_report.write_text("当日完整日报\n", encoding="utf-8")
+            public = root / "natural_language"
+            public.symlink_to(old_report.parent)
+            count = sync_public_natural_reports(
+                current_report.parent.parent
+                / current_report.name,
+                public,
+            )
+            self.assertEqual(count, 2)
+            self.assertTrue(public.is_dir())
+            self.assertFalse(public.is_symlink())
+            self.assertEqual(
+                (public / "2026-08-04.md").read_text(
+                    encoding="utf-8"
+                ),
+                "旧日完整日报\n",
+            )
+            self.assertEqual(
+                (public / "latest.md").resolve(),
+                (public / "2026-08-05.md").resolve(),
+            )
+
     def test_latest_facts_replace_stale_narrative_header(
         self,
     ) -> None:

@@ -818,6 +818,9 @@ def build_portfolio_input(
             )
         ),
     }
+    previous_portfolio_payload = dict(
+        previous_portfolio or {}
+    )
     signature_payload = {
         "profile_id": paths.profile_id,
         "strategy_id": paths.strategy_id,
@@ -881,8 +884,8 @@ def build_portfolio_input(
         "open_orders": orders,
         "candidates": candidates,
         "market_context": market_context,
-        "previous_portfolio": dict(
-            previous_portfolio or {}
+        "previous_portfolio": (
+            previous_portfolio_payload
         ),
         "data_quality": dict(
             base_snapshot.get(
