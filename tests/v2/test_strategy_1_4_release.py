@@ -31,7 +31,7 @@ class StrategyOneFourReleaseTests(
         )
         self.assertEqual(
             load_profile("live1").strategy_version,
-            "1.6.1",
+            "1.6.2",
         )
         self.assertEqual(
             load_profile("paper1").strategy_version,

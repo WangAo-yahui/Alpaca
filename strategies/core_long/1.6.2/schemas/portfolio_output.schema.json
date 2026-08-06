@@ -1,0 +1,1232 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://wa-trader.local/schemas/v2/portfolio_output.schema.json",
+  "title": "WA Trader v2 portfolio decision output",
+  "description": "作用：约束 Stage D 只输出战略权重、研究结论和执行前复核点。重要性：严格字段集合阻止最终数量与订单参数越过阶段边界。",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "stage",
+    "profile_id",
+    "strategy_id",
+    "strategy_version",
+    "run_date",
+    "cycle_id",
+    "generated_at",
+    "input_signature",
+    "status",
+    "network_research",
+    "guidance_response",
+    "market_assessment",
+    "capital_deployment_plan",
+    "cash_management",
+    "capital_competition",
+    "etf_lookthrough",
+    "allocation",
+    "decisions",
+    "open_order_assessments",
+    "watchlist",
+    "execution_focus",
+    "requires_rebalance_next_cycle",
+    "valid_until",
+    "warnings",
+    "source_references"
+  ],
+  "properties": {
+    "schema_version": {
+      "type": "string",
+      "const": "1.0"
+    },
+    "stage": {
+      "type": "string",
+      "const": "portfolio_decision"
+    },
+    "profile_id": {
+      "type": "string",
+      "minLength": 1
+    },
+    "strategy_id": {
+      "type": "string",
+      "minLength": 1
+    },
+    "strategy_version": {
+      "type": "string",
+      "minLength": 1
+    },
+    "run_date": {
+      "type": "string",
+      "minLength": 10
+    },
+    "cycle_id": {
+      "type": "string",
+      "minLength": 15
+    },
+    "generated_at": {
+      "type": "string",
+      "minLength": 10
+    },
+    "input_signature": {
+      "type": "string",
+      "minLength": 64,
+      "maxLength": 64
+    },
+    "status": {
+      "type": "string",
+      "enum": [
+        "success",
+        "success_local_only"
+      ]
+    },
+    "network_research": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "status",
+        "web_access",
+        "summary",
+        "warnings"
+      ],
+      "properties": {
+        "status": {
+          "type": "string",
+          "enum": [
+            "completed",
+            "unavailable",
+            "not_requested"
+          ]
+        },
+        "web_access": {
+          "type": "boolean"
+        },
+        "summary": {
+          "type": "string"
+        },
+        "warnings": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        }
+      }
+    },
+    "guidance_response": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "summary",
+        "accepted_points",
+        "modified_points",
+        "rejected_points",
+        "constraint_conflicts"
+      ],
+      "properties": {
+        "summary": {
+          "type": "string"
+        },
+        "accepted_points": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "modified_points": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "rejected_points": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "constraint_conflicts": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        }
+      }
+    },
+    "market_assessment": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "regime",
+        "summary",
+        "key_risks"
+      ],
+      "properties": {
+        "regime": {
+          "type": "string"
+        },
+        "summary": {
+          "type": "string"
+        },
+        "key_risks": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        }
+      }
+    },
+    "capital_deployment_plan": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "contribution_pattern",
+        "future_amount_known",
+        "future_timing_known",
+        "deploy_only_available_usd",
+        "current_capital_action",
+        "usdt_conversion_priority",
+        "usdt_conversion_status",
+        "next_available_usd_priority",
+        "rationale"
+      ],
+      "properties": {
+        "contribution_pattern": {
+          "type": "string",
+          "const": "irregular_uncommitted"
+        },
+        "future_amount_known": {
+          "type": "boolean",
+          "const": false
+        },
+        "future_timing_known": {
+          "type": "boolean",
+          "const": false
+        },
+        "deploy_only_available_usd": {
+          "type": "boolean",
+          "const": true
+        },
+        "current_capital_action": {
+          "type": "string",
+          "enum": [
+            "deploy",
+            "partially_deploy",
+            "hold_cash",
+            "raise_cash"
+          ]
+        },
+        "usdt_conversion_priority": {
+          "type": "string",
+          "const": "convert_before_equity_deployment_when_detected"
+        },
+        "usdt_conversion_status": {
+          "type": "string",
+          "enum": [
+            "not_detected",
+            "planned",
+            "awaiting_broker_confirmation",
+            "completed",
+            "not_supported"
+          ]
+        },
+        "next_available_usd_priority": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "rationale": {
+          "type": "string",
+          "minLength": 1
+        }
+      }
+    },
+    "cash_management": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "expected_cash_return_range",
+        "opportunity_cost",
+        "review_by",
+        "deployment_triggers",
+        "evidence_gaps_blocking_deployment"
+      ],
+      "properties": {
+        "expected_cash_return_range": {
+          "type": ["string", "null"]
+        },
+        "opportunity_cost": {
+          "type": "string",
+          "minLength": 1
+        },
+        "review_by": {
+          "type": "string"
+        },
+        "deployment_triggers": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1
+          }
+        },
+        "evidence_gaps_blocking_deployment": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1
+          }
+        }
+      }
+    },
+    "capital_competition": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "comparison_summary",
+        "cash_role",
+        "ranked_uses",
+        "holding_counterfactuals"
+      ],
+      "properties": {
+        "comparison_summary": {
+          "type": "string",
+          "minLength": 1
+        },
+        "cash_role": {
+          "type": "string",
+          "minLength": 1
+        },
+        "ranked_uses": {
+          "type": "array",
+          "minItems": 4,
+          "maxItems": 25,
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "rank",
+              "symbol",
+              "current_position",
+              "comparator_type",
+              "base_return_range",
+              "evidence_confidence",
+              "permanent_loss_risk",
+              "portfolio_fit",
+              "opportunity_cost",
+              "source_references"
+            ],
+            "properties": {
+              "rank": {
+                "type": "integer",
+                "minimum": 1
+              },
+              "symbol": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 15
+              },
+              "current_position": {
+                "type": "boolean"
+              },
+              "comparator_type": {
+                "type": "string",
+                "enum": [
+                  "cash",
+                  "current_holding",
+                  "non_held_candidate"
+                ]
+              },
+              "base_return_range": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              },
+              "evidence_confidence": {
+                "type": "string",
+                "enum": [
+                  "high",
+                  "medium",
+                  "low",
+                  "insufficient"
+                ]
+              },
+              "permanent_loss_risk": {
+                "type": "string",
+                "enum": [
+                  "low",
+                  "medium",
+                  "high",
+                  "uncertain"
+                ]
+              },
+              "portfolio_fit": {
+                "type": "string",
+                "minLength": 1
+              },
+              "opportunity_cost": {
+                "type": "string",
+                "minLength": 1
+              },
+              "source_references": {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                }
+              }
+            }
+          }
+        },
+        "holding_counterfactuals": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "symbol",
+              "would_buy_if_not_held",
+              "action_if_not_held",
+              "best_alternative",
+              "expected_advantage_after_costs",
+              "hysteresis_reason",
+              "estimated_switching_cost_fraction",
+              "review_by",
+              "unresolved_evidence",
+              "exit_or_reduce_if_unresolved"
+            ],
+            "properties": {
+              "symbol": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 15
+              },
+              "would_buy_if_not_held": {
+                "type": "boolean"
+              },
+              "action_if_not_held": {
+                "type": "string",
+                "enum": [
+                  "open",
+                  "watch",
+                  "avoid"
+                ]
+              },
+              "best_alternative": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 15
+              },
+              "expected_advantage_after_costs": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              },
+              "hysteresis_reason": {
+                "type": "string",
+                "minLength": 1
+              },
+              "estimated_switching_cost_fraction": {
+                "type": "string"
+              },
+              "review_by": {
+                "type": "string"
+              },
+              "unresolved_evidence": {
+                "type": "array",
+                "items": {
+                  "type": "string",
+                  "minLength": 1
+                }
+              },
+              "exit_or_reduce_if_unresolved": {
+                "type": "boolean"
+              }
+            }
+          }
+        }
+      }
+    },
+    "etf_lookthrough": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "status",
+        "as_of",
+        "methodology",
+        "assessments",
+        "limitations"
+      ],
+      "properties": {
+        "status": {
+          "type": "string",
+          "enum": [
+            "completed",
+            "partial",
+            "unavailable",
+            "not_applicable"
+          ]
+        },
+        "as_of": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "methodology": {
+          "type": "string",
+          "minLength": 1
+        },
+        "assessments": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "symbol",
+              "top_holdings_review",
+              "sector_or_factor_concentration",
+              "portfolio_overlap",
+              "direct_and_indirect_exposure",
+              "source_references"
+            ],
+            "properties": {
+              "symbol": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 15
+              },
+              "top_holdings_review": {
+                "type": "string",
+                "minLength": 1
+              },
+              "sector_or_factor_concentration": {
+                "type": "string",
+                "minLength": 1
+              },
+              "portfolio_overlap": {
+                "type": "string",
+                "minLength": 1
+              },
+              "direct_and_indirect_exposure": {
+                "type": "string",
+                "minLength": 1
+              },
+              "source_references": {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                }
+              }
+            }
+          }
+        },
+        "limitations": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        }
+      }
+    },
+    "allocation": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "target_cash_weight",
+        "target_invested_weight",
+        "target_position_count",
+        "maximum_single_symbol_weight",
+        "maximum_sector_weight",
+        "deployment_posture",
+        "rationale"
+      ],
+      "properties": {
+        "target_cash_weight": {
+          "type": "string"
+        },
+        "target_invested_weight": {
+          "type": "string"
+        },
+        "target_position_count": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "maximum_single_symbol_weight": {
+          "type": "string"
+        },
+        "maximum_sector_weight": {
+          "type": "string"
+        },
+        "deployment_posture": {
+          "type": "string",
+          "enum": [
+            "defensive",
+            "gradual",
+            "balanced",
+            "aggressive",
+            "opportunistic",
+            "concentrated",
+            "fully_invested",
+            "full_cash"
+          ]
+        },
+        "rationale": {
+          "type": "string",
+          "minLength": 1
+        }
+      }
+    },
+    "decisions": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "symbol",
+          "current_position",
+          "in_current_coarse",
+          "action",
+          "conviction",
+          "target_weight",
+          "maximum_weight",
+          "priority",
+          "risk_bucket",
+          "price_plan",
+          "valuation",
+          "expected_return",
+          "accumulation_plan",
+          "protection_plan",
+          "monitoring_plan",
+          "thesis",
+          "thesis_break_conditions",
+          "risks",
+          "catalysts",
+          "portfolio_role",
+          "execution_checks",
+          "source_references"
+        ],
+        "properties": {
+          "symbol": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 15
+          },
+          "current_position": {
+            "type": "boolean"
+          },
+          "in_current_coarse": {
+            "type": "boolean"
+          },
+          "action": {
+            "type": "string",
+            "enum": [
+              "open",
+              "increase",
+              "hold",
+              "reduce",
+              "close",
+              "watch",
+              "avoid"
+            ]
+          },
+          "conviction": {
+            "type": "string",
+            "enum": [
+              "high",
+              "medium",
+              "low"
+            ]
+          },
+          "target_weight": {
+            "type": "string"
+          },
+          "maximum_weight": {
+            "type": "string"
+          },
+          "priority": {
+            "type": "integer",
+            "minimum": 1
+          },
+          "risk_bucket": {
+            "type": "string",
+            "enum": [
+              "broad_index",
+              "quality_compounder",
+              "profitable_growth",
+              "cyclical_value",
+              "opportunistic",
+              "contrarian",
+              "turnaround",
+              "defensive",
+              "diversifier"
+            ]
+          },
+          "price_plan": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "currency",
+              "entry_zone_low",
+              "entry_zone_high",
+              "do_not_chase_above",
+              "review_below",
+              "notes"
+            ],
+            "properties": {
+              "currency": {
+                "type": "string",
+                "const": "USD"
+              },
+              "entry_zone_low": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              },
+              "entry_zone_high": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              },
+              "do_not_chase_above": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              },
+              "review_below": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              },
+              "notes": {
+                "type": "string"
+              }
+            }
+          },
+          "valuation": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "status",
+              "method",
+              "market_price",
+              "value_range_low",
+              "value_range_high",
+              "margin_of_safety_fraction",
+              "evidence_quality",
+              "evidence_as_of",
+              "source_references",
+              "calculation_inputs",
+              "attempted_methods",
+              "no_estimate_reason",
+              "assumptions",
+              "caveats"
+            ],
+            "properties": {
+              "status": {
+                "type": "string",
+                "enum": [
+                  "undervalued",
+                  "approximately_fair",
+                  "overvalued",
+                  "no_reliable_estimate"
+                ]
+              },
+              "method": {
+                "type": "string"
+              },
+              "market_price": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              },
+              "value_range_low": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              },
+              "value_range_high": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              },
+              "margin_of_safety_fraction": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              },
+              "evidence_quality": {
+                "type": "string",
+                "enum": [
+                  "high",
+                  "medium",
+                  "low",
+                  "insufficient"
+                ]
+              },
+              "evidence_as_of": {
+                "type": ["string", "null"]
+              },
+              "source_references": {
+                "type": "array",
+                "items": {
+                  "type": "string",
+                  "minLength": 1
+                }
+              },
+              "calculation_inputs": {
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "additionalProperties": false,
+                  "required": [
+                    "name",
+                    "value",
+                    "as_of",
+                    "source_reference"
+                  ],
+                  "properties": {
+                    "name": {
+                      "type": "string",
+                      "minLength": 1
+                    },
+                    "value": {
+                      "type": "string",
+                      "minLength": 1
+                    },
+                    "as_of": {
+                      "type": "string",
+                      "minLength": 1
+                    },
+                    "source_reference": {
+                      "type": "string",
+                      "minLength": 1
+                    }
+                  }
+                }
+              },
+              "attempted_methods": {
+                "type": "array",
+                "minItems": 1,
+                "items": {
+                  "type": "string",
+                  "minLength": 1
+                }
+              },
+              "no_estimate_reason": {
+                "type": ["string", "null"]
+              },
+              "assumptions": {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                }
+              },
+              "caveats": {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "expected_return": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "horizon_years",
+              "bear_annualized",
+              "base_annualized",
+              "bull_annualized",
+              "confidence",
+              "calibration_basis",
+              "confidence_reason",
+              "drivers"
+            ],
+            "properties": {
+              "horizon_years": {
+                "type": "integer",
+                "minimum": 10,
+                "maximum": 20
+              },
+              "bear_annualized": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              },
+              "base_annualized": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              },
+              "bull_annualized": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              },
+              "confidence": {
+                "type": "string",
+                "enum": [
+                  "high",
+                  "medium",
+                  "low",
+                  "insufficient"
+                ]
+              },
+              "calibration_basis": {
+                "type": "string",
+                "minLength": 1
+              },
+              "confidence_reason": {
+                "type": "string",
+                "minLength": 1
+              },
+              "drivers": {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "monitoring_plan": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "review_by",
+              "triggers"
+            ],
+            "properties": {
+              "review_by": {
+                "type": "string"
+              },
+              "triggers": {
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "additionalProperties": false,
+                  "required": [
+                    "trigger_type",
+                    "metric",
+                    "operator",
+                    "threshold",
+                    "lookback_days",
+                    "action",
+                    "source_reference"
+                  ],
+                  "properties": {
+                    "trigger_type": {
+                      "type": "string",
+                      "enum": [
+                        "valuation",
+                        "fundamental",
+                        "concentration",
+                        "event",
+                        "time"
+                      ]
+                    },
+                    "metric": {
+                      "type": "string",
+                      "minLength": 1
+                    },
+                    "operator": {
+                      "type": "string",
+                      "enum": [
+                        "above",
+                        "below",
+                        "at_or_above",
+                        "at_or_below",
+                        "deteriorates",
+                        "event_occurs",
+                        "review_due"
+                      ]
+                    },
+                    "threshold": {
+                      "type": ["string", "null"]
+                    },
+                    "lookback_days": {
+                      "type": ["integer", "null"],
+                      "minimum": 0
+                    },
+                    "action": {
+                      "type": "string",
+                      "enum": [
+                        "review",
+                        "stop_add",
+                        "reduce",
+                        "close"
+                      ]
+                    },
+                    "source_reference": {
+                      "type": ["string", "null"]
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "accumulation_plan": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "style",
+              "planned_total_fraction",
+              "tranches",
+              "future_settled_cash_priority",
+              "stop_conditions"
+            ],
+            "properties": {
+              "style": {
+                "type": "string",
+                "enum": [
+                  "immediate",
+                  "staged",
+                  "valuation_triggered",
+                  "future_settled_cash_priority",
+                  "wait",
+                  "no_add"
+                ]
+              },
+              "planned_total_fraction": {
+                "type": "string"
+              },
+              "tranches": {
+                "type": "array",
+                "maxItems": 5,
+                "items": {
+                  "type": "object",
+                  "additionalProperties": false,
+                  "required": [
+                    "sequence",
+                    "fraction",
+                    "price_trigger_low",
+                    "price_trigger_high",
+                    "condition"
+                  ],
+                  "properties": {
+                    "sequence": {
+                      "type": "integer",
+                      "minimum": 1
+                    },
+                    "fraction": {
+                      "type": "string"
+                    },
+                    "price_trigger_low": {
+                      "type": [
+                        "string",
+                        "null"
+                      ]
+                    },
+                    "price_trigger_high": {
+                      "type": [
+                        "string",
+                        "null"
+                      ]
+                    },
+                    "condition": {
+                      "type": "string",
+                      "minLength": 1
+                    }
+                  }
+                }
+              },
+              "future_settled_cash_priority": {
+                "type": "integer",
+                "minimum": 0
+              },
+              "stop_conditions": {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "protection_plan": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "style",
+              "reference_price",
+              "maximum_loss_fraction",
+              "notes"
+            ],
+            "properties": {
+              "style": {
+                "type": "string",
+                "enum": [
+                  "review_threshold",
+                  "thesis_break",
+                  "none"
+                ]
+              },
+              "reference_price": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              },
+              "maximum_loss_fraction": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              },
+              "notes": {
+                "type": "string"
+              }
+            }
+          },
+          "thesis": {
+            "type": "string"
+          },
+          "thesis_break_conditions": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "risks": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "catalysts": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "portfolio_role": {
+            "type": "string"
+          },
+          "execution_checks": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "source_references": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          }
+        }
+      }
+    },
+    "open_order_assessments": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "order_reference",
+          "symbol",
+          "assessment",
+          "reason",
+          "conflicts_with_target"
+        ],
+        "properties": {
+          "order_reference": {
+            "type": "string"
+          },
+          "symbol": {
+            "type": "string"
+          },
+          "assessment": {
+            "type": "string",
+            "enum": [
+              "keep",
+              "review",
+              "cancel",
+              "replace"
+            ]
+          },
+          "reason": {
+            "type": "string"
+          },
+          "conflicts_with_target": {
+            "type": "boolean"
+          }
+        }
+      }
+    },
+    "watchlist": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "execution_focus": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "requires_rebalance_next_cycle": {
+      "type": "boolean"
+    },
+    "valid_until": {
+      "type": "string",
+      "minLength": 10
+    },
+    "warnings": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "source_references": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "id",
+          "title",
+          "url",
+          "source_type",
+          "retrieved_at"
+        ],
+        "properties": {
+          "id": {
+            "type": "string",
+            "minLength": 1
+          },
+          "title": {
+            "type": "string",
+            "minLength": 1
+          },
+          "url": {
+            "type": "string"
+          },
+          "source_type": {
+            "type": "string",
+            "enum": [
+              "web",
+              "input",
+              "local"
+            ]
+          },
+          "retrieved_at": {
+            "type": [
+              "string",
+              "null"
+            ]
+          }
+        }
+      }
+    }
+  }
+}

@@ -1,0 +1,27 @@
+{
+  "_comment": "作用：锁定 core_long 1.6.2 的强制联网尝试、跨日策略连续性、中文摘要、可复算估值及现金部署合同。重要性：Web工具可用时不得用not_requested跳过研究，真实工具故障仍允许有界本地降级。",
+  "schema_version": "1.0",
+  "strategy_id": "core_long",
+  "strategy_version": "1.6.2",
+  "compatible_app_version": ">=2.0.0,<3.0.0",
+  "description": "10-20 year strategy with mandatory web-research attempts, prior-day plan continuity, bounded local fallback, Chinese summaries, auditable valuation and cash triggers",
+  "prompt_hashes": {
+    "prompts/coarse.md": "89f99d009b3108299c874e35ac906395a2a1ba8a386dee0abf1f713ff5630115",
+    "prompts/coarse_AGENTS.md": "0c9edb54a873ca35823988b068c4a244c97a3374f0cf81741345d3f67b404bf6",
+    "prompts/portfolio.md": "41a1b3cc52f064f813193b6e7622ed2b87a30276ff892e1ee10c1adfe439ae58",
+    "prompts/portfolio_AGENTS.md": "d8356d47a1ea79ee4cd02d29c141b0bdb320bcd564e2dd2394fb1049e97859e3",
+    "prompts/execution.md": "bac552bbfdb792955750c64ccb14caa16ff5d4658e8226e6be37be46f963ec5b",
+    "prompts/execution_AGENTS.md": "4d93d8609ae76236c976c2d9f22ceb2bc461c40d4d680cc466e326b9622a3688"
+  },
+  "schema_hashes": {
+    "schemas/coarse_output.schema.json": "c1cead5222b5f39c3ca6437f203885de377412f1cfba5564d364adb979521b0a",
+    "schemas/portfolio_output.schema.json": "56c7d06166d82c01b80755cd292bd8d8377eec367b5b2da5fb1f9ba9a5d18253",
+    "schemas/execution_output.schema.json": "28fa509afb930147ed51c11552b7b7d17ae65778d07ed0dfed85b71aed70a633"
+  },
+  "config_hashes": {
+    "config/coarse_policy.json": "4b807a036244af900bc8ce653cd04bb339ffae27e3aea4fe2f0da9c4d5aaed83",
+    "config/portfolio_policy.json": "9d7f687c3317a7bf014f12490ad2a5035c9a9da0e786456e2cd002cad477de28",
+    "config/execution_policy.json": "e8933a24b6f16fbe781d32be92d106b8f6db1f4f98a7c1f41aee54e1ab760935",
+    "config/codex_policy.json": "b14d2fb0d0d6b81d462ff2c5760562ca881ba8796117aa495ceddb30273a2be8"
+  }
+}

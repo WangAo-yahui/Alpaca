@@ -205,7 +205,7 @@ from v2.reports.natural_language_report import (  # noqa: E402
 )
 
 
-SCRIPT_VERSION = "2026-08-06-v2-continuity-web-recovery-v1"
+SCRIPT_VERSION = "2026-08-06-v2-mandatory-web-attempt-v1"
 
 
 @dataclass(frozen=True)

@@ -1,4 +1,4 @@
-"""验证 core_long 1.6.1 的跨日连续性与联网粗选恢复合同。"""
+"""验证 core_long 1.6.2 的强制联网尝试与本地降级合同。"""
 
 from __future__ import annotations
 
@@ -9,15 +9,18 @@ from v2.releases import load_strategy_release
 from v2.runtime import load_json_object
 
 
-class StrategyOneSixOneReleaseTests(unittest.TestCase):
-    def test_continuity_release_remains_loadable(self) -> None:
+class StrategyOneSixTwoReleaseTests(unittest.TestCase):
+    def test_live1_uses_mandatory_web_attempt_release(self) -> None:
         release = load_strategy_release(
             "core_long",
-            "1.6.1",
+            "1.6.2",
         )
         live = load_profile("live1")
         paper = load_profile("paper1")
-        self.assertEqual(live.strategy_version, "1.6.2")
+        self.assertEqual(
+            live.strategy_version,
+            release.strategy_version,
+        )
         self.assertEqual(
             paper.strategy_version,
             "1.2.0",
@@ -31,6 +34,9 @@ class StrategyOneSixOneReleaseTests(unittest.TestCase):
             policy[
                 "refresh_local_only_next_cycle"
             ]
+        )
+        self.assertTrue(
+            policy["require_web_research_attempt"]
         )
         coarse_prompt = (
             release.root
@@ -47,6 +53,10 @@ class StrategyOneSixOneReleaseTests(unittest.TestCase):
             coarse_prompt,
         )
         self.assertIn(
+            "MUST attempt live web research",
+            coarse_prompt,
+        )
+        self.assertIn(
             "previous_portfolio",
             portfolio_prompt,
         )
@@ -58,7 +68,7 @@ class StrategyOneSixOneReleaseTests(unittest.TestCase):
         self.assertEqual(
             execution_schema["properties"]
             ["strategy_version"]["const"],
-            "1.6.1",
+            "1.6.2",
         )
 
 

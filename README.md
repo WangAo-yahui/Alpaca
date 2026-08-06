@@ -18,7 +18,7 @@ WA Trader v2 当前是只运行 `live1` 的美股组合决策、订单规划、�
 | --- | --- |
 | Profile | `live1` |
 | Broker 环境 | Alpaca Live |
-| 策略 | `core_long@1.6.0` |
+| 策略 | `core_long@1.6.2` |
 | 风险配置 | `live_full@1.2.0` |
 | 订单配置 | `live_equity@1.0.0` |
 | 提交配置 | `alpaca_live@1.0.0` |
@@ -158,7 +158,7 @@ LaunchAgent 与 `./wa start/restart` 始终使用最后一次部署的不可变 
 4. 所有计划、写入前状态、响应和对账都先后落盘；
 5. 不允许模型、命令行参数或部署选项绕过风控。
 
-## 4. `core_long@1.6.0` 整体策略
+## 4. `core_long@1.6.2` 整体策略
 
 ### 4.1 Coarse 候选筛选
 
@@ -717,7 +717,9 @@ Alpaca/
 | `1.3.0` | 中性持仓动作与执行合同修订 |
 | `1.4.0` | Live 长周期策略过渡版本 |
 | `1.5.0` | 历史 Live 策略；强化候选竞争、分批建仓与证据合同 |
-| `1.6.0` | 当前 Live 策略；刷新日线、可复算估值、限时迟滞、现金触发器与净入金校正绩效 |
+| `1.6.0` | 刷新日线、可复算估值、限时迟滞、现金触发器与净入金校正绩效 |
+| `1.6.1` | 增加跨日策略连续性、日报统一索引、本地粗选次轮刷新与中文摘要 |
+| `1.6.2` | 当前 Live 策略；强制先尝试实时 Web 研究，真实工具故障才允许有界本地降级 |
 
 每个版本中的文件类型：
 
@@ -850,7 +852,7 @@ var/
 典型轮次目录：
 
 ```text
-var/shared/runtime/accounts/live1/strategies/core_long/1.6.0/
+var/shared/runtime/accounts/live1/strategies/core_long/1.6.2/
 └── YYYY-MM-DD/
         ├── daily_state.json
         ├── market_data_refresh.json

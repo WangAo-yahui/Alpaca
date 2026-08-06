@@ -6,6 +6,7 @@
 
 from __future__ import annotations
 
+from collections.abc import Mapping
 from dataclasses import dataclass
 from datetime import datetime
 from pathlib import Path
@@ -288,6 +289,50 @@ def _validate_existing(
     return output, validation
 
 
+def _apply_web_attempt_contract(
+    validation: CoarseValidationResult,
+    *,
+    output: Mapping[str, Any],
+    coarse_policy: Mapping[str, Any],
+) -> CoarseValidationResult:
+    """Reject a local-only result when Codex never tried live research."""
+
+    if (
+        not validation.valid
+        or not bool(
+            coarse_policy.get(
+                "require_web_research_attempt",
+                False,
+            )
+        )
+        or output.get("status") != "success_local_only"
+    ):
+        return validation
+    network = output.get("network_research")
+    if (
+        not isinstance(network, Mapping)
+        or network.get("status") != "not_requested"
+    ):
+        return validation
+    return CoarseValidationResult(
+        valid=False,
+        schema_valid=validation.schema_valid,
+        business_valid=False,
+        errors=(
+            *validation.errors,
+            {
+                "code": "COARSE_WEB_RESEARCH_NOT_ATTEMPTED",
+                "message": (
+                    "策略要求先尝试实时Web研究；"
+                    "不得以not_requested作为本地降级理由"
+                ),
+                "path": "$.network_research.status",
+            },
+        ),
+        warnings=validation.warnings,
+    )
+
+
 def execute_coarse_selection(
     *,
     paths: CyclePaths,
@@ -552,6 +597,11 @@ def execute_coarse_selection(
             schema=schema,
             now=now,
         )
+        validation = _apply_web_attempt_contract(
+            validation,
+            output=run_result.payload,
+            coarse_policy=coarse_policy,
+        )
         atomic_write_json(
             revision.validation,
             _validation_document(
@@ -575,16 +625,22 @@ def execute_coarse_selection(
                 paths.daily_state,
                 daily_state,
             )
+            error_codes = sorted(
+                {
+                    str(item["code"])
+                    for item in validation.errors
+                }
+            )
             raise CodexOutputValidationError(
                 "Codex粗选输出未通过Schema或业务校验",
+                code=(
+                    "CODEX_WEB_RESEARCH_NOT_ATTEMPTED"
+                    if "COARSE_WEB_RESEARCH_NOT_ATTEMPTED"
+                    in error_codes
+                    else "CODEX_OUTPUT_INVALID"
+                ),
                 details={
-                    "error_codes": sorted(
-                        {
-                            str(item["code"])
-                            for item
-                            in validation.errors
-                        }
-                    )
+                    "error_codes": error_codes
                 },
             )
         atomic_write_json(
