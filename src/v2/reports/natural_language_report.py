@@ -590,10 +590,12 @@ def sync_public_natural_reports(
             selected[candidate.name] = candidate
             continue
         candidate_key = (
+            candidate.stat().st_mtime_ns,
             candidate.stat().st_size,
             candidate.parents[2].name,
         )
         current_key = (
+            current.stat().st_mtime_ns,
             current.stat().st_size,
             current.parents[2].name,
         )

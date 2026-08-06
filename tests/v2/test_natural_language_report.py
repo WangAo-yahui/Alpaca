@@ -216,6 +216,48 @@ class NaturalLanguageReportTests(unittest.TestCase):
                 (public / "2026-08-05.md").resolve(),
             )
 
+    def test_public_directory_prefers_newer_same_day_report(
+        self,
+    ) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            strategy_root = root / "core_long"
+            older = (
+                strategy_root
+                / "1.6.1"
+                / "daily"
+                / "natural_language"
+                / "2026-08-06.md"
+            )
+            newer = (
+                strategy_root
+                / "1.6.2"
+                / "daily"
+                / "natural_language"
+                / "2026-08-06.md"
+            )
+            older.parent.mkdir(parents=True)
+            newer.parent.mkdir(parents=True)
+            older.write_text(
+                "较长但较旧的完整日报\n" * 20,
+                encoding="utf-8",
+            )
+            newer.write_text(
+                "较新完整日报\n",
+                encoding="utf-8",
+            )
+            os.utime(older, (100, 100))
+            os.utime(newer, (200, 200))
+            public = root / "natural_language"
+            sync_public_natural_reports(
+                newer.parent.parent / newer.name,
+                public,
+            )
+            self.assertEqual(
+                (public / "2026-08-06.md").resolve(),
+                newer.resolve(),
+            )
+
     def test_latest_facts_replace_stale_narrative_header(
         self,
     ) -> None:
